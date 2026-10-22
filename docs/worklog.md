@@ -1,5 +1,40 @@
 # 작업 기록
 
+## 2026-10-22 — WBS-09: 자시·시주와 미상 시각 후보
+
+### 선행 확인과 구현 전 완료 조건
+
+- 직전 PR #9 MERGED(2026-10-22 22:33:04 KST), merge commit `79bd3ba6d745294170f4da52e1b36e216913e682`와 원격 develop 일치/ancestor 확인. 선행 WBS-06 PR #7도 MERGED 및 ancestor 확인. WBS-09 실행순서 11, 선행 WBS-06/08 충족.
+- develop checkout/ff-only pull 후 `git branch -d feature/WBS-08-solar-time-policy` 성공. 최신 develop에서 `feature/WBS-09-hour-day-boundary` 한 개 생성. AGENTS/WBS/02/05/06/08, 관련 코어 및 설치 SDK의 공개 API·일 경계 구현을 읽었다.
+- 완료 조건: WBS-07/08 결과를 고정 공급자의 공개 API에 연결해 연·월주는 실제 UTC, 일·시주는 정책 시계로 계산한다. midnight/zi-start를 명시적으로 midnight/jasi에 매핑하고 splitJasi는 도입하지 않는다. 두 계산 시계와 분 내림 해상도/규칙·공급자 버전을 기록한다.
+- 시각 미상은 단일 시각/확정 시주를 만들지 않는다. 가능한 입력 분 0~1439 전체를 명시적 가설로 평가해 같은 결과의 인접 구간을 합친다. 전체 상태는 partial, 확정 hour는 항상 null이며 모든 분이 해석/계산 가능하고 같은 경우에만 연·월·일주를 공통값으로 남긴다. 거절/미지원 구간도 후보 범위에 보존한다. 확률이나 대표 시각은 부여하지 않는다.
+- 정상/경계 테스트: 12시진의 시작 포함 경계, 22:59/23:00/23:59/00:00의 두 일 경계 정책, 갑진/계해→갑자/연말 일진 앵커, 태양시 날짜 넘김, 절입은 UTC 기준 유지, 역사 초 오프셋·DST fold/gap·음력 윤달·범위 끝 검증. 미상 표준/태양시/절입일의 후보와 입력 불변성을 확인한다.
+- 오류 테스트: 잘못된 날짜/정책/범위와 손상된 공급자 응답/버전/요청 불일치, SDK 예외 비식별화, 경도 미상·시각 미상에 확정 snapshot 없음. 공개 SDK가 분 입력만 받으므로 초/밀리초는 두 시계 각각 분 내림하고 천문 정밀도 보증으로 표시하지 않는다. 실제 UTC+9 투영 또는 정책 시계 연도가 SDK 1800~2300 밖이면 명시적 unavailable다.
+- `calculate-policy` CLI로 새 정책 계산/후보 서비스를 실행한다. 기존 고정 UTC+9 calculate와 normalize-time 계약은 보존한다. 이번 관련 테스트와 영향받은 CLI/시각 경계 검증, 타입·린트를 실행하고 결과/제약/파일을 기록한다. 전체 이전 테스트/설치/빌드를 매번 반복하지 않는 최신 AGENTS 지침을 따른다. 사용자 AGENTS/작업지시 문서/next-env.d.ts 수정은 보존/커밋 제외한다. PR 한 건 생성 후 중지한다.
+
+### 구현과 검증 결과
+
+- 공급자 타입 없는 `PolicyCalendarAdapter`와 strict/readonly 요청·스냅샷을 추가했다. 공개 calculateFourPillars를 두 번 호출해 실제 UTC+9 투영의 연·월주와 정책 시계의 일·시주만 조합한다. SDK private import, 별도 간지 계산식, 경도/DST/EoT 중복 보정은 없다. 원래 두 시계, 요청 정책과 실제 2.0.0/규칙/분 내림 전제를 보존한다.
+- `calculatePolicySaju`가 기존 음양력/IANA/태양시 서비스에 이 포트를 연결한다. 잘못된 입력·요청과 다른 응답·버전·손상 결과를 차단한다. 두 투영 연도 중 하나가 SDK 범위 밖이면 호출 없이 PILLAR_RANGE_UNSUPPORTED다. 거절된 fold/gap에는 기둥을 만들지 않는다.
+- unknown은 1,440개 입력 분을 평가한 후 같은 결과의 인접 구간을 합친다. 전체 범위 0~1440의 연속 분할과 공통 기둥의 일관성을 검증한다. partial에는 snapshot/단일 UTC/단일 태양시가 없고 확정 hour는 항상 null이다. 모든 분이 계산 가능하고 같은 경우에만 공통 연·월·일주를 남긴다. 원래 달력·윤달/시각 미상/한계와 SDK·IANA 버전을 기록하며 음력 변환은 한 번만 한다.
+- 검토 중 분별 INPUT_REJECTED를 하루 전체 미지원으로 조기 종료할 수 있는 처리를 발견해 제거했다. 한 분만 거절되고 이후 분은 유효한 회귀를 추가했다. 거절/미지원 구간은 보존하며 전체가 미지원이면 원인을, 하루 전체가 gap 등으로 거절되면 NO_RESOLVED_CANDIDATES를 반환한다. 예상 밖 공급자 실패를 partial로 덮지 않는다.
+- 새 `calculate-policy` CLI는 known 계산 종료 0, partial/rejected/unavailable 종료 2, 비식별 공급자/설정 실패 종료 1이다. 실제 npm 자식 프로세스에서 known/unknown과 호스트 Pacific/Honolulu를 검증했다. 기존 CLI의 입력 제한/오류·고정 시계 calculate/normalize-time 회귀도 확인했다.
+- 시주 독립 기준은 [HKO 표 3·5](https://www.hko.gov.hk/tc/gts/time/stemsandbranches.htm)의 시진/갑·기일 시간 대응표와 WBS-06의 KASI 공식 갑진일 앵커다. fixture에 출처·확인일·산출법을 기록했다. 23시/다음날/갑자 회귀는 앵커와 채택 정책에서 수기 산출했고 공급자 결과로 기대값을 만들지 않았다. 천문대가 자시 관법을 인증했다고 표시하지 않는다.
+- 테스트 선작성: policy-calendar/policy-saju는 구현 모듈 부재로 각각 종료 1, policy-cli는 미연결 명령으로 2건 실패했다. 구현 후 어댑터 31건, 초기 서비스 13건, 신규 전체 53건이 통과했다. tsc가 테스트 정책 문자열의 넓은 타입을 지적해 명시적 literal 타입으로 수정했다. 이후 미상 경계/불변성/음력 재사용/분별 거절 테스트를 보강했다.
+- 최종 `npm.cmd test -- tests/policy-calendar.test.ts tests/policy-calendar-errors.test.ts tests/policy-saju.test.ts tests/policy-cli.test.ts tests/cli.test.ts tests/normalize-time-cli.test.ts tests/solar-time-application.test.ts`: 종료 0, 관련 7파일/101건(신규 58건) 통과. 최종 소스의 `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`: 각각 종료 0. skip/실패 무시 옵션은 사용하지 않았다.
+- 최신 AGENTS의 관련 테스트 중심 지침을 따라 이번 변경이 있는 정책/CLI와 그 연결에 영향받은 기존 테스트만 실행했다. 패키지/잠금 파일·Next 라우트/설정이 바뀌지 않아 설치·빌드·전체 릴리스 검사는 반복하지 않았다. 타입 검사는 사용 중인 개발 서버와 사용자 next-env.d.ts를 보존하도록 기존 생성 타입을 사용하는 tsc로 수행했다.
+
+### 변경 파일과 제약
+
+- `src/domain/policy-calendar/index.ts`, `README.md`: 두 시계의 SDK 포트/정책·해상도/범위 계약과 근거·사용법·후보 의미.
+- `src/infrastructure/manseryeok/policy-calendar.ts`, `index.ts`, `README.md`: 고정 공개 API 구현, 오류 정규화/export/설명.
+- `src/application/policy-saju/index.ts`: known 계산과 미상 분 전수 후보·공통 기둥/범위 검증. `src/application/saju/index.ts`는 별도 정책 서비스 안내 주석만 변경.
+- `src/cli/run.ts`, `main.ts`, `README.md`: calculate-policy 명령/의존성 조립/종료 코드와 사용법.
+- `tests/policy-calendar.test.ts`, `policy-calendar-errors.test.ts`, `policy-saju.test.ts`, `policy-cli.test.ts`, `fixtures/hour-policy-golden.json`: 독립 대응표·자시/날짜/절입·SDK 오류·시각 미상·실제 CLI 검증.
+- 루트 `README.md`, `src/domain/input/README.md`, `src/domain/solar-time/README.md`, `src/domain/timezone/README.md`, `docs/worklog.md`: 현재 구현 위치와 지원 범위·결과.
+- 미상 후보는 분 단위 입력 라벨의 가능성이지 실제 출생시각/확률/연속 초 범위가 아니다. 천문/역사 전 구간 정확도나 다른 자시 관법·최종 NatalCore/F01~F11 완료를 보증하지 않는다. 두 SDK 시계의 1800~2300 범위와 기존 태양시 근사/절입 분 해상도 한계를 유지한다.
+- AGENTS.md/작업지시 문서/next-env.d.ts의 SHA-256이 시작과 같음을 확인했다. 이 사용자 변경은 보존하고 커밋에서 제외한다. WBS.csv 상태·의존성·UI/API/DB/LLM/OAuth/PG/키/CI·이후 WBS 변경은 없다. 관련 20개 파일만 명시적으로 스테이징해 develop 대상 PR 한 건을 생성하고 중지한다.
+
 ## 2026-10-22 — WBS-08: 평태양시·진태양시 정책
 
 ### 선행 확인과 구현 전 완료 조건

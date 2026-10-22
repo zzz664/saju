@@ -50,7 +50,8 @@ unavailable/LONGITUDE_UNKNOWN이며 의존 포트를 호출하지 않는다. fol
 민간시 입력 범위는 기존 1800~2300년, 음력은 기존 변환 범위를 따른다. UTC는 연초/연말의
 인접 연도로 이동할 수 있어 EoT 요청은 1799~2301년으로 검증한다. EoT ±30분은 손상 응답
 차단 범위다. SDK 예외와 잘못된 출력은 고정 SolarTimeError 코드/문구로 반환하며 원문/cause를
-보관하지 않는다. 시주·자시·미상 시각 후보와 사주 계산 연결은 WBS-09 범위다.
+보관하지 않는다. 시주·자시·미상 시각 후보와 사주 계산 연결은
+[WBS-09 calculate-policy](../policy-calendar/README.md)에서 제공한다.
 
 독립 기준과 한계:
 
