@@ -20,6 +20,10 @@ const snapshot = calculateManseryeokSnapshot({
 천간·지지와 실제 패키지 이름/버전, 시간/일 경계 전제만 담은 readonly JSON DTO다.
 공급자 클래스/메서드/십신/대운/공망을 외부로 반환하지 않으며, 반환값도 Zod로 검증한다.
 
+WBS-03의 `manseryeokCalendarAdapter`는 공용 `CalendarAdapter` 포트를 구현한다.
+공용 요청/스냅샷 스키마는 `domain/calendar`로 옮겼고 기존 export는 같은 계약의 별칭으로 유지한다.
+`application/saju`와 [CLI](../../cli/README.md)는 명시적 `Etc/GMT-9` 입력만 이 포트에 연결한다.
+
 모든 요청 필드는 필수다. 미상 시각은 hour를 생략/null/추정치로 보내지 않고 현재 호출
 범위 밖에 둔다. 일반 IANA 시간대, `AnalysisInput`의 태양시·자시 정책이나 공급자의
 trueSolarTime/gender 옵션을 덧붙이면 엄격한 스키마에서 거절한다.
@@ -28,8 +32,8 @@ trueSolarTime/gender 옵션을 덧붙이면 엄격한 스키마에서 거절한�
 같지 않다. 공급자 2.0.0은 trueSolarTime 옵션 미지정 시 고정 UTC+9를 쓰며 역사 DST를
 해석하지 않는다. 이 옵션을 켜면 경도/균시차/한국 과거 오프셋이 결합되고 기본 경도도
 추정하므로, 현재 어댑터에서는 활성화하지 않는다. 실제 지역 벽시계 입력을 이 함수에
-그대로 연결하면 안 된다. WBS-03의 입출력 포트와 WBS-07/08/09의 독립 검증을 거친
-시간 정규화·정책 적용이 선행되어야 한다.
+그대로 연결하면 안 된다. WBS-03은 고정 시간 기준만 연결하며, 일반 지역 시간대에는
+WBS-07/08/09의 독립 검증을 거친 시간 정규화·정책 적용이 선행되어야 한다.
 
 양력 사주 API는 1800~2300, 음력 사주 API는 1800~2100이다. 공급자의 독립 음양력
 변환 API(1391~2100)와 범위가 다르다. 날짜 실재/윤달 검증은 실제 calculateFourPillars에

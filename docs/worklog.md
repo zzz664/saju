@@ -1,5 +1,50 @@
 # 작업 기록
 
+## 2026-10-22 — WBS-03: CLI와 어댑터 인터페이스
+
+### 선행 병합과 구현 전 완료 조건
+
+- PR #3 `MERGED`(2026-10-22 18:26:00 KST), merge commit `bf96d8f9df74cb1bc1d0826a815b664dd60ec159`의 origin/develop 반영과 선행 PR #2 merge commit의 ancestor를 확인했다. 열린 develop PR 없음.
+- develop checkout/fast-forward pull 후 이전 로컬 `feature/WBS-01-manseryeok-adapter`를 `git branch -d`로 안전 정리하고 `feature/WBS-03-cli-adapter-interface` 한 개를 생성했다.
+- AGENTS, WBS 및 02/05/06/08, 10의 어댑터 경계, 기존 입력/패키지 어댑터 문서를 읽었다. 기존 사용자 지시 문서와 Next dev 생성 타입 변경은 보존하며 커밋에서 제외한다.
+- 완료 조건: 공급자 SDK 타입과 분리된 CalendarAdapter 포트, 기존 AnalysisInput → 제한된 실제 패키지 호출 연결, 표준입력 JSON의 validate/calculate CLI와 npm 실행 명령, 결과·오류·종료 코드 계약 및 실제 CLI 스모크.
+- 현재 계산은 `Etc/GMT-9`(명시적 고정 UTC+9), known 시각, standard/midnight/reject 정책만 지원한다. 일반 지역 시간대·DST·태양시·자시 및 미상 시각 알고리즘을 구현/추정하지 않고 unavailable 사유와 기존 미상 메타데이터를 반환한다. validate는 기존 입력 계약 전체를 검증한다.
+- 정상 검증: 공급자 비의존 포트/가짜 포트로 순수 연결 검증, 실제 어댑터/CLI의 성공 JSON과 고정 UTC+9 예제, validate/도움말.
+- 오류 검증: 잘못된 JSON/필수 필드/CLI 인자/라이브러리 거절/손상된 어댑터 응답/입출력 오류, 민감 원문 없는 stderr 및 0/1/2 종료 코드.
+- 경계 검증: 미상 시각/좌표/순역 기준, 미지원 정책·시간대의 공급자 호출 0회, 입력 최대 64 KiB와 UTF-8/BOM/청크 분할, 실제 자정·23:59, stdout/stderr 구분.
+- npm test 및 CLI/포트 전용 테스트, typecheck/lint/build를 실행한다. 개발 서버의 SWC 잠금·.next 충돌을 피하는 재현 설치/빌드는 필요 시 동일 소스 임시 사본에서 검증하고 원래 폴더 성공과 구분한다. 다음 WBS/CI/실 API/시크릿 변경은 없다.
+
+### 결과
+
+- 공급자 SDK 타입 없는 `domain/calendar`의 CalendarAdapter 포트와 공용 요청/응답 Zod 계약을 추가했다. WBS-01의 동일 계약을 옮기고 기존 Manseryeok export는 호환 별칭으로 유지했다. SDK import는 기존 adapter.ts 내부에만 남아 있다.
+- `manseryeokCalendarAdapter`가 포트를 구현하며 `application/saju`는 AnalysisInput 검증 → 현재 지원 조건 확인 → 포트 요청/응답 검증을 수행한다. 미상/미지원이면 snapshot 없이 unavailable/reasons/information을 반환하고 공급자를 호출하지 않는다. 실제 달력 입력 거절은 정규화된 포트 오류로 구분한다.
+- `npm run --silent saju -- validate|calculate|--help`를 추가했다. UTF-8 stdin 한 문서만 받고 stdout 결과와 stderr 오류, 0/1/2 종료 코드를 분리한다. 64 KiB 상한·BOM·UTF-8 청크 분할·손상/읽기 오류를 처리하고 원문 입력/공급자 예외/stack/cause는 출력하지 않는다.
+- `npm.cmd install --save-dev --save-exact tsx@4.23.15 --no-fund`: 종료 0. 실제 npm 버전/engine 및 [tsx 공식 Node CLI 문서](https://tsx.hirok.io/dev-api/node-cli)의 `node --import tsx` 방식을 확인했다. 기존 패키지 버전은 모두 유지했고 npm이 제거한 기존 선택 플랫폼 메타데이터 2개도 보존했다.
+- 테스트 선작성 초기 실행은 미구현 모듈 collection 실패(종료 1)였다. 구현 뒤 제한 실행 환경의 실제 프로세스 테스트 4건은 tsx가 OS 사용자 정보 조회 시 `uv_os_get_passwd ENOMEM`을 반환해 실패했다. 테스트를 생략/약화하지 않고 동일 명령을 일반 실행 권한에서 다시 실행해 41건 통과했다. 타입 검사에서 드러난 mock 호출 인자 타입도 수정했다.
+- BOM/도움말과 실제 오류 종료 코드 검증을 보강한 뒤 원래 작업 폴더 `npm.cmd test`(일반 실행 권한): 종료 0, 5개 파일/206건 통과. 기존 164건과 신규 42건(포트·CLI·입력/실제 npm 자식 프로세스) 포함. 예제는 합성 입력이며 외부 API 호출은 없다.
+- 원래 폴더 `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`: 종료 0. Next dev 생성 타입/사용자 편집을 유지하기 위해 전체 npm typecheck/build는 아래 동일 소스 사본에서 검증했다.
+- 기존 SWC 잠금/개발 서버 .next 충돌이 알려져 원래 폴더의 npm ci를 재시도하지 않았다. `%TEMP%/saju-wbs03-validation-a9e6c7234c5f433f885c70435340ded9`에 32개 소스/설정 파일의 SHA-256 일치를 확인한 임시 검증 사본을 만들었다. 별도 브랜치나 다른 WBS는 만들지 않았다.
+- 동일 사본 `npm.cmd ci --no-fund`: 종료 0, 376개 패키지 재현 설치 성공.
+- 동일 사본 `npm.cmd test`(일반 실행 권한): 종료 0, 5개 파일/206건 통과. 실제 npm CLI의 계산/검증/도움말, invalid JSON, unknown 시각, 65,537바이트/손상 UTF-8의 종료 코드와 stdout/stderr를 검증했다.
+- 동일 사본 `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run build`: 모두 종료 0. 빌드는 NEXT_TELEMETRY_DISABLED=1, 기존 루트/404 유지.
+- 동일 사본 `npm.cmd audit --omit=dev --json`: 종료 0, 런타임 취약점 0건. 기존 개발 의존성 high 5건 및 ESLint 9 지원 종료 경고는 남아 있으며 전체 감사 통과로 표시하지 않는다.
+- 최종 소스/설정 31개 파일(Next 생성 관리 파일 제외)의 SHA-256이 검증 사본과 일치함을 재확인했다. 사용자 지시 문서와 next-env.d.ts는 시작 전 SHA-256과 같고 커밋에서 제외한다.
+- `git diff --cached --check`: 통과. 스테이징은 아래 WBS-03 관련 17개 파일만 포함한다.
+- 기능 구현/로컬 검증 완료. develop 대상 PR 한 건 생성 후 중지하고 사용자 리뷰/병합 전 WBS-04 이후에 착수하지 않는다.
+
+### 변경 파일과 제약
+
+- `src/domain/calendar/index.ts`: 공용 요청/응답 스키마, CalendarAdapter 및 값 없는 오류 계약. SDK/Node I/O/Next/인프라 import 없음.
+- `src/infrastructure/manseryeok/schemas.ts`, `index.ts`, `port.ts`: 기존 export 호환 유지와 포트 구현 연결. 기존 실제 SDK 호출 알고리즘은 유지.
+- `src/application/saju/index.ts`: 기존 AnalysisInput과 제한된 계산 포트의 순수 연결 및 검증된 결과 계약.
+- `src/cli/main.ts`, `run.ts`, `input.ts`, `README.md`: 실제 입출력, 순수 실행/오류·종료 코드, 제한 UTF-8 reader 및 사용법.
+- `tests/calendar-service.test.ts`, `tests/cli.test.ts`, `tests/fixtures/cli-input.json`: 순수 포트/실제 패키지·npm CLI, 미지원 공급자 호출 0회, 오류/개인정보/입력 경계 검증.
+- `package.json`, `package-lock.json`: npm saju 명령 및 정확한 tsx 개발 의존성.
+- `README.md`, `src/infrastructure/manseryeok/README.md`, `docs/worklog.md`: 실행 계약/현재 한계/검증/변경 기록.
+- 계산은 정확한 Etc/GMT-9(고정 UTC+09:00), known 시각, standard/midnight/reject만 연결한다. Asia/Seoul을 포함한 일반 지역 시간대를 성공시키려고 이름만 바꾸거나 UTC+9로 간주하지 않는다. 정상 범위 밖에서는 unavailable을 반환한다. 이 상태는 CLI 개발용 스냅샷의 상태이며 F01~F11 complete 또는 최종 NatalCore가 아니다.
+- 일반 IANA/역사 DST, 평·진태양시, 자시·미상 후보, 음양력 종합 골든/순수 판단 규칙은 후속 WBS 범위다. 현재 명시적 불가 사유와 기존 미상 메타데이터를 유지하며 허구의 시각/정책/순역 기준을 만들지 않는다.
+- tsx와 실제 npm 자식 프로세스 테스트는 OS 사용자 정보 조회를 허용하는 일반 실행 환경에서 검증했다. 제한 실행 환경의 실패를 통과로 표시하지 않는다. CI 구성/필수 상태 검사, 실제 OpenAI/DB/OAuth/PG, P06/UI, 시크릿 및 기존 BirthInput 계약 변경은 없다.
+
 ## 2026-10-22 — WBS-01: 지정 manseryeok 설치와 패키지 어댑터
 
 ### 선행 병합과 구현 전 완료 조건

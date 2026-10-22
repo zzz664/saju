@@ -1,4 +1,5 @@
 export { calculateManseryeokSnapshot, ManseryeokAdapterError } from "./adapter";
+export { manseryeokCalendarAdapter } from "./port";
 export {
   ManseryeokRequestSchema,
   ManseryeokSnapshotSchema,

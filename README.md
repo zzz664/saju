@@ -1,6 +1,7 @@
 # 개발 환경
 
 WBS-18의 npm 개발 환경, WBS-02의 출생 입력 계약, WBS-01의 지정 만세력 패키지 어댑터를 포함한다. 제품명은 미정이다.
+WBS-03의 CLI·어댑터 포트 사용법과 현재 지원 범위는 [CLI 문서](src/cli/README.md)를 참고한다.
 기능 개발 순서는 `docs/WBS.csv`의 `실행순서`와 실제 `develop` 병합 상태를 따른다.
 
 입력 계약과 범위는 [src/domain/input/README.md](src/domain/input/README.md)를 참고한다.
@@ -23,6 +24,7 @@ PowerShell에서 `npm.ps1` 실행이 제한되면 실행 정책을 변경하지 
 
 ```sh
 npm test
+npm run --silent saju -- --help
 npm run typecheck
 npm run lint
 npm run build
