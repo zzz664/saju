@@ -1,5 +1,41 @@
 # 작업 기록
 
+## 2026-10-22 — WBS-05: 절기·연주·월주 계산
+
+### 선행 확인과 구현 전 완료 조건
+
+- PR #5 GitHub MERGED(2026-10-22 19:27:01 KST), base develop, merge commit `66215b2e223cb32d34c259acc72ce19a94289802` 및 origin/develop 반영 확인. 열린 develop PR 없음. WBS 실행순서 07, 선행 WBS-04 충족.
+- develop checkout/ff-only pull, 위 커밋 ancestor 확인 후 `git branch -d feature/WBS-04-calendar-conversion` 성공. 최신 develop에서 `feature/WBS-05-solar-terms-year-month` 한 개 생성.
+- AGENTS, WBS, 02/05/06/08 및 10의 절입 경계 원칙, 기존 코드와 설치된 manseryeok 2.0.0의 공개 API/타입/구현을 확인했다. 사용자 지시 문서와 next-env.d.ts의 기존 편집은 보존/커밋 제외.
+- 완료 조건: 공개 getSolarTermsOfYear로 24절기를 UTC ISO 문자열의 readonly DTO로 제공하고, 기존 실제 계산 포트에서 연주/월주만 투영하는 별도 SolarCalendarAdapter를 제공한다. 입춘 연 경계, 12절 월 경계, 시작 포함, 분 단위 해상도와 규칙/공급자 버전을 기록한다. 비공개 SDK 경로나 별도 천문·간지 엔진은 추가하지 않는다.
+- 정상/경계: KASI 독립 2024 절입 12개 각각 1분 전/당시/1분 후 연주·월주 검증, 중기 12개에서 월주 불변, 양력 새해/설날/윤달을 월·연 경계로 오인하지 않는지 확인. 24절기 순서/명칭/시간·불변/JSON 왕복 및 1800/2300 범위를 검증한다.
+- 오류: 범위 밖 근사 폴백 차단, 누락/잘못된 타입/정책/실재하지 않는 날짜, 공급자 실패 및 손상된 절기 응답/버전 정규화. 원본 날짜나 공급자 cause를 외부로 보내지 않는다.
+- 독립 자료 확인 중 KASI 예비 웹 페이지 간 청명 시각 차이를 발견했다. 공식 보도자료 첨부 월력요항(2023-06-23 관보 게재)은 절기의 날짜만 제공한다. 공식 날짜와 KASI 기본 경로의 분 단위 절입을 구분해 사용한다. 비공식 예비 자료/공급자 정확도 차이는 결과에 남기고 성공으로 숨기지 않는다.
+- npm test, 전용 경계 테스트, 타입/린트/빌드를 실행한다. 실행 중인 개발 서버 충돌을 피한 동일 소스 임시 사본 검증은 위치를 구분한다. WBS-06 이후, CI, 실 OpenAI/PG, 비밀키 변경은 진행하지 않는다.
+
+### 구현과 검증 결과
+
+- `SolarCalendarAdapter`와 조회 요청/24절기 응답/연월주 응답의 엄격한 Zod 계약을 추가했다. 조회 결과는 UTC ISO 문자열, 중첩 readonly, 24개 수량·인덱스/명칭 대응·순서·요청 연도·분 해상도를 검증한다. 근사 폴백 연도는 입력에서 차단한다.
+- `manseryeokSolarCalendarAdapter`는 공개 getSolarTermsOfYear와 기존 실제 사주 포트만 사용한다. 연월주를 별도 재계산하지 않고 투영하며, 입춘/12절/시작 포함/고정 UTC+9 정책과 공급자/규칙 버전을 반환한다. SDK Date/hanja/메서드는 노출하지 않는다.
+- 구현 전 `npm.cmd test -- tests/solar-calendar.test.ts`: 종료 1, 없는 export로 예상한 53건 실패. 첫 구현에서 readonly Zod 스키마의 shape 접근 오류를 발견해 공용 연도 스키마를 분리했다. 이후 같은 전용 명령 종료 0, 실제 패키지 53건 통과. 실패 무시/skip은 사용하지 않았다.
+- 원래 폴더 `npm.cmd test`: 종료 0, 9개 파일/342건 통과. 신규 66건은 실제 패키지·독립 경계 53건 및 명시적 SDK 오류 Mock 13건이다. 12절 1분 전/당시/후의 연주·월주를 모두 대조했고 중기 불변·양력 연말/새해·설날·윤달·지원 범위·손상 응답·오류 비식별화를 검증했다.
+- 초기 린트는 통과했으나 root tsc 및 재현 사본의 Next typecheck에서 오류 응답 테스트의 이종 튜플 함수 추론 오류 TS7024가 발생했다. 테스트 팩토리에 명시적 `() => unknown` 타입을 부여해 수정했다. 이후 원래 폴더 `npm.cmd test -- tests/solar-calendar.test.ts tests/solar-calendar-errors.test.ts` 66건, `npm.cmd run lint`, `node node_modules/typescript/bin/tsc --noEmit` 모두 종료 0. 검사 강도를 낮추거나 실패를 무시하지 않았다.
+- 동일 소스 임시 사본 `%TEMP%/saju-wbs05-validation-5817c99611824037ac216e2187dbb6af`에서 src/tests·설정·잠금 파일의 SHA-256 일치를 확인했다. 위 타입 수정 파일도 반영 후 해시를 대조했다. 원래 개발 서버/node_modules/.next는 검증용 설치·빌드로 변경하지 않았다.
+- 임시 사본 `npm.cmd ci --no-fund`: 종료 0, 376개 재현 설치. 최종 소스로 `npm.cmd test`: 종료 0, 9개 파일/342건. 이어 `npm.cmd run typecheck`(Next typegen 포함), `npm.cmd run lint`, `npm.cmd run build`: 각각 종료 0. 빌드는 NEXT_TELEMETRY_DISABLED=1, 기존 루트/404 생성 성공.
+- 임시 사본 `npm.cmd audit --omit=dev --json`: 종료 0, 런타임 취약점 0건. 설치에서 기존 개발 의존성 high 5건과 ESLint 9 지원 종료 경고가 재확인되었다. 기존 eslint-config-next → fast-glob → micromatch → braces 경로의 제약을 유지하고 의존성 변경/강제 audit fix 또는 전체 감사 통과로 표시하지 않는다.
+- 사용자 지시 문서와 next-env.d.ts의 SHA-256이 작업 시작과 동일함을 확인했다. 아래 기능 관련 9개 파일만 명시적으로 스테이징하며 staged diff 검사 후 develop 대상 PR 한 건을 생성하고 중지한다.
+- 독립 근거: [공식 보도자료](https://www.kasi.re.kr/kor/publication/post/newsMaterial/29633?cPage=7)의 HWP 첨부(1687408104839_1.hwp) 4쪽을 KASI 공식 HTML 미리보기로 확인했다. 공식 24절기 날짜와 [KASI 기본 경로 예비 달력자료](https://astro.kasi.re.kr/life/post/calendardata)의 2024년 시각을 fixture에 구분해 고정했다. 연월주 예상값은 입춘/12절·오호둔 정책의 수기 표이며 KASI의 음력 월건을 가져온 값이 아니다.
+- 12절 시각은 허용오차 없이 독립 자료와 일치한다. **소설(중기)은 KASI 웹 04:56 / 공급자 04:57로 1분 차이가 남는다.** 별도 known-difference 회귀에서 차이를 확인하며 전체 24개 시각의 독립 일치로 표시하지 않는다. 월 경계인 절이 아니므로 이 차이는 연월주에 영향을 주지 않는다. 범위 밖 정밀도를 약속하거나 패키지를 임의 교체/보정하지 않았다.
+
+### 변경 파일과 제약
+
+- `src/domain/calendar/index.ts`: SolarCalendarAdapter, 요청/절기·연월주 DTO 및 정책·버전 스키마.
+- `src/infrastructure/manseryeok/solar-calendar.ts`, `index.ts`: 지정 공개 API 호출·기존 포트 투영·오류 정규화·export.
+- `tests/solar-calendar.test.ts`, `solar-calendar-errors.test.ts`, `fixtures/solar-terms-golden.json`: 독립 경계/회귀 및 명시적 공급자 오류 Mock.
+- `README.md`, `src/infrastructure/manseryeok/README.md`, `docs/worklog.md`: 사용 예제·근거·정확도 차이·명령/결과 기록.
+- `precision=minute`는 해상도다. 공급자 보정표는 주석상 6tail 천문 계산에서 생성했고 이번 독립 분 대조는 2024년 12절이다. 공식 첨부는 날짜만 제공하며 예비 웹 자료는 비공식이고 경로별 청명 시각도 다르다. 전 지원 연도/초 단위 천문 정확도 검증은 완료로 표시하지 않는다.
+- 기존 고정 UTC+9·known 시각 요청 계약을 유지한다. IANA/DST/태양시/자시/미상 시각·일주 독립 대조·시기별 운세 기간 모델은 각 후속 WBS이며 구현하지 않았다. 의존성/잠금 파일·기존 CLI·UI/API/DB·LLM/OAuth/PG/키/CI 변경은 없다. 사용자 지시 문서와 next-env.d.ts의 기존 편집은 보존한다.
+
 ## 2026-10-22 — WBS-04: 양력·음력·윤달 변환
 
 ### 선행 병합과 구현 전 완료 조건
