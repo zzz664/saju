@@ -58,6 +58,8 @@ finding에는 안정된 ID와 assertion, 규칙/출처/우선순위/입력 경�
 선언/적용 예외와 precision/caveats가 포함된다. 모든 evidence 경로·값이 실제 facts와
 일치하는지 검사한다. sourcePillars와 SDK/facts/규칙/출처 버전을 함께 보존한다.
 우선순위는 정렬·추적 용도다. 여러 관찰을 삭제/통합하거나 충돌을 중재하지 않는다.
+WBS-12의 별도 [충돌·불확실성 중재](ARBITRATION.md)는 이 평가를 보존하고
+채택/억제/보류 및 미상 trace를 추가한다. `arbitrate-facts`로 실행한다.
 
 ```sh
 npm run --silent saju -- judge-facts < tests/fixtures/cli-input.json

@@ -23,6 +23,8 @@ WBS-10의 [십성·지장간·오행 기초 계산](src/domain/natal-facts/READM
 확정된 기둥만 사용하며 오행 출현 개수와 강약 판단을 구분한다.
 WBS-11의 [고전 출처·기초 판단 20개](src/domain/judgment/README.md)는 `judge-facts`로 실행한다.
 각 결과에 출처·입력 근거·버전·예외와 미상 범위를 보존한다.
+WBS-12의 [충돌·불확실성 중재](src/domain/judgment/ARBITRATION.md)는 `arbitrate-facts`로 실행한다.
+원래 판단을 보존하고 명시된 충돌의 채택·억제·보류 및 미상 trace를 반환한다.
 
 - Node.js 24.x, npm 11.x (초기 검증: Node 24.12.0 / npm 11.6.2).
 - Next.js App Router / TypeScript / Vitest. 직접 의존성과 잠금 파일을 함께 고정한다.
