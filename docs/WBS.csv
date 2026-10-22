@@ -1,66 +1,66 @@
-﻿ID,주차,작업,선행작업,완료 기준,우선순위,상태,담당,브랜치,테스트 결과
-WBS-00,1,기존 프로젝트 초기화 대상·범위 확인 및 npm 재시작 준비,,"보관 없이 초기화 대상 확인, 승인된 범위만 재시작, develop 기준 PR 운영 확정",P0,TODO,,,
-WBS-01,1,확정 yhj1024/manseryeok npm 설치·어댑터 연동,WBS-18,지정 패키지 버전/lockfile 고정·실제 API 호출 스모크 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-02,1,입력 스키마/누락 정보 모델,WBS-18,스키마 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-03,1,CLI·어댑터 인터페이스,WBS-01;WBS-02,CLI smoke test; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-04,2,양력·음력·윤달 변환,WBS-01;WBS-03,왕복/윤달 골든 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-05,2,절기/연주/월주 계산,WBS-04,절기 경계 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-06,2,일주 계산 및 독립 대조,WBS-04,독립 골든 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-07,3,IANA 시간대·역사 DST,WBS-02,fold/gap 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-08,3,평/진태양시 정책,WBS-07,경도/EoT 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-09,3,자시/시주·미상 시각 후보,WBS-06;WBS-08,정책별 경계 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-10,4,십성·지장간·오행 계산,WBS-05;WBS-06,규칙 단위 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-11,4,고전 출처 카탈로그·판단 룰,WBS-10,20개 검토 규칙/근거; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-12,4,충돌·불확실성 중재,WBS-11,충돌/미상 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-13,5,JSON/수동 ChatGPT 프롬프트,WBS-12,스키마/복사 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-14,5,결정성·버전·해시,WBS-13,100회 동일 해시; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-15,5,배포 전 로컬 lint/typecheck/build 검증,WBS-03,npm run lint/typecheck/build 실행 및 결과 기록; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-16,6,독립 교차검증/골든 30건,WBS-14,30건 승인; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-17,6,ChatGPT 수동 평가·QA·문서,WBS-16,P0 결함 0건/평가 기록; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-18,1,npm 기반 Next.js/TypeScript/Vitest 신규 프로젝트 초기화,WBS-00,"package-lock.json 커밋, npm test 통과, pnpm 미사용; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행",P0,TODO,,,
-WBS-19,1,선택적 GitHub Actions CI 도입(초기 제외),WBS-15,별도 승인 시 npm ci + npm test로 구성; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P2,TODO,,,
-WBS-20,3,개발자 검증 UI 및 서버 API,WBS-09;WBS-18,입력/미상/JSON 출력 E2E 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,
-WBS-21,6,Supabase 배포환경 점검 및 비밀키·RLS 검증,WBS-52;WBS-53,"로컬 RLS 검증 결과 및 배포환경 키/권한 확인; 서비스 DB는 WBS-52에서 선행 구현; PR 1개, develop 머지 후 진행",P1,TODO,,,
-WBS-22,1,OpenAI 혜택·동의·환경 분리 체크,WBS-18,조직 설정 수동 확인 체크리스트; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P1,TODO,,,
-WBS-23,5,LLM provider·프롬프트·mock,WBS-13;WBS-22,mock/스키마 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P1,TODO,,,
-WBS-24,5,API 예산 가드·실험 접근제어,WBS-23,예산/동시성/보안 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P1,TODO,,,
-WBS-25,6,GPT-4o mini 반복 품질 평가,WBS-24;WBS-47,평가 리포트·사용량 기록; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행; 페르소나 문체·사실 불변·출력 형식 비교 평가,P1,TODO,,,
-WBS-26,6,운영 차단·개인정보·비용 QA,WBS-25,운영 키/실험 비활성화 검증; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P1,TODO,,,
-WBS-27,확장-A,M01 원국 구조 진단 확장,WBS-12,"월령/통근/투출/강약 판단에 출처·예외·충돌 기록; npm test; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-28,확장-A,M02 천간·지지 관계 분석,WBS-27,"합충형파해 판정·골든·다자관계·순서 검증; npm test; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-29,확장-A,M03 주제별 명리 판단 규칙,WBS-27;WBS-28,"기질/강점/직업/재물/연애/사회 6개 규칙팩 계약·테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-30,확장-A,M09 기능별 결과 조합·공통 API 계약,WBS-13;WBS-29,"FeatureRequest/FeatureResult Zod·F01~F11 라우팅·mock 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-31,확장-A,F03 오행·십성 기반 강점·약점,WBS-30,"F03 정상·부분·불가 해석·근거 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-32,확장-A,F02 성격·기질,WBS-31,"F02 근거·충돌·출생시각 미상 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-33,확장-A,F04 직업 적성·업무 성향,WBS-32,"F04 규칙·과장 방지·JSON 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-34,확장-A,F05 재물 성향·금전 관리 성향,WBS-33,"F05 규칙·불확실성·금융 예측 금지 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-35,확장-A,F06 연애 성향·관계 패턴,WBS-34,"F06 관계 규칙·성별 고정관념·부분 입력 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-36,확장-B,M04 신살 규칙·판정표,WBS-28,"채택 신살표/출처·양성/음성/관법 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-37,확장-B,F07 신살·특수 성향,WBS-30;WBS-36,"F07 신살 조회·근거·주의사항 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-38,확장-B,F01 종합 원국 풀이,WBS-31;WBS-32;WBS-33;WBS-34;WBS-35;WBS-37,"F02~F07 통합·중복 제거·부분 상태 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-39,확장-C,M05 대운 구간 정규화,WBS-01;WBS-38,"라이브러리 대운 재사용·세부 시작·구간 경계 검증; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-40,확장-C,M06 세운·월운·일운 간지·기간,WBS-05;WBS-06;WBS-39,"입춘·월 12절·일자 경계 및 timezone 골든; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-41,확장-C,M07 시기별 상호작용 판단,WBS-27;WBS-28;WBS-39;WBS-40,"원국/대운/연월일운 관계·충돌·근거 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-42,확장-C,F08 대운·인생 시기별 운세,WBS-30;WBS-41,"F08 대운 구간별 정상·경계·누락 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-43,확장-C,F09 세운·신년운세,WBS-42,"F09 입춘 전후·대운 중첩·시기별 근거 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-44,확장-C,F10 월운·일운·오늘의 운세,WBS-43,"F10 월 절입/일진/현지 오늘/불완전 입력 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-45,확장-D,M08 두 원국 궁합 분석,WBS-27;WBS-28;WBS-29;WBS-44,"A/B 대칭/방향성·부분 입력·판단 근거 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-46,확장-D,F11 두 사람의 궁합,WBS-30;WBS-45,"F11 통합·A/B 입력 스키마·모델 mock·회귀 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-47,5,R01 캐릭터 페르소나 말투·공통 시스템 프롬프트·서술 JSON 검증,WBS-23;WBS-24,"승인형 PersonaProfile/Zod·프롬프트 3계층·GPT-4o mini Mock·근거 ID 검증·문체 평가 테스트; 기능 브랜치 1개·PR 1개, develop 머지 확인 후 WBS-25 진행",P1,TODO,,,
-WBS-48,확장-E,업로드 이미지 색감 기반 임시 UI 디자인 토큰 정의,WBS-18,"색상/그라데이션/반경/간격/브레이크포인트 토큰 정의 및 예시 화면 검토; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-49,확장-E,모바일 퍼스트 반응형 공통 UI 컴포넌트 구현,WBS-48,"Button/Card/Input/Chip/Header/BottomNav 공통 컴포넌트 및 반응형 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-50,확장-E,입력/결과/상세/개발자 검증 화면의 임시 UI 구성,WBS-20;WBS-49,"모바일 우선 임시 UI 연결 및 반응형 검증 통과; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행; v2.3 P04/P06/P17 모바일 검증 화면에 적용",P1,TODO,,,
-WBS-51,확장-F,P01~P18 라우트 골격·페이지 IA/와이어프레임 적용,WBS-49,"모바일/태블릿/데스크톱 페이지 골격, 로딩/에러 상태, 화면 라우트 테스트; 기능 1브랜치 1PR, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-52,확장-F,Supabase PostgreSQL 스키마·RLS·마이그레이션,WBS-18,"10개 테이블/11개 기능 seed, A/B 사용자 RLS 골든, 문서/마이그레이션 정합성; 기능 1브랜치 1PR, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-53,확장-F,Google/Kakao OAuth 회원가입·로그인·세션,WBS-51;WBS-52,"Supabase SSR PKCE, 오류/보안 next, 재방문/이메일 없는 Kakao 검증; 기능 1브랜치 1PR, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-54,확장-F,출생정보/분석 결과/캐릭터 서술 DB 저장·보관함,WBS-53;WBS-20,"본인 전용 CRUD/분석 저장·R01 버전·삭제/동의·누락 입력 테스트; 기능 1브랜치 1PR, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-55,확장-G,테스트 offer·주문 API·서버 가격 스냅샷,WBS-54;WBS-64,"실제 상품명 미정; 서버 주문 금액/중복 생성/소유권 검증; 기능 1브랜치 1PR, develop 머지 후 다음 진행; 대화형 결과 기능 병합 완료 뒤 착수",P1,TODO,,,
-WBS-56,확장-G,PG 테스트 인터페이스/결제창/서버 승인,WBS-55,"FakePG 로컬 Mock+Toss v2 테스트 설정 검증, 금액 변조 거절; 기능 1브랜치 1PR, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-57,확장-G,테스트 결제 후 권한 부여·결과 접근제어,WBS-56,"PG DONE/금액 일치 + DB 원자 지급, 중복 요청에도 1권한; 기능 1브랜치 1PR, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-58,확장-G,테스트 결제 대사·웹훅 수신 보강,WBS-57,"중복/순서 변경/위조 이벤트/PG 조회 확인 및 재처리 Mock; 기능 1브랜치 1PR, develop 머지 후 다음 진행",P1,TODO,,,
-WBS-59,확장-G,전체 화면 모바일·인증·DB·테스트 결제 통합 QA,WBS-58;WBS-50;WBS-64,"320~1440 반응형, Playwright 핵심 경로, RLS/테스트PG 테스트 보고서; 기능 1브랜치 1PR, develop 머지 후 다음 진행; P06 리포트/질문/복구 통합 테스트 포함",P1,TODO,,,
-WBS-60,확장-H,대화 세션/메시지 DB(0002)·소유권/RLS·리포트 상태·멱등 계약,WBS-52;WBS-54;WBS-47,"마이그레이션 0002, RLS 사용자 A/B, 리포트 상태/멱등 선점 Mock, npm test; 기능 1PR develop 머지 확인",P1,TODO,,,
-WBS-61,확장-H,R02 GPT-4o mini 리포트 말풍선 SSE 스트리밍,WBS-60;WBS-23;WBS-24,"R01 승인형 페르소나+섹션 계획, OpenAI delta->SSE, 완료 검증·트랜잭션 게이트, 연결 끊김 Mock; 기능 1PR develop 머지 확인",P1,TODO,,,
-WBS-62,확장-H,P06 모바일 메신저형 풀이 UI 및 질문 잠금 상태,WBS-61;WBS-50,실제 SSE 소비·왼쪽 캐릭터 말풍선·중단/재개·입력 disabled·모바일/접근성/IME 테스트; 기능 1PR develop 머지 확인,P1,TODO,,,
-WBS-63,확장-H,R03 기존 풀이 근거 기반 후속 질문·답변 SSE,WBS-62,"완료 상태에서만 질문, 검증된 FeatureResult 맥락/서버 페르소나/동시성/비용, Mock·A/B 권한 테스트; 기능 1PR develop 머지 확인",P1,TODO,,,
-WBS-64,확장-H,스트리밍·후속질문·반응형·복구 통합 QA,WBS-63,"F01~F11 스트림, 리포트 2/N 중단, 미완료 질문409, 중복요청/저장/RLS, a11y/320~1440px 테스트 보고; 기능 1PR develop 머지 확인",P1,TODO,,,
+﻿ID,주차,작업,선행작업,완료 기준,우선순위,상태,담당,브랜치,테스트 결과,실행순서,개발단계
+WBS-00,1,"기존 개발 초기화 범위·삭제 위험·npm 재시작 사전 확인 (읽기 전용, 승인 전 삭제 금지)",,대상 경로/브랜치/파괴적 변경 범위 보고 및 사용자 승인 확인; 코드 변경 없다면 기능 PR 예외; 보관/아카이브 제안 금지,P0,TODO,,,,01,사전승인
+WBS-18,1,npm 기반 Next.js/TypeScript/Vitest 신규 프로젝트 초기화,WBS-00,"package-lock.json 커밋, npm test 통과, pnpm 미사용; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행",P0,TODO,,,,02,코어
+WBS-02,1,입력 스키마/누락 정보 모델,WBS-18,스키마 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,03,코어
+WBS-01,1,확정 yhj1024/manseryeok npm 설치·어댑터 연동,WBS-18,지정 패키지 버전/lockfile 고정·실제 API 호출 스모크 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,04,코어
+WBS-03,1,CLI·어댑터 인터페이스,WBS-01;WBS-02,CLI smoke test; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,05,코어
+WBS-04,2,양력·음력·윤달 변환,WBS-01;WBS-03,왕복/윤달 골든 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,06,코어
+WBS-05,2,절기/연주/월주 계산,WBS-04,절기 경계 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,07,코어
+WBS-06,2,일주 계산 및 독립 대조,WBS-04,독립 골든 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,08,코어
+WBS-07,3,IANA 시간대·역사 DST,WBS-02,fold/gap 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,09,코어
+WBS-08,3,평/진태양시 정책,WBS-07,경도/EoT 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,10,코어
+WBS-09,3,자시/시주·미상 시각 후보,WBS-06;WBS-08,정책별 경계 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,11,코어
+WBS-10,4,십성·지장간·오행 계산,WBS-05;WBS-06,규칙 단위 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,12,코어
+WBS-11,4,고전 출처 카탈로그·판단 룰,WBS-10,20개 검토 규칙/근거; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,13,코어
+WBS-12,4,충돌·불확실성 중재,WBS-11,충돌/미상 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,14,코어
+WBS-13,5,JSON/수동 ChatGPT 프롬프트,WBS-12,스키마/복사 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,15,코어
+WBS-14,5,결정성·버전·해시,WBS-13,100회 동일 해시; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,16,코어
+WBS-20,3,개발자 검증 UI 및 서버 API,WBS-09;WBS-13;WBS-18,입력/미상/JSON 출력 E2E 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,17,코어
+WBS-22,1,OpenAI 혜택·동의·환경 분리 체크,WBS-18,조직 설정 수동 확인 체크리스트; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P1,TODO,,,,18,코어
+WBS-23,5,LLM provider·프롬프트·mock,WBS-13;WBS-22,mock/스키마 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P1,TODO,,,,19,코어
+WBS-24,5,API 예산 가드·실험 접근제어,WBS-23,예산/동시성/보안 테스트 통과; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P1,TODO,,,,20,코어
+WBS-47,5,R01 캐릭터 페르소나 말투·공통 시스템 프롬프트·서술 JSON 검증,WBS-23;WBS-24,"승인형 PersonaProfile/Zod·프롬프트 3계층·GPT-4o mini Mock·근거 ID 검증·문체 평가 테스트; 기능 브랜치 1개·PR 1개, develop 머지 확인 후 WBS-25 진행",P1,TODO,,,,21,코어
+WBS-16,6,독립 교차검증/골든 30건,WBS-14,30건 승인; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,22,코어
+WBS-25,6,GPT-4o mini 반복 품질 평가,WBS-24;WBS-47,R01 비스트리밍 Mock·페르소나 품질 평가 기록; 실 API는 승인 시만; R02/R03 스트리밍 종합 평가는 WBS-64; develop 머지 후 다음 진행,P1,TODO,,,,23,코어
+WBS-17,6,명리 계산/LLM 품질 QA 및 코어 문서 검증,WBS-16;WBS-25,P0 결함 0건/평가 기록; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P0,TODO,,,,24,코어
+WBS-26,6,운영 차단·개인정보·비용 QA,WBS-17;WBS-25,운영 키/실험 비활성화 검증; 기능당 PR 1개 develop 머지 확인 후 다음 WBS 진행,P1,TODO,,,,25,코어
+WBS-27,확장-A,M01 원국 구조 진단 확장,WBS-12,"월령/통근/투출/강약 판단에 출처·예외·충돌 기록; npm test; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,26,명리확장
+WBS-28,확장-A,M02 천간·지지 관계 분석,WBS-27,"합충형파해 판정·골든·다자관계·순서 검증; npm test; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,27,명리확장
+WBS-29,확장-A,M03 주제별 명리 판단 규칙,WBS-27;WBS-28,"기질/강점/직업/재물/연애/사회 6개 규칙팩 계약·테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,28,명리확장
+WBS-30,확장-A,M09 기능별 결과 조합·공통 API 계약,WBS-13;WBS-29,"FeatureRequest/FeatureResult Zod·F01~F11 라우팅·mock 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,29,명리확장
+WBS-31,확장-A,F03 오행·십성 기반 강점·약점,WBS-30,"F03 정상·부분·불가 해석·근거 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,30,명리확장
+WBS-32,확장-A,F02 성격·기질,WBS-31,"F02 근거·충돌·출생시각 미상 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,31,명리확장
+WBS-33,확장-A,F04 직업 적성·업무 성향,WBS-32,"F04 규칙·과장 방지·JSON 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,32,명리확장
+WBS-34,확장-A,F05 재물 성향·금전 관리 성향,WBS-33,"F05 규칙·불확실성·금융 예측 금지 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,33,명리확장
+WBS-35,확장-A,F06 연애 성향·관계 패턴,WBS-34,"F06 관계 규칙·성별 고정관념·부분 입력 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,34,명리확장
+WBS-36,확장-B,M04 신살 규칙·판정표,WBS-28,"채택 신살표/출처·양성/음성/관법 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,35,명리확장
+WBS-37,확장-B,F07 신살·특수 성향,WBS-30;WBS-36,"F07 신살 조회·근거·주의사항 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,36,명리확장
+WBS-38,확장-B,F01 종합 원국 풀이,WBS-31;WBS-32;WBS-33;WBS-34;WBS-35;WBS-37,"F02~F07 통합·중복 제거·부분 상태 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,37,명리확장
+WBS-39,확장-C,M05 대운 구간 정규화,WBS-01;WBS-38,"라이브러리 대운 재사용·세부 시작·구간 경계 검증; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,38,명리확장
+WBS-40,확장-C,M06 세운·월운·일운 간지·기간,WBS-05;WBS-06;WBS-39,"입춘·월 12절·일자 경계 및 timezone 골든; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,39,명리확장
+WBS-41,확장-C,M07 시기별 상호작용 판단,WBS-27;WBS-28;WBS-39;WBS-40,"원국/대운/연월일운 관계·충돌·근거 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,40,명리확장
+WBS-42,확장-C,F08 대운·인생 시기별 운세,WBS-30;WBS-41,"F08 대운 구간별 정상·경계·누락 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,41,명리확장
+WBS-43,확장-C,F09 세운·신년운세,WBS-42,"F09 입춘 전후·대운 중첩·시기별 근거 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,42,명리확장
+WBS-44,확장-C,F10 월운·일운·오늘의 운세,WBS-43,"F10 월 절입/일진/현지 오늘/불완전 입력 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,43,명리확장
+WBS-45,확장-D,M08 두 원국 궁합 분석,WBS-27;WBS-28;WBS-29;WBS-44,"A/B 대칭/방향성·부분 입력·판단 근거 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,44,명리확장
+WBS-46,확장-D,F11 두 사람의 궁합,WBS-30;WBS-45,"F11 통합·A/B 입력 스키마·모델 mock·회귀 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,45,명리확장
+WBS-48,확장-E,업로드 이미지 색감 기반 임시 UI 디자인 토큰 정의,WBS-18,"색상/그라데이션/반경/간격/브레이크포인트 토큰 정의 및 예시 화면 검토; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,46,UI·인증·저장
+WBS-49,확장-E,모바일 퍼스트 반응형 공통 UI 컴포넌트 구현,WBS-48,"Button/Card/Input/Chip/Header/BottomNav 공통 컴포넌트 및 반응형 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,47,UI·인증·저장
+WBS-50,확장-E,코어 입력/원국·판단 JSON 개발자 검증 UI 및 P06 자리표시자,WBS-20;WBS-49,모바일 반응형 입력/근거/JSON 검증 화면. P06은 임시 상태/자리표시자만; 정적 JSON 리포트를 최종 UX로 구현하지 않음; npm test; develop 대상 1PR,P1,TODO,,,,48,UI·인증·저장
+WBS-51,확장-F,P01~P18 라우트 골격·페이지 IA/와이어프레임 적용,WBS-49,P01~P18 라우트·접근제어 셸·로우파이 모바일 화면; P06은 R02 개발 전 비작동 placeholder만; 1PR·develop 머지 게이트,P1,TODO,,,,49,UI·인증·저장
+WBS-52,확장-F,Supabase PostgreSQL 스키마·RLS·마이그레이션,WBS-18,"10개 테이블/11개 기능 seed, A/B 사용자 RLS 골든, 문서/마이그레이션 정합성; 기능 1브랜치 1PR, develop 머지 후 다음 진행",P1,TODO,,,,50,UI·인증·저장
+WBS-53,확장-F,Google/Kakao OAuth 회원가입·로그인·세션,WBS-51;WBS-52,"Supabase SSR PKCE, 오류/보안 next, 재방문/이메일 없는 Kakao 검증; 기능 1브랜치 1PR, develop 머지 후 다음 진행",P1,TODO,,,,51,UI·인증·저장
+WBS-54,확장-F,출생정보/분석 결과/캐릭터 서술 DB 저장·보관함,WBS-53;WBS-20;WBS-14,출생정보·분석 결과/기본 보관함 0001 저장 검증; 대화 메시지/스트리밍 저장은 WBS-60에서; RLS A/B 검사; 1PR,P1,TODO,,,,52,UI·인증·저장
+WBS-60,확장-H,대화 세션/메시지 DB(0002)·소유권/RLS·리포트 상태·멱등 계약,WBS-52;WBS-54;WBS-47;WBS-46,"0002 마이그레이션/RLS, 대화 소유권·상태 전이·멱등/동시성 잠금 계약 Mock 테스트. 모든 F01~F11/인증/보관 선행 병합 확인; 1PR",P1,TODO,,,,53,대화형스트리밍
+WBS-61,확장-H,R02 GPT-4o mini 리포트 말풍선 SSE 스트리밍,WBS-60;WBS-23;WBS-24,"실 OpenAI 없이 SSE mock 테스트; R02 섹션별 delta/완료 후 DB 커밋/복구, 예산·중복 방지; P06 실 UI는 WBS-62; 1PR",P1,TODO,,,,54,대화형스트리밍
+WBS-62,확장-H,P06 모바일 메신저형 풀이 UI 및 질문 잠금 상태,WBS-61;WBS-50,P06 실제 모바일 채팅 말풍선 SSE UI; report 완료 DB 재확인 전 질문 잠금; 접근성/중단/복구/IME/반응형 테스트; 1PR,P1,TODO,,,,55,대화형스트리밍
+WBS-63,확장-H,R03 기존 풀이 근거 기반 후속 질문·답변 SSE,WBS-62,"R03 근거 기반 후속 질문, 입력 한도·권한·409·비식별 메트릭·SSE/멱등·대화 저장 테스트; 1PR",P1,TODO,,,,56,대화형스트리밍
+WBS-64,확장-H,스트리밍·후속질문·반응형·복구 통합 QA,WBS-63,"스트리밍·후속질문 통합/복구 QA, UTF-8/SSE 프레임·동시성·RLS·근거/페르소나·모바일 접근성; 1PR",P1,TODO,,,,57,대화형스트리밍
+WBS-55,확장-G,테스트 offer·주문 API·서버 가격 스냅샷,WBS-54;WBS-64,"실제 상품명 미정; 서버 주문 금액/중복 생성/소유권 검증; 기능 1브랜치 1PR, develop 머지 후 다음 진행; 대화형 결과 기능 병합 완료 뒤 착수",P1,TODO,,,,58,PG테스트
+WBS-56,확장-G,PG 테스트 인터페이스/결제창/서버 승인,WBS-55,"FakePG 로컬 Mock+Toss v2 테스트 설정 검증, 금액 변조 거절; 기능 1브랜치 1PR, develop 머지 후 다음 진행",P1,TODO,,,,59,PG테스트
+WBS-57,확장-G,테스트 결제 후 권한 부여·결과 접근제어,WBS-56,"PG DONE/금액 일치 + DB 원자 지급, 중복 요청에도 1권한; 기능 1브랜치 1PR, develop 머지 후 다음 진행",P1,TODO,,,,60,PG테스트
+WBS-58,확장-G,테스트 결제 대사·웹훅 수신 보강,WBS-57,"중복/순서 변경/위조 이벤트/PG 조회 확인 및 재처리 Mock; 기능 1브랜치 1PR, develop 머지 후 다음 진행",P1,TODO,,,,61,PG테스트
+WBS-59,확장-G,전체 화면 모바일·인증·DB·테스트 결제 통합 QA,WBS-58;WBS-50;WBS-64,"320~1440 반응형, Playwright 핵심 경로, RLS/테스트PG 테스트 보고서; 기능 1브랜치 1PR, develop 머지 후 다음 진행; P06 리포트/질문/복구 통합 테스트 포함",P1,TODO,,,,62,PG테스트
+WBS-15,5,전체 구현 후 배포 전 로컬 npm test/typecheck/lint/build 검증,WBS-59;WBS-64,"npm test, npm run typecheck, npm run lint, npm run build 전체 성공 및 결과 기록; 기능 브랜치 1개·PR 1개, 머지 확인 후 다음 진행",P0,TODO,,,,63,릴리스검증
+WBS-21,6,Vercel/Supabase 개발·테스트 배포 통합 환경 확인,WBS-15;WBS-53;WBS-59,OAuth/RLS·테스트 PG·POST SSE/타임아웃·환경키/비식별 로그 검증; 외부 콘솔 미설정 시 BLOCKED로 명확히 기록; 기능당 PR 1개,P1,TODO,,,,64,릴리스검증
+WBS-19,1,선택적 GitHub Actions CI 도입(초기 제외),WBS-15,선택 사항: 사용자 별도 승인 시만 npm ci + npm test 최소 CI 추가; 기존 GitHub Rulesets 필수 검사 점검; 1PR,P2,TODO,,,,선택,선택적CI

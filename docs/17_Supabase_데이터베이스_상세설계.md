@@ -1,6 +1,8 @@
-# v2.3 Supabase PostgreSQL 데이터베이스 설계
+# Supabase PostgreSQL 데이터베이스 상세설계 — v2.4
 
 > 목표: 사용자/출생정보/분석 이력/LLM 서술/기능 카탈로그/테스트 주문·결제·권한을 독립 관리한다. **SQL은 실제 Supabase 인스턴스에서 실행·테스트하지 않은 초기 마이그레이션 초안**이다. `db/migrations/0001_initial.sql` 참조. 실계정 연결 전 로컬 DB/RLS 검증이 필요하다.
+
+> **현행 v2.4 저장 모델**: `0001_initial.sql`에서 기본 애플리케이션 10개 테이블, `0002_reading_conversations.sql`에서 `reading_conversations`/`reading_messages` 2개를 추가해 **총 12개**. PostgreSQL/Supabase 관리 `auth.users`는 별도. 저장형 P06은 R02/R03 스트리밍 메시지를 사용한다. **동시 스트림 원자 차단·소유권·접근권·멱등 검증은 서버 필수**.
 
 ## ERD 요약
 
@@ -92,9 +94,19 @@ erDiagram
 
 ---
 
-# v2.4 — 대화형 풀이 DB 확장(기존 10 → 총 12개 앱 테이블)
 
-- 신규 `reading_conversations`(분석·페르소나·리포트 완료/중단 상태), `reading_messages`(완료된 리포트 말풍선, 사용자의 질문, 캐릭터 답변) 추가.
-- `db/migrations/0002_reading_conversations.sql`는 `0001_initial.sql` 이후 적용하는 **미검증 DDL 초안**이며 RLS/소유자·FK/멱등 동시성 테스트 필수. `analysis_runs`와 결합된 대화 데이터는 계정/분석 삭제 시 종속 삭제.
-- 보고서는 관련 섹션의 최종 검증·영속화가 모두 끝난 뒤에만 완료로 설정하고 `narrations.output_json`에 기존 형식으로 재조립한다. 원문 delta 매 토큰 DB 저장 금지.
-- 사용자별 RLS `auth.uid()=user_id`; 클라이언트는 읽기만 가능하며 쓰기는 서버의 인증·소유권·권한 검사와 트랜잭션에 한정. 자세한 계약은 19번 문서.
+## 대화형 풀이 테이블(v2.4 필수)
+
+|테이블|주요 내용|관계 및 규칙|
+|---|---|---|
+|`reading_conversations`|owner, analysis_run_id, persona/model/prompt 버전, report_status, 섹션 계획·총수|`(analysis_run_id,user_id)` 복합 FK, 사용자 자신만 SELECT, 완료 상태 서버 트랜잭션 관리|
+|`reading_messages`|conversation_id, 순번, assistant/user, report/followup, content, evidence_ids, request_id|세션 소유자 복합 FK, 검증된 완료 메시지만 저장, 중복 방지|
+
+`report.completed`는 모든 섹션의 검증·저장·상태 커밋이 끝난 후에만 송신하며 그 전에는 R03 질문 API가 `409 REPORT_NOT_COMPLETE`를 반환한다. OpenAI 스트림 델타는 DB에 검증 완료 데이터처럼 저장하지 않는다.
+
+### 미완료·복구
+
+- 클라이언트가 연결이 끊기면 GET 상태로 저장된 완료 섹션만 복원한다. 미완료 섹션은 서버가 다시 생성한다.
+- `request_id`와 DB 잠금/서버 실행 잠금을 함께 활용해 중복 스트리밍/중복 메시지를 방지한다.
+- 읽기 RLS만으로 서비스 역할의 쓰기 권한이 제한되지는 않으므로 서버에서 본인 소유/권한/세션 상태를 재확인한다.
+- 실제 마이그레이션을 실행하지 않았으며 외래키, RLS, 상태 전이, 삭제 cascade는 테스트 DB에서 검증해야 한다.
