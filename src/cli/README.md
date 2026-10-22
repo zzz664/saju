@@ -9,6 +9,7 @@ npm run --silent saju -- validate < tests/fixtures/cli-input.json
 npm run --silent saju -- calculate < tests/fixtures/cli-input.json
 npm run --silent saju -- normalize-time < tests/fixtures/cli-input.json
 npm run --silent saju -- calculate-policy < tests/fixtures/cli-input.json
+npm run --silent saju -- derive-facts < tests/fixtures/cli-input.json
 ```
 
 PowerShell에서는 실행 정책 변경 없이 다음과 같이 파이프한다.
@@ -18,7 +19,7 @@ Get-Content -Raw -Encoding utf8 tests/fixtures/cli-input.json | npm.cmd run --si
 $LASTEXITCODE
 ```
 
-인자는 `validate`, `calculate`, `normalize-time`, `calculate-policy`, `--help` 중 하나다. 표준입력은 기존 `AnalysisInput` JSON
+인자는 `validate`, `calculate`, `normalize-time`, `calculate-policy`, `derive-facts`, `--help` 중 하나다. 표준입력은 기존 `AnalysisInput` JSON
 문서 한 개이며 인자에 생년월일을 넣지 않는다. `--silent`는 npm의 스크립트 안내만 숨겨
 stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다. stdout은 요청된 개발용
 결과이고, 입력 원문을 그대로 반사하거나 일반 로그에 기록하지 않는다.
@@ -30,6 +31,8 @@ stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다
 | `normalize-time` 성공 | `status: normalized`, 현지 시각·UTC·오프셋 및 `solarTime` 정책 시계/보정량/EoT/버전·미상 정보 | 없음 | 0 |
 | `calculate-policy` known 성공 | `status: calculated`, 실제 UTC/정책 시계 기준의 4기둥 및 버전 | 없음 | 0 |
 | `calculate-policy` 시각 미상 | `status: partial`, 입력 분 구간별 후보와 공통 기둥, 확정 hour는 null | 없음 | 2 |
+| `derive-facts` complete | `calculation` 및 `facts`(십성/지장간/분리 오행 개수/근거 버전) | 없음 | 0 |
+| `derive-facts` partial/unavailable | 확정 범위의 facts 또는 null, 미상 한계와 기존 calculation | 없음 | 2 |
 | 시간 정규화 거절/미상·범위 미지원 | `status: rejected`(fold/gap, resolved 없음) 또는 `unavailable`(reasons) | 없음 | 2 |
 | 계산 미지원/실제 달력 입력 거절 | `status: unavailable`, reasons/미상 정보. snapshot 없음 | 없음 | 2 |
 | 잘못된 인자/JSON/입력/UTF-8/크기 초과 | 없음 | 고정 코드/메시지의 error JSON | 2 |
@@ -61,6 +64,10 @@ gap 이동 시각과 원래 양력 벽시계를 함께 반환한다. 해당 날�
 위도/경도/순역 기준 미상 자체는 보정 없는 4기둥 호출을 차단하지 않고 metadata로 남긴다.
 `calculated`는 이 제한된 스냅샷 호출 성공이며 F01~F11의 complete나 최종 NatalCore가 아니다.
 
+WBS-10의 [derive-facts](../domain/natal-facts/README.md)는 정책 계산 결과를 보존하고 확정 기둥만
+파생 계산한다. 시각 미상 후보를 합치지 않으며 일간 미상이면 십성은 null이다.
+표면 오행 개수와 지장간 출현 개수는 별도로 반환한다. 강약/용신 판단은 포함하지 않는다.
+
 입력은 최대 64 KiB(65,536바이트), 유효한 UTF-8만 받는다. UTF-8 BOM과 청크 분할을
 처리하며 크기 초과·손상된 바이트·스트림 오류에서 부분 결과를 반환하지 않는다.
 원본 JSON, Zod/공급자 예외 전문, stack/cause를 stderr로 노출하지 않는다.
@@ -70,6 +77,7 @@ gap 이동 시각과 원래 양력 벽시계를 함께 반환한다. 해당 날�
 - `domain/calendar`: 기존 WBS-01 DTO를 옮긴 공용 Zod 계약과 SDK 타입 없는 CalendarAdapter 포트.
 - `infrastructure/manseryeok`: 고정 공급자 구현. 기존 WBS-01 export는 호환 별칭으로 유지.
 - `application/saju`: AnalysisInput 검증, 현재 지원 범위 검사, 포트 요청/응답 검증. I/O 없음.
+- `domain/natal-facts`, `application/natal-facts`: 검증된 SDK 기호와 확정 기둥의 순수 기초 계산/연결.
 - `cli/run`: 인자·JSON·종료 코드 처리. `cli/input`/`main`만 실제 Node 표준입출력 담당.
 
 `npm test -- tests/calendar-service.test.ts tests/cli.test.ts`는 포트 단위 검증과 실제 npm CLI

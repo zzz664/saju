@@ -1,5 +1,39 @@
 # 작업 기록
 
+## 2026-10-22 — WBS-10: 십성·지장간·오행 기초 계산
+
+### 선행 확인과 구현 전 완료 조건
+
+- PR #10 MERGED(2026-10-22 23:06:15 KST), merge commit `b8fbf5ecc09198822844d1031e263d15ccdc9962`와 원격 develop 일치/ancestor 확인. 선행 WBS-05 PR #6(`c252a2630cf2b256e345a90f4740597ff3fc64e6`)/WBS-06 PR #7도 MERGED 및 ancestor 확인. 실행순서 12.
+- develop checkout/ff-only pull과 `git branch -d feature/WBS-09-hour-day-boundary` 성공. 최신 develop에서 `feature/WBS-10-ten-gods-hidden-stems-elements` 한 개 생성. AGENTS/WBS/02/05/06/08 및 관련 10 상세설계, 기존 계산 계약과 설치된 manseryeok 2.0.0의 공개 오행/음양/십신 API를 읽었다.
+- 완료 조건: 공급자 타입 없는 검증된 기호 카탈로그를 통해 SDK 공개 음양·오행·십신 함수를 재사용하고 순수 도메인에서 기둥별 천간/지지 본기/전체 지장간의 기초 사실을 조합한다. 지장간은 연해자평의 지지장둔가 집합(子癸/卯乙/酉辛/亥壬甲, 총 28개)을 명시적으로 채택한다. 본기 우선 표시이며 나머지 순서는 세력/월령 가중치가 아니다.
+- 드러난 천간·지지의 오행 개수와 지장간 출현 개수는 별도 단위 합계로 반환한다. 강약/용신/길흉/월령 가중치나 WBS-11 판단 룰·확장 M01을 구현하지 않는다. 각 계산 규칙·출처·공급자 버전을 기록한다.
+- 미상 기둥은 null을 유지하며 알려진 기둥만 계산한다. 일간 미상이면 상대 십성은 null, 오행/지장간은 알려진 범위만 제공한다. 일간 자신은 '일간'으로 구분한다. WBS-09의 confirmedPillars만 파생 계산에 사용하고 후보 시주를 확정값으로 합치지 않는다. derive-facts 개발 CLI로 AnalysisInput 연결을 검증한다.
+- 정상/경계 테스트: 천간 10개×10개의 십성 대응과 음양/오행, 12지지/28지장간, 본기·지장간의 상대 십성, 반복 기둥/0개 원소/합계·분리 집계, day/hour/null 및 전체 미상, 원본 불변성·결정성·정책 계산 연결.
+- 오류 테스트: 잘못된 간지/필수 nullable 슬롯 누락·추가 필드, 손상/누락/중복 카탈로그·고정 버전 불일치, SDK 오류 비식별화, 잘못된 출력 합계/미상 전파. 이번 관련 테스트와 영향받는 CLI, 타입·린트만 실행한다. 사용자 AGENTS/작업지시 문서/next-env.d.ts 수정은 보존/커밋 제외하고 develop PR 한 건 생성 후 중지한다.
+
+### 구현과 검증 결과
+
+- `SymbolCatalogAdapter`와 고정 SDK 구현이 공개 음양/오행 함수 및 getTenGod를 사용해 10천간·12지지·100십신 대응을 제공한다. 개수·유일성·고정 버전과 반환값을 검증하며 도메인으로 SDK 타입을 전달하지 않는다. 원국 간지나 생극 알고리즘을 복제하지 않았다.
+- 순수 `deriveNatalFacts`는 유효한 60갑자/null 기둥을 받고 천간·지지 본기·28지장간의 오행/음양/일간 기준 십성을 조합한다. 일간 자신은 '일간', 일간 미상이면 상대 십성은 null이다. 표면 8개 기호와 장간 출현은 각각 단위 개수로 세며 반복을 유지하고 합치거나 세력 점수로 바꾸지 않는다.
+- 출력은 원래 확정 기둥과 각 위치의 facts, 확인/미상 기호 수, 완전/부분/불가와 한계, SDK 및 4개 계산 규칙/관법/출처 버전을 포함한다. strict/readonly DTO가 본기·장간 집합, 합계·원래 기둥 대응·미상 전파도 검사한다.
+- `calculateNatalFacts`는 WBS-09 계산을 한 번 실행하고 확정된 snapshot/confirmedPillars만 파생한다. 후보 시주·불확정 일주를 합치지 않고 카탈로그도 한 번만 읽는다. 거절/미지원에는 facts null 및 카탈로그 호출 0회다. 실제 `derive-facts` CLI가 known/unknown에 대해 단일 JSON과 종료 0/2를 반환하고 오류는 종료 1의 비식별 메시지다.
+- 독립 fixture는 [연해자평 전사본](https://zh.wikisource.org/zh-hant/淵海子平大全)의 갑·을 일간 예시와 지지장둔가를 확인한 뒤 나머지 십성 표를 생극/음양 관례로 별도 산출했다. SDK 출력에서 기대값을 생성하지 않았다. 전사본의 출처 미확인/미완성 고지를 기록했고 비평 정본/과학 검증으로 표시하지 않는다. 장둔가 집합과 월령별 사령 일수를 혼합하지 않았다.
+- 테스트 선작성 `npm.cmd test -- tests/natal-facts.test.ts`: 구현 모듈 부재로 종료 1. 구현 후 123건과 타입 검사가 통과했다. 서비스 선작성도 모듈 부재로 종료 1, SDK 오류 테스트 2건은 통과했다. 서비스/CLI 연결 후 신규 132건 및 타입·린트가 통과했다. 이후 불가능한 간지 짝 거절과 10천간/12지지 전체 음양·오행 표 회귀를 보강했다.
+- 최종 `npm.cmd test -- tests/natal-facts.test.ts tests/natal-facts-errors.test.ts tests/natal-facts-service.test.ts tests/cli.test.ts tests/policy-cli.test.ts`: 종료 0, 관련 5파일/160건(신규 134건). 실제 npm CLI, 기존 입력/출력·정책 CLI 회귀 포함. 최종 `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`: 각각 종료 0. skip/실패 무시 옵션은 사용하지 않았다.
+- 최신 AGENTS에 따라 관련 검사만 실행했다. 의존성/잠금 파일·Next 라우트/설정 변경이 없어 설치·빌드·전체 릴리스 검사는 반복하지 않았다. 타입 검사는 기존 생성 타입으로 수행해 사용자 next-env.d.ts와 실행 중인 개발 서버를 보존했다.
+
+### 변경 파일과 제약
+
+- `src/domain/natal-facts/index.ts`, `README.md`: 기호 카탈로그·확정 기둥/파생 facts 계약, 순수 조합/분리 집계/미상·버전 검증, 채택 관법/근거/사용법.
+- `src/infrastructure/manseryeok/symbol-catalog.ts`, `index.ts`, `README.md`: 고정 공개 SDK 기호 조회 구현/export·오류 정규화.
+- `src/application/natal-facts/index.ts`: 기존 정책 계산의 확정 기둥만 파생하고 원래 계산/미상/거절 상태 보존.
+- `src/cli/run.ts`, `main.ts`, `README.md`: derive-facts 명령·의존성 조립·종료 코드·사용법.
+- `tests/natal-facts.test.ts`, `natal-facts-errors.test.ts`, `natal-facts-service.test.ts`, `fixtures/natal-facts-golden.json`: 독립 100십성/12지장간 표·음양오행/미상/합계·오류·실제 CLI.
+- 루트 `README.md`, `docs/worklog.md`: 구현 위치·검증 결과/범위 기록.
+- 이 complete는 4기둥의 기초 facts가 알려졌다는 뜻이다. 오행 0회는 알려진 자료에서의 출현 0회이며 미상 기둥의 부재를 보증하지 않는다. 강약/용신·성격·길흉 해석, WBS-11 고전 출처 카탈로그/판단 룰과 확장 M01/F01~F11은 구현하지 않았다.
+- AGENTS/작업지시 문서/next-env.d.ts의 SHA-256이 시작과 같음을 확인했다. 이 사용자 변경은 보존/커밋 제외한다. WBS.csv 상태·기존 역법 계산·의존성·UI/API/DB/LLM/OAuth/PG/키/CI·이후 WBS 변경은 없다. WBS-10 관련 15개 파일만 명시적으로 스테이징해 develop PR 한 건 생성 후 중지한다.
+
 ## 2026-10-22 — WBS-09: 자시·시주와 미상 시각 후보
 
 ### 선행 확인과 구현 전 완료 조건

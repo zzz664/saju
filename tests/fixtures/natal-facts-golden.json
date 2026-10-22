@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-22",
+  "source": "https://zh.wikisource.org/zh-hant/淵海子平大全",
+  "scope": "Primary text transcription: 基礎 gives the gap/eul ten-god examples; 又地支藏遁歌 gives the twelve hidden-stem sets. Other ten-god rows are independently derived by the stated five-element generation/control and polarity convention, not generated from manseryeok. Wikisource flags this transcription's source as unverified/incomplete; it is a declared rule reference, not a critical edition or scientific validation. Main-stem-first display order is adopted separately and is not a strength weighting. Historical fatalistic interpretations are not used.",
+  "stems": ["갑", "을", "병", "정", "무", "기", "경", "신", "임", "계"],
+  "tenGodRows": [
+    ["비견", "겁재", "식신", "상관", "편재", "정재", "편관", "정관", "편인", "정인"],
+    ["겁재", "비견", "상관", "식신", "정재", "편재", "정관", "편관", "정인", "편인"],
+    ["편인", "정인", "비견", "겁재", "식신", "상관", "편재", "정재", "편관", "정관"],
+    ["정인", "편인", "겁재", "비견", "상관", "식신", "정재", "편재", "정관", "편관"],
+    ["편관", "정관", "편인", "정인", "비견", "겁재", "식신", "상관", "편재", "정재"],
+    ["정관", "편관", "정인", "편인", "겁재", "비견", "상관", "식신", "정재", "편재"],
+    ["편재", "정재", "편관", "정관", "편인", "정인", "비견", "겁재", "식신", "상관"],
+    ["정재", "편재", "정관", "편관", "정인", "편인", "겁재", "비견", "상관", "식신"],
+    ["식신", "상관", "편재", "정재", "편관", "정관", "편인", "정인", "비견", "겁재"],
+    ["상관", "식신", "정재", "편재", "정관", "편관", "정인", "편인", "겁재", "비견"]
+  ],
+  "hiddenStems": [
+    { "branch": "자", "stems": ["계"] }, { "branch": "축", "stems": ["기", "계", "신"] },
+    { "branch": "인", "stems": ["갑", "병", "무"] }, { "branch": "묘", "stems": ["을"] },
+    { "branch": "진", "stems": ["무", "을", "계"] }, { "branch": "사", "stems": ["병", "무", "경"] },
+    { "branch": "오", "stems": ["정", "기"] }, { "branch": "미", "stems": ["기", "을", "정"] },
+    { "branch": "신", "stems": ["경", "임", "무"] }, { "branch": "유", "stems": ["신"] },
+    { "branch": "술", "stems": ["무", "신", "정"] }, { "branch": "해", "stems": ["임", "갑"] }
+  ]
+}

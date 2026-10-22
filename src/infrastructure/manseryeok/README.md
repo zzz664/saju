@@ -225,3 +225,15 @@ SDK private 모듈이나 별도 간지 엔진은 사용하지 않는다.
 IANA/DST·태양시와 이 포트를 연결한다. 시각 미상은 전수 분 후보로 표시하며 확정 시주를 만들지 않는다.
 HKO 시진/일간별 시간 표와 기존 KASI 일진 앵커를 독립 fixture로 사용하고,
 자시 관법·분 해상도·지원 범위·전체 역사 정확도의 한계는 정책 문서에 명시한다.
+
+## WBS-10 음양·오행·십신 기호 카탈로그
+
+`manseryeokSymbolCatalogAdapter.load()`는 공개 getHeavenlyStemElement/YinYang,
+getEarthlyBranchElement/YinYang, getTenGod만 호출한다. 10천간·12지지와 모든 100십성 조합,
+실제 패키지 이름/버전 및 규칙 버전을 strict/readonly DTO로 제공한다. 누락/중복/손상 값과
+지원하지 않는 버전을 차단하고 예외는 고정 NatalFactsError로 정규화한다.
+날짜/시각/개인정보나 외부 API가 필요하지 않으며 사주 기둥을 다시 계산하지 않는다.
+
+SDK는 지지 십신을 본기로 조회하고 전체 지장간 집합은 제공하지 않는다.
+[별도 순수 기초 계산](../../domain/natal-facts/README.md)이 채택한 28지장간 집합을 사용하고
+각 장간의 상대 십신과 오행은 이 카탈로그를 재사용한다. 원국 강약 판단은 하지 않는다.
