@@ -15,6 +15,8 @@ WBS-05의 절기·연월주 포트는 24절기 UTC 시각과 입춘/12절 기준
 WBS-06의 일주 전용 포트는 고정 UTC+9·자정 정책을 명시하며 공식 월력요항 일진과 독립 대조한다.
 WBS-07의 [IANA 시간대 정규화](src/domain/timezone/README.md)는 역사 오프셋과 fold/gap을 해석한다.
 `npm run --silent saju -- normalize-time`으로 실행하며 전체 사주 계산 연결과 구분한다.
+WBS-08의 [태양시 정책](src/domain/solar-time/README.md)은 같은 명령에서 명시적 경도와 EoT를
+적용하고 보정량·정책 시계를 반환한다. 시주·자시 연결은 WBS-09 범위다.
 
 - Node.js 24.x, npm 11.x (초기 검증: Node 24.12.0 / npm 11.6.2).
 - Next.js App Router / TypeScript / Vitest. 직접 의존성과 잠금 파일을 함께 고정한다.

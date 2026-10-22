@@ -1,4 +1,4 @@
-import { manseryeokCalendarAdapter, manseryeokCalendarConversionAdapter } from "../infrastructure/manseryeok/index";
+import { manseryeokCalendarAdapter, manseryeokCalendarConversionAdapter, manseryeokEquationOfTimeAdapter } from "../infrastructure/manseryeok/index";
 import { temporalTimeZoneAdapter } from "../infrastructure/timezone/index";
 import { CliInputError, readUtf8Input } from "./input";
 import { cliError, runCli, type CliResult } from "./run";
@@ -17,7 +17,7 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const needsInput = args.length === 1 && ["validate", "calculate", "normalize-time"].includes(args[0]);
   const text = needsInput ? await readUtf8Input(process.stdin) : "";
-  writeResult(runCli(args, text, manseryeokCalendarAdapter, { timeZone: temporalTimeZoneAdapter, calendar: manseryeokCalendarConversionAdapter }));
+  writeResult(runCli(args, text, manseryeokCalendarAdapter, { timeZone: temporalTimeZoneAdapter, calendar: manseryeokCalendarConversionAdapter, equationOfTime: manseryeokEquationOfTimeAdapter }));
 }
 
 main().catch((error: unknown) => {

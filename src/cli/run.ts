@@ -1,18 +1,18 @@
 import { ZodError } from "zod";
 
 import { calculateSajuSnapshot } from "../application/saju/index";
-import { normalizeBirthTime, type TimeNormalizationDependencies } from "../application/time-normalization/index";
+import { prepareBirthTime, type SolarTimeDependencies } from "../application/solar-time/index";
 import type { CalendarAdapter } from "../domain/calendar/index";
 import { AnalysisInputSchema, getInputInformation } from "../domain/input/index";
 
 export type CliResult = { exitCode: 0 | 1 | 2; stdout: string; stderr: string };
-export const HELP = "Usage: npm run --silent saju -- <validate|calculate|normalize-time> < input.json\nInput: one UTF-8 AnalysisInput JSON document, at most 64 KiB.\nnormalize-time resolves an IANA civil clock to UTC; solar/day policies are separate stages.\ncalculate currently requires Etc/GMT-9 and standard/midnight/reject.\n";
+export const HELP = "Usage: npm run --silent saju -- <validate|calculate|normalize-time> < input.json\nInput: one UTF-8 AnalysisInput JSON document, at most 64 KiB.\nnormalize-time resolves IANA civil time and applies the requested solar policy; day policy is separate.\ncalculate currently requires Etc/GMT-9 and standard/midnight/reject.\n";
 
 export function cliError(exitCode: 1 | 2, code: string, message: string): CliResult {
   return { exitCode, stdout: "", stderr: JSON.stringify({ error: { code, message } }) + "\n" };
 }
 
-export function runCli(args: readonly string[], text: string, adapter: CalendarAdapter, timeDependencies?: TimeNormalizationDependencies): CliResult {
+export function runCli(args: readonly string[], text: string, adapter: CalendarAdapter, timeDependencies?: SolarTimeDependencies): CliResult {
   if (args.length === 1 && args[0] === "--help") return { exitCode: 0, stdout: HELP, stderr: "" };
   if (args.length !== 1 || !["validate", "calculate", "normalize-time"].includes(args[0])) {
     return cliError(2, "USAGE", "Use validate, calculate, normalize-time or --help; provide JSON through standard input.");
@@ -29,7 +29,7 @@ export function runCli(args: readonly string[], text: string, adapter: CalendarA
     }
     if (args[0] === "normalize-time") {
       if (!timeDependencies) return cliError(1, "TIME_NORMALIZATION_FAILED", "Local time normalization is unavailable.");
-      const result = normalizeBirthTime(raw, timeDependencies);
+      const result = prepareBirthTime(raw, timeDependencies);
       return { exitCode: result.status === "normalized" ? 0 : 2, stdout: JSON.stringify(result) + "\n", stderr: "" };
     }
     const result = calculateSajuSnapshot(raw, adapter);
