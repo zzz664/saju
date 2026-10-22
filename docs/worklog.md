@@ -1,5 +1,41 @@
 # 작업 기록
 
+## 2026-10-22 — WBS-04: 양력·음력·윤달 변환
+
+### 선행 병합과 구현 전 완료 조건
+
+- 직전 PR #4는 GitHub `MERGED`(2026-10-22 18:56:05 KST), base develop이다. merge commit `870a39f4442b858de596af3ac36cf90fd386ad52`와 선행 WBS-01 PR #3의 merge commit이 origin/develop ancestor임을 확인했다. 열린 develop PR 없음.
+- `git checkout develop`, `git pull --ff-only origin develop` 후 `git branch -d feature/WBS-03-cli-adapter-interface` 성공. 최신 develop에서 `feature/WBS-04-calendar-conversion` 한 개를 생성했다. WBS 실행순서 06, 선행 WBS-01/03 충족.
+- AGENTS, WBS, 02/05/06/08 및 기존 입력·CLI·어댑터 계약과 설치된 manseryeok 2.0.0의 공개 변환 타입/구현을 확인했다. 사용자 지시 문서 및 next-env.d.ts의 기존 로컬 변경은 보존하고 커밋에서 제외한다.
+- 완료 조건: 시각/시간대/성별 없이 날짜만 받는 엄격한 변환 계약과 공급자 독립 포트, 지정 패키지의 공개 solarToLunar/lunarToSolar API 연결, 평달·윤달을 명시한 양/음력 날짜 쌍과 출처 버전 반환. 기존 사주 계산 범위와 별도로 문서화한다.
+- 정상: KASI 2023 달력자료의 평달·윤2월 시작/끝·다음 달·해 넘김을 독립 고정값으로 양방향 대조하고 왕복 보존, readonly/JSON 직렬화를 검증한다. 웹 달력자료의 비공식 고지를 함께 기록한다.
+- 오류: 누락/잘못된 타입/추가 필드, 존재하지 않는 양력·음력 날짜, 없는 윤달, 윤달 플래그 누락·양력 true, 공급자 거절의 정규화 및 원문/stack/cause 미노출을 검증한다.
+- 경계: 변환 API의 음력 1391~2100 및 실제 대응 양력 시작/끝과 그 직전/직후, 그레고리 윤년/세기년, 29/30일·평달/윤달 전환을 확인한다. 지원 경계 회귀와 독립 골든을 구별한다. 기존 사주 API의 1800~2300 범위를 확대하지 않는다.
+- npm test 및 변환 전용 검사, 타입/린트/빌드를 실행한다. 개발 서버 산출물 충돌을 피하기 위한 임시 동일 소스 검증은 위치와 결과를 구분해 기록한다. 다음 WBS와 CI/외부 API/키 변경은 하지 않는다.
+
+### 구현과 검증 결과
+
+- `domain/calendar/conversion.ts`에 날짜 전용 요청/양력·음력 쌍/출처 버전 Zod 스키마 및 공급자 독립 CalendarConversionAdapter를 추가했다. 입력은 엄격하고 윤달 플래그 필수, 출력은 중첩 readonly다.
+- 인프라 `conversion.ts`가 설치된 공개 solarToLunar/lunarToSolar만 호출한다. 없는 윤달·실제 음력 월 길이·정확한 변환 범위는 고정 공급자가 검사한다. 입력 거절/예상 밖 공급자 오류/손상된 결과를 공통 CalendarAdapterError의 고정 문구로 반환하며 원문 cause나 Zod issues를 보관하지 않는다.
+- 양력 1391-02-13 ~ 2101-01-28, 음력 평달 1391-01-01 ~ 2100-12-29 양끝을 실제 설치 패키지로 확인했다. 지원 구간 끝값은 공급자 회귀이며 독립 검증으로 표시하지 않는다. 사주/CLI calculate 범위는 바꾸지 않았다.
+- [KASI 2023](https://astro.kasi.re.kr/kor/life/post/calendarData?search_year=2023), [2024 달력자료](https://astro.kasi.re.kr/kor/life/post/calendarData?search_year=2024)의 음력 월초와 대/소에서 독립 날짜 10건을 고정했다. 2023 평2월 30일 → 윤2월 1일 → 윤2월 29일 → 3월 1일, 해 넘김 및 2024 그레고리 윤일을 양방향 대조한다. 월말/윤일은 표의 시작일과 일수에서 산출한 값임을 fixture에 명시했다.
+- 구현 전 `npm.cmd test -- tests/calendar-conversion.test.ts`: 예상한 종료 1, 아직 없는 변환 export로 63건 실패. 구현 후 같은 명령 종료 0, 실제 패키지 63건 통과. 실패를 무시하거나 skip하지 않았다.
+- 원래 작업 폴더 `npm.cmd test`: 종료 0, 7개 파일/276건 통과. 추가 70건은 실제 공급자 테스트 63건과 명시적 SDK 오류 Mock 7건이며 기존 입력/사주/실제 npm CLI 회귀를 포함한다.
+- 원래 폴더 `npm.cmd run lint`: 종료 0, 경고 0개. `node node_modules/typescript/bin/tsc --noEmit`: 종료 0. Next typegen을 포함한 검사는 개발 서버 산출물과 충돌하지 않도록 아래 임시 사본에서 별도 수행한다.
+- 동일 소스 임시 사본 `%TEMP%/saju-wbs04-validation-2db48a91740645099ea4acf7df40b947`을 만들고 src/tests 및 설정/잠금 파일의 SHA-256 일치를 확인했다. 원래 폴더 node_modules와 개발 서버는 건드리지 않았다.
+- 임시 사본 `npm.cmd ci --no-fund`: 종료 0, 376개 패키지 재현 설치. 이후 `npm.cmd test`: 종료 0, 7개 파일/276건 재확인. `npm.cmd run typecheck`(Next typegen 포함), `npm.cmd run lint`, `npm.cmd run build`: 각각 종료 0. 빌드는 NEXT_TELEMETRY_DISABLED=1로 실행했으며 기존 루트/404를 생성했다.
+- 임시 사본 `npm.cmd audit --omit=dev --json`: 종료 0, 런타임 취약점 0건. 설치에서 표시된 기존 개발 의존성 high 5건과 ESLint 9 지원 종료 경고는 미해결 제약이다. 기존 worklog의 eslint-config-next → fast-glob → micromatch → braces 경로 관련 사항이며 강제 수정/의존성 변경 또는 전체 감사 통과로 표시하지 않는다.
+- 사용자 지시 문서와 next-env.d.ts의 SHA-256이 시작 시점과 동일함을 확인했다. 기능 관련 10개 파일만 명시적으로 스테이징하며 `git diff --cached --check` 및 범위 검토 후 develop 대상 PR 한 건을 생성하고 중지한다.
+
+### 변경 파일과 제약
+
+- `src/domain/calendar/conversion.ts`, `index.ts`: 날짜 전용 계약/스키마/타입/포트와 공개 export.
+- `src/infrastructure/manseryeok/conversion.ts`, `index.ts`: 실제 고정 공급자의 양방향 변환, 오류·응답 경계와 export.
+- `tests/calendar-conversion.test.ts`, `calendar-conversion-errors.test.ts`, `fixtures/calendar-conversion-golden.json`: 독립 골든·왕복·윤달·지원 경계·오류 검증.
+- `README.md`, `src/infrastructure/manseryeok/README.md`, `docs/worklog.md`: 사용 예제, 지원 범위, 근거 및 검증 기록.
+- KASI 웹 달력자료는 공식 발표 자료가 아니라는 자체 고지를 포함한다. 이번 독립 골든 범위는 2023~2024년이다. 패키지 테이블 주석의 2050~2100년은 천문 계산 기반이며 해당 구간 및 전체 역사적 날짜의 독립 정확도를 보증하지 않는다. 역사 시간대/절입/명리 판단과 30건 종합 골든은 후속 WBS다.
+- 사용자 지시 문서와 next-env.d.ts의 기존 로컬 편집은 보존/커밋 제외한다. 의존성/잠금 파일, 기존 CLI/사주 계산, UI/API/DB/LLM/OAuth/PG/시크릿/CI 변경은 없다.
+
 ## 2026-10-22 — WBS-03: CLI와 어댑터 인터페이스
 
 ### 선행 병합과 구현 전 완료 조건

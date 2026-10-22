@@ -1,0 +1,18 @@
+{
+  "source": "https://astro.kasi.re.kr/kor/life/post/calendarData?search_year=2023",
+  "additionalSource": "https://astro.kasi.re.kr/kor/life/post/calendarData?search_year=2024",
+  "checkedAt": "2026-10-22",
+  "scope": "Independent KASI lunar month starts and month lengths (large=30, small=29). End dates are derived by adding length minus one Gregorian days to the listed start. These web calendar data explicitly are not the officially published calendar notice. Range endpoints are separate provider regressions, not independent goldens.",
+  "cases": [
+    { "id": "new-year", "solar": { "year": 2023, "month": 1, "day": 22 }, "lunar": { "year": 2023, "month": 1, "day": 1, "isLeapMonth": false } },
+    { "id": "regular-second-start", "solar": { "year": 2023, "month": 2, "day": 20 }, "lunar": { "year": 2023, "month": 2, "day": 1, "isLeapMonth": false } },
+    { "id": "regular-second-end", "solar": { "year": 2023, "month": 3, "day": 21 }, "lunar": { "year": 2023, "month": 2, "day": 30, "isLeapMonth": false } },
+    { "id": "leap-second-start", "solar": { "year": 2023, "month": 3, "day": 22 }, "lunar": { "year": 2023, "month": 2, "day": 1, "isLeapMonth": true } },
+    { "id": "leap-second-end", "solar": { "year": 2023, "month": 4, "day": 19 }, "lunar": { "year": 2023, "month": 2, "day": 29, "isLeapMonth": true } },
+    { "id": "after-leap-month", "solar": { "year": 2023, "month": 4, "day": 20 }, "lunar": { "year": 2023, "month": 3, "day": 1, "isLeapMonth": false } },
+    { "id": "lunar-year-crosses-solar-year", "solar": { "year": 2024, "month": 1, "day": 11 }, "lunar": { "year": 2023, "month": 12, "day": 1, "isLeapMonth": false } },
+    { "id": "lunar-year-end", "solar": { "year": 2024, "month": 2, "day": 9 }, "lunar": { "year": 2023, "month": 12, "day": 30, "isLeapMonth": false } },
+    { "id": "next-new-year", "solar": { "year": 2024, "month": 2, "day": 10 }, "lunar": { "year": 2024, "month": 1, "day": 1, "isLeapMonth": false } },
+    { "id": "gregorian-leap-day", "solar": { "year": 2024, "month": 2, "day": 29 }, "lunar": { "year": 2024, "month": 1, "day": 20, "isLeapMonth": false } }
+  ]
+}

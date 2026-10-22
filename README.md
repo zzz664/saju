@@ -8,6 +8,8 @@ WBS-03의 CLI·어댑터 포트 사용법과 현재 지원 범위는 [CLI 문서
 Zod 검증과 입력 한계 판정은 Next.js/외부 서비스 없이 실행할 수 있다.
 지정 패키지 `manseryeok@2.0.0`의 저수준 호출 범위와 시간 전제는
 [어댑터 문서](src/infrastructure/manseryeok/README.md)를 참고한다.
+WBS-04의 별도 날짜 변환 포트는 시각 없이 양력·음력·윤달을 변환하고 양쪽 날짜와 출처 버전을 보존한다.
+변환 지원 구간과 사주 계산 지원 구간은 어댑터 문서에 구분해 기록한다.
 
 - Node.js 24.x, npm 11.x (초기 검증: Node 24.12.0 / npm 11.6.2).
 - Next.js App Router / TypeScript / Vitest. 직접 의존성과 잠금 파일을 함께 고정한다.
