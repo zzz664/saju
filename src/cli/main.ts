@@ -1,5 +1,6 @@
 import { manseryeokCalendarAdapter, manseryeokCalendarConversionAdapter, manseryeokEquationOfTimeAdapter, manseryeokPolicyCalendarAdapter, manseryeokSymbolCatalogAdapter } from "../infrastructure/manseryeok/index";
 import { temporalTimeZoneAdapter } from "../infrastructure/timezone/index";
+import { nodeSha256Adapter } from "../infrastructure/hashing/index";
 import { CliInputError, readUtf8Input } from "./input";
 import { cliError, runCli, type CliResult } from "./run";
 
@@ -15,9 +16,9 @@ process.stderr.on("error", () => { process.exitCode = 1; });
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  const needsInput = args.length === 1 && ["validate", "calculate", "normalize-time", "calculate-policy", "derive-facts", "judge-facts", "arbitrate-facts", "export-json", "manual-prompt"].includes(args[0]);
+  const needsInput = args.length === 1 && ["validate", "calculate", "normalize-time", "calculate-policy", "derive-facts", "judge-facts", "arbitrate-facts", "export-json", "manual-prompt", "hash-json"].includes(args[0]);
   const text = needsInput ? await readUtf8Input(process.stdin) : "";
-  writeResult(runCli(args, text, manseryeokCalendarAdapter, { timeZone: temporalTimeZoneAdapter, calendar: manseryeokCalendarConversionAdapter, equationOfTime: manseryeokEquationOfTimeAdapter, pillars: manseryeokPolicyCalendarAdapter, symbols: manseryeokSymbolCatalogAdapter }));
+  writeResult(runCli(args, text, manseryeokCalendarAdapter, { timeZone: temporalTimeZoneAdapter, calendar: manseryeokCalendarConversionAdapter, equationOfTime: manseryeokEquationOfTimeAdapter, pillars: manseryeokPolicyCalendarAdapter, symbols: manseryeokSymbolCatalogAdapter, hash: nodeSha256Adapter }));
 }
 
 main().catch((error: unknown) => {
