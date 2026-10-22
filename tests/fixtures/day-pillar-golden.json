@@ -1,0 +1,34 @@
+{
+  "source": {
+    "publisher": "한국천문연구원 / 과학기술정보통신부",
+    "title": "2024년 월력요항 붙임, 4쪽 음력 날짜 표의 양력 날짜·일진",
+    "notice": "https://www.kasi.re.kr/kor/publication/post/newsMaterial/29633?cPage=7",
+    "attachment": "https://www.kasi.re.kr/file/1687408104839_1.hwp",
+    "preview": "https://www.kasi.re.kr/file/htmlconverter_preview/1687408104839_1.hwp.files/4.html",
+    "publicationDate": "2023-06-23",
+    "checkedAt": "2026-10-22",
+    "scope": "Twelve rows independently transcribed from the official attachment. Only solar/lunar dates and daily ganji are used, never lunar month labels as solar-term month pillars. Expectations do not come from manseryeok or another calendar implementation. The derived cases below are hand-counted civil days and daily sexagenary progression from official anchors, not additional source quotations. This is not full historical-range or other day-boundary-policy validation."
+  },
+  "quoted": [
+    { "solarDate": "2024-02-10", "lunarDate": "2024-01-01", "isLeapMonth": false, "day": "갑진" },
+    { "solarDate": "2024-03-10", "lunarDate": "2024-02-01", "isLeapMonth": false, "day": "계유" },
+    { "solarDate": "2024-04-09", "lunarDate": "2024-03-01", "isLeapMonth": false, "day": "계묘" },
+    { "solarDate": "2024-05-08", "lunarDate": "2024-04-01", "isLeapMonth": false, "day": "임신" },
+    { "solarDate": "2024-06-06", "lunarDate": "2024-05-01", "isLeapMonth": false, "day": "신축" },
+    { "solarDate": "2024-07-06", "lunarDate": "2024-06-01", "isLeapMonth": false, "day": "신미" },
+    { "solarDate": "2024-08-04", "lunarDate": "2024-07-01", "isLeapMonth": false, "day": "경자" },
+    { "solarDate": "2024-09-03", "lunarDate": "2024-08-01", "isLeapMonth": false, "day": "경오" },
+    { "solarDate": "2024-10-03", "lunarDate": "2024-09-01", "isLeapMonth": false, "day": "경자" },
+    { "solarDate": "2024-11-01", "lunarDate": "2024-10-01", "isLeapMonth": false, "day": "기사" },
+    { "solarDate": "2024-12-01", "lunarDate": "2024-11-01", "isLeapMonth": false, "day": "기해" },
+    { "solarDate": "2024-12-31", "lunarDate": "2024-12-01", "isLeapMonth": false, "day": "기사" }
+  ],
+  "derived": [
+    { "solarDate": "2024-02-09", "day": "계묘", "anchor": "2024-02-10 갑진", "dayOffset": -1 },
+    { "solarDate": "2024-02-28", "day": "임술", "anchor": "2024-02-10 갑진", "dayOffset": 18 },
+    { "solarDate": "2024-02-29", "day": "계해", "anchor": "2024-02-10 갑진", "dayOffset": 19 },
+    { "solarDate": "2024-03-01", "day": "갑자", "anchor": "2024-02-10 갑진", "dayOffset": 20 },
+    { "solarDate": "2024-12-30", "day": "무진", "anchor": "2024-12-31 기사", "dayOffset": -1 },
+    { "solarDate": "2025-01-01", "day": "경오", "anchor": "2024-12-31 기사", "dayOffset": 1 }
+  ]
+}
