@@ -1,5 +1,36 @@
 # 작업 기록
 
+## 2026-10-23 — WBS-13: JSON·수동 ChatGPT 프롬프트
+
+### 선행 확인과 구현 전 완료 조건
+
+- PR #13(WBS-12)이 develop에 MERGED(2026-10-23 00:15:13 KST)임을 GitHub에서 확인했다. merge commit `84b01940a7e84734b31539f85fd1c51d37a87192`와 origin/develop 원격 hash 일치, fetch 후 ancestor 확인. WBS.csv 실행순서 15/선행 WBS-12를 충족하며 CSV의 TODO만으로 완료를 판단하지 않았다.
+- develop checkout/ff-only pull과 `git branch -d feature/WBS-12-conflict-uncertainty-arbitration` 안전 삭제 성공. 최신 develop에서 `feature/WBS-13-json-manual-prompt` 하나를 생성했다. AGENTS/WBS/02/05/06/08, 관련 10/12 문서 및 기존 중재·계산/입출력 계약을 읽었다.
+- 완료 조건: 기존 계산/확정 facts·판단/출처·중재/미상 trace를 보존하는 명시적 JSON 계약과 직렬화/가져오기, 구조용 JSON Schema, 확정·채택 finding만 설명 대상으로 전달하는 수동 ChatGPT 복사 프롬프트. 원본 생년월일/출생시각·좌표·시각 후보와 임의 사용자 지시문은 내보내지 않는다. partial/unavailable을 유지하며 P06/실 API와 연결하지 않는다.
+- 정상 테스트 선작성: 한국어 facts/판단/근거·정책/버전 JSON 왕복과 보존, 명시적 개인정보 제외, 확정 finding 선별, 단일 계산, 실제 CLI. 오류: 미지원 버전/추가 필드/손상·잘림·초과 JSON, 잘못된 facts·판단·상태·중재 연결과 부분 finding 승격. 경계: BOM/CRLF, midnight/zi-start 미상, DST fold·경도 미상, 설명 가능한 확정 판단 부재, provider 없는 schema 모드와 종료 0/2/1.
+
+### 구현과 검증 결과
+
+- `CoreExportSchema`(1.0.0/base-structural-observations)와 calculateCoreExport를 추가했다. 기존 중재 계산을 한 번 수행한 뒤 원래 facts/evaluation/resolution을 옮기고 계산 상태·정책·누락/실패 사유·실제 SDK/정규화 버전을 보존한다. 생년월일·시각·지역 ID·좌표·성별 기준값·UTC/정책 시계·분 단위 후보는 명시적 필드 선별로 제외했다.
+- 결과의 확정 facts에 기존 판단 규칙을 다시 적용해 evaluation과 대조하고 resolution/미상 trace를 재연결한다. 달력이나 facts를 재계산/수정하지 않는다. strict/readonly 문서를 검증한 뒤 들여쓰기 2칸+마지막 LF로 직렬화한다. 가져오기는 1 MiB 한도, BOM/CRLF/공백을 지원하고 고정 오류로 거절한다.
+- `export-schema`는 Zod에서 draft 2020-12 구조 JSON Schema를 생성하며 stdin/계산 공급자를 요청하지 않는다. 구조 스키마가 사용자 정의 교차 검증 전체를 표현하지 못하므로 실제 가져오기는 CoreExportSchema/parseCoreExport를 사용해야 함을 문서에 명시했다. 문서 일관성 검사는 원본 사실의 서명/출처 인증이나 실제 역법 정확도 검증을 대체하지 않는다.
+- manual-prompt는 고정 한국어 범위/안전/문체 지시와 analysis_data JSON 하나로 구성한다. accepted+confirmed finding만 verifiedFindings에 넣고 부분/억제/보류 문장은 제외한다. 제외 ID·예외/coverage·입력/계산/중재 제한과 원래 출처/규칙/중재 및 별도 promptVersion을 유지한다. 데이터 내부 지시문을 따르지 않고 새로운 계산·판단·미래 사건 단정을 하지 않도록 명시했다.
+- OpenAI Docs 스킬을 적용하고 [공식 prompt engineering 문서](https://developers.openai.com/api/docs/guides/prompt-engineering)의 코드 내 지시 관리·지시/문맥 구분·대표 테스트 지침을 확인했다. 태그 경계를 JSON 유니코드로 이스케이프하지만 주입/근거 이탈 방지를 보증하지 않는다. 수동 복사본은 서버 상위 역할이나 ChatGPT 모델·계정 설정을 제어하지 않으며 실제 전송/응답 품질은 검증하지 않았다. gpt-4o-mini API 선택과 R01/R02/R03 계약을 변경하지 않는다.
+- export-json/manual-prompt/export-schema CLI를 추가했다. 출력은 의도한 개발자용 결과이며 별도 로그나 네트워크/클립보드 I/O가 없다. complete/partial/unavailable 종료 0/2/2, 입력 오류 2·공급자 실패 1을 유지하고 공급자 메시지/원문을 반사하지 않는다. 복사 검증은 실제 CLI stdout과 JSON/문자열 왕복이며 OS 클립보드 조작 검증은 아니다.
+- 선작성 도메인 테스트는 모듈 부재로 실패했다. 구현 후 잘못된 facts의 중첩 의미 검증에서 예외가 빠져나오는 사례를 발견했고 외부에 고정 스키마 실패로 반환하도록 수정해 10건 통과했다. 서비스/CLI 선작성은 명령 미연결 등 4건 실패를 확인한 뒤 연결했다. 이후 관련 45건/타입/린트 통과, DST 거절 분이 포함되어 모든 공통 기둥이 미상인 사례와 내부 trace는 맞지만 목 근거를 화 matched로 조작한 문서의 거절을 보강했다.
+- 최종 `npm.cmd test -- tests/core-export.test.ts tests/core-export-service.test.ts tests/arbitration-service.test.ts tests/cli.test.ts`: 종료 0, 관련 4파일/46건 통과(신규 계약/복사 11건+서비스/CLI 5건). `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`도 종료 0. 실제 npm CLI의 known/unknown과 schema-only, 호스트 TZ=Pacific/Honolulu, 한국어/BOM/CRLF 왕복·개인정보 제외/종료 코드를 확인했다.
+- 이전 WBS에서 격리 환경의 tsx Windows 사용자 조회(uv_os_get_passwd ENOMEM) 오류가 확인되어 실제 CLI를 포함한 최종 검사는 일반 실행 권한으로 수행했다. 테스트/코드 우회·skip·실패 무시 옵션은 없다. AGENTS에 따라 관련 검사만 실행하고 의존성/Next 설정·라우트 변경이 없어 전체 테스트/설치/빌드는 반복하지 않았다. 사용자 생성 타입과 개발 서버를 보존했다.
+
+### 변경 파일과 제약
+
+- `src/domain/core-export/index.ts`, `README.md`: 코어 JSON·가져오기/직렬화·구조 스키마, 확정 서술 데이터와 복사 프롬프트, 사용법/범위.
+- `src/application/core-export/index.ts`: 기존 중재 계산 단일 실행과 명시적 필드 투영/검증.
+- `src/cli/run.ts`, `main.ts`, `README.md`: 내보내기 3개 명령·입출력/종료 코드와 사용법.
+- `tests/core-export.test.ts`, `tests/core-export-service.test.ts`: 스키마·판단/중재 무결성·복사·미상/미지원·실제 CLI·원본 보존/개인정보 제외.
+- 루트 `README.md`, `docs/worklog.md`: 구현 경로·완료 기준·결과/제약. 총 10개 작업 파일만 커밋한다.
+- 원국/파생 분석 자체는 민감할 수 있어 익명화된 자료라고 보장하지 않는다. 수동 모델 응답을 검증된 facts나 저장 결과로 가져오지 않는다. complete는 기초 관찰 내보내기 범위이며 11개 기능·DB 완료/스트리밍·LLM 품질을 뜻하지 않는다.
+- AGENTS.md/작업지시 문서/next-env.d.ts의 기존 사용자 수정은 보존·커밋 제외한다. WBS.csv 상태·기존 판단/중재 정책·고전 카탈로그·역법/파생 계산·의존성·UI/DB/OAuth/PG/OpenAI/키/CI, WBS-14 해시/캐시 및 이후 기능은 변경하지 않는다. develop 대상 PR 한 건 생성 후 중지한다.
+
 ## 2026-10-23 — WBS-12: 충돌·불확실성 중재
 
 ### 선행 확인과 구현 전 완료 조건

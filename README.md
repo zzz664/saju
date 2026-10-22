@@ -25,6 +25,8 @@ WBS-11의 [고전 출처·기초 판단 20개](src/domain/judgment/README.md)는
 각 결과에 출처·입력 근거·버전·예외와 미상 범위를 보존한다.
 WBS-12의 [충돌·불확실성 중재](src/domain/judgment/ARBITRATION.md)는 `arbitrate-facts`로 실행한다.
 원래 판단을 보존하고 명시된 충돌의 채택·억제·보류 및 미상 trace를 반환한다.
+WBS-13의 [JSON·수동 ChatGPT 내보내기](src/domain/core-export/README.md)는
+`export-json`, `manual-prompt`, `export-schema`로 실행한다. 확정·채택 판단만 설명 대상으로 전달한다.
 
 - Node.js 24.x, npm 11.x (초기 검증: Node 24.12.0 / npm 11.6.2).
 - Next.js App Router / TypeScript / Vitest. 직접 의존성과 잠금 파일을 함께 고정한다.
