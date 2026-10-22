@@ -1,7 +1,10 @@
 # 개발 환경
 
-현재 범위는 WBS-18의 npm 기반 프로젝트 초기화다. 제품명은 미정이다.
+WBS-18의 npm 개발 환경과 WBS-02의 출생 입력 스키마·미상 정보 모델을 포함한다. 제품명은 미정이다.
 기능 개발 순서는 `docs/WBS.csv`의 `실행순서`와 실제 `develop` 병합 상태를 따른다.
+
+입력 계약과 범위는 [src/domain/input/README.md](src/domain/input/README.md)를 참고한다.
+Zod 검증과 입력 한계 판정은 Next.js/외부 서비스 없이 실행할 수 있다.
 
 - Node.js 24.x, npm 11.x (초기 검증: Node 24.12.0 / npm 11.6.2).
 - Next.js App Router / TypeScript / Vitest. 직접 의존성과 잠금 파일을 함께 고정한다.
@@ -27,7 +30,7 @@ npm start
 `npm test`는 감시 모드 없이 실행하고 테스트가 없거나 실패하면 오류로 종료한다.
 `npm run typecheck`는 먼저 Next.js 라우트 타입을 생성하므로 새 체크아웃에서도 실행할 수 있다.
 Vitest는 기본 Node 환경에서 실행하며 이후 순수 도메인 코어도 웹 서버 없이 검증한다.
-현재 테스트는 실제 루트 TSX와 한국어 레이아웃의 서버 렌더링을 확인한다.
+테스트는 출생 입력·정책·누락 정보 계약과 실제 루트 TSX/한국어 레이아웃의 서버 렌더링을 확인한다.
 프로덕션 기동 확인은 빌드 후 `npm start`에서 `/`의 200 응답과 없는 경로의 404 응답으로 수행한다.
 
 환경파일·빌드 산출물·의존성 폴더는 Git에서 제외한다. `docs/examples/.env.example`은 보존한다.
