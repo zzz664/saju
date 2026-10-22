@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+export {
+  CalendarConversionRequestSchema,
+  CalendarConversionSnapshotSchema,
+  type CalendarConversionRequest,
+  type CalendarConversionSnapshot,
+  type CalendarConversionAdapter,
+} from "./conversion";
+
 /** Current adapter contract: explicit fixed UTC+09:00, not general civil time. */
 export const CalendarRequestSchema = z.strictObject({
   year: z.number().int().min(1800).max(2300),
