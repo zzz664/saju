@@ -49,7 +49,8 @@ ruleId/ruleVersion/sourceRef, 지장간 관법과 스키마 버전을 기록한�
 오행 생극·음양 관례로 별도 산출했다. SDK 출력에서 기대값을 생성하지 않았다.
 해당 Wikisource 전사본에는 출처 미확인/미완성 고지가 있어 비평 정본으로 취급하지 않는다.
 이는 채택한 기초 규칙의 일관성 검증이며 고전의 숙명적 해석은 도입하지 않는다.
-강약/용신·성격/길흉 판단, 고전 출처 카탈로그·판단 룰, 확장 M01/F01~F11은 후속 범위다.
+고전 출처 카탈로그와 기초 구조 규칙은 [WBS-11 판단 계층](../judgment/README.md)에서 제공한다.
+강약/용신·성격/길흉 판단과 확장 M01/F01~F11은 후속 범위다.
 
 `npm test -- tests/natal-facts.test.ts tests/natal-facts-errors.test.ts tests/natal-facts-service.test.ts`는
 100십성/12지장간·음양오행/미상·합계·오류·실제 CLI를 검증한다.
