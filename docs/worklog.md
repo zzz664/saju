@@ -1,5 +1,38 @@
 # 작업 기록
 
+## 2026-10-22 — WBS-11: 고전 출처 카탈로그와 기초 판단 규칙
+
+### 선행 확인과 구현 전 완료 조건
+
+- PR #11 MERGED(2026-10-22 23:25:30 KST), merge commit `3f3fb9e4cbcf5aaae345716eea79a2fd3655e6a6` 및 origin/develop 일치/ancestor 확인. 선행 WBS-10 충족, 실행순서 13.
+- develop checkout/ff-only pull 후 `git branch -d feature/WBS-10-ten-gods-hidden-stems-elements` 성공. 최신 develop에서 `feature/WBS-11-classical-evidence-rules` 한 개 생성. AGENTS/WBS/02/05/06/08, 관련 10 상세설계와 기존 파생 facts/CLI 계약을 읽었다.
+- 완료 조건: 적천수·궁통보감·자평진전·삼명통회의 확인 가능한 원문 구절/전사본·절 위치·확인일·판본 한계와 적용 범위를 기록하는 카탈로그, 검토 기록이 있는 기초 규칙 20개 및 순수 평가기. 검토는 구현자의 원문 대조/조건·예외·fixture 검사이며 명리 전문가나 사용자 승인으로 표시하지 않는다.
+- 20개 범위: 일간 오행 5개, 전통 월지 사계 4개, 일간과 장간 동일 글자 1개, 월지 본기/기타 장간의 천간 노출 2개, 비겁/식상/재성/관성/인성의 표면 존재 5개, 정관·편관/식신·편인/상관·정인 동시 존재 3개. 전통 논의에서 재현 가능한 최소 구조 조건만 채택하며 통근 전체/격국 성립/제화/강약/길흉을 단정하지 않는다.
+- 각 결과는 규칙/버전/우선순위·출처 참조·입력 경로·관찰 근거·선언/적용 예외·coverage를 보존한다. matched/not-matched/unavailable를 구분하고 matched만 assertion finding을 생성한다. 미상 범위에서 관찰되지 않았음을 부재로 바꾸지 않는다. 우선순위는 추적/정렬만 하며 WBS-12 충돌 중재를 구현하지 않는다.
+- 테스트 선작성: 20개 각각 수기 양성/음성/전체 미상, 부분 입력의 양성/미확정 음성, 동일 장간/본기·기타 투출 범위, 출처·중복/누락/검토·버전 오류, 근거 경로/출처 무결성, 순서·결정성/불변성, 실제 judge-facts CLI와 기존 파생 CLI 회귀. 관련 검사·타입·린트와 결과/제약을 기록하고 사용자 변경 파일은 제외해 develop PR 한 건 생성 후 중지한다.
+
+### 구현과 검증 결과
+
+- 고전 4종의 출처 항목 6개와 기초 규칙 20개를 strict/readonly 카탈로그에 기록했다. 각 항목의 전사/영인 판본·절/URL/원문 일부/확인일/대조 방법/한계를 보존한다. 출처 누락·중복·미검증 참조, 규칙 중복/누락·미검토·버전 오류를 차단한다. 검토된 1.0.0의 데이터 내용은 같고 순서만 다른 카탈로그만 허용한다.
+- 적천수 천간론/궁통보감 삼춘·삼하·삼추·삼동/삼명통회 인식관재 명의는 원문 페이지를 확인했다. 자평진전 근 논의는 국가도서관 영인 PDF의 색인 원문, 투출/상관 논의는 색인에 수록된 고전 전사 원문을 대조했다. 일부 직접 페이지 요청은 시간 초과였다. AI/현대 해설을 실행 근거로 사용하지 않았고 영인 전체 교감·전문가 승인으로 표시하지 않았다.
+- 평가기는 기존 facts만 읽으며 5 일간오행 + 4 월지사계 + 1 동일 장간글자 + 2 월지 본기/기타 노출 + 5 표면 십성군 + 3 기호 동시 존재를 검사한다. 각 규칙은 원문 논의에서 채택한 최소 조건과 제외 범위를 명시했다. 동일 글자 불일치를 통근 전체 부재로, 노출/동시 존재를 성립·제화·길흉으로 바꾸지 않는다.
+- matched/not-matched/unavailable, coverage와 선언/적용 예외를 분리한다. 일부 확인된 존재는 보존하고 미상 검색 영역 때문에 판정할 수 없는 부재는 unavailable다. matched만 안정된 ID/단정 범위가 제한된 assertion과 실제 근거 finding을 생성한다. 우선순위는 결정적 정렬만 하며 관찰을 삭제하거나 충돌을 중재하지 않는다.
+- 결과에 원래 확정 기둥과 규칙/출처/사실/공급자 버전을 보존하고 모든 evidence 경로/값을 실제 facts에 대조한다. 출력 검증은 잘못된 출처·중복/누락·순서·예외/coverage·상태·finding 문구/근거 연결도 차단한다. 원본 facts와 카탈로그는 변경하지 않는다.
+- 새 calculateJudgments 서비스와 judge-facts CLI는 기존 facts 계산을 한 번 실행하고 확정된 facts에만 적용한다. 기존 분석/후보/facts를 analysis에 보존하며 입력 거절/미지원에는 evaluation null이다. 미상 후보의 일주/시주를 확정 근거로 사용하지 않는다. 실제 npm CLI의 known/unknown과 기존 derive-facts·입력/출력 회귀를 확인했다.
+- 테스트 선작성 judgment는 모듈 부재로 종료 1, 구현 후 65건/타입 검사 통과. 서비스 선작성도 모듈 부재로 종료 1이었다. 이후 신규 71건/타입 검사가 통과했으나 린트가 evidence 배열 선언의 prefer-const를 지적했다. const로 수정하고 원문 확인 범위를 실제 확인한 영인/전사 색인에 맞춰 기록했다. 단일 장간 월지·관찰 공존/우선순위 경계와 근거 변조 회귀를 보강했다.
+- 최종 `npm.cmd test -- tests/judgment.test.ts tests/judgment-service.test.ts tests/natal-facts-service.test.ts tests/cli.test.ts`: 종료 0, 관련 4파일/104건(신규 73건) 통과. 20개 각각의 수기 양성/음성/전체 미상 60건 포함. `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`: 각각 종료 0. 실패 무시/skip은 사용하지 않았다.
+- 최신 AGENTS에 따라 관련 검사만 실행했다. 의존성/잠금 파일·Next 라우트/설정 변경이 없어 설치·빌드·전체 릴리스 검사는 반복하지 않았다. 기존 생성 타입을 사용해 사용자 next-env.d.ts와 개발 서버를 보존했다.
+
+### 변경 파일과 제약
+
+- `src/domain/judgment/schemas.ts`, `catalog.ts`, `index.ts`, `README.md`: 출처/검토·규칙/근거 계약과 카탈로그, 순수 평가/관찰 범위·실제 근거 검증, 검토 범위/20개 규칙 표.
+- `src/application/judgment/index.ts`: 기존 facts 분석을 재사용하고 평가 결과/근거를 연결하며 원래 계산/미상 상태 보존.
+- `src/cli/run.ts`, `main.ts`, `README.md`: judge-facts 명령/종료 코드/의존성 재사용/사용법.
+- `tests/judgment.test.ts`, `judgment-service.test.ts`, `fixtures/base-judgment-golden.json`: 규칙별 독립 조건 fixture·검토/출처·미상/근거·범위·결정성/불변성·실제 CLI.
+- 루트 `README.md`, `src/domain/natal-facts/README.md`, `docs/worklog.md`: 구현 위치·검증 결과/제약 기록.
+- 이 검토는 구현자의 원문/조건/fixture 대조이며 전문가나 사용자 리뷰를 대체하지 않는다. 확인 구절이 고전의 전체 해석이나 비평 정본 검증을 뜻하지 않는다. complete는 기초 facts/관찰 범위이며 강약·용신·길흉/성격, WBS-12 중재나 확장 M01/F01~F11·최종 NatalCore/리포트 완료를 보증하지 않는다.
+- AGENTS/작업지시 문서/next-env.d.ts의 SHA-256이 시작과 동일함을 확인했다. 사용자 변경은 보존/커밋 제외한다. WBS.csv 상태·기존 역법/facts 계산·의존성·UI/API/DB/LLM/OAuth/PG/키/CI·이후 WBS 변경은 없다. 관련 14개 파일만 명시적으로 스테이징해 develop PR 한 건 생성 후 중지한다.
+
 ## 2026-10-22 — WBS-10: 십성·지장간·오행 기초 계산
 
 ### 선행 확인과 구현 전 완료 조건

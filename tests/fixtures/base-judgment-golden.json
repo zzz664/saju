@@ -1,0 +1,25 @@
+{
+  "basis": "Hand-selected valid sexagenary symbols and explicit WBS-11 predicate definitions, never evaluator output. Root matching means identical stem text only. Exposure excludes the day-master stem. Coexistence is an observed symbol prerequisite, not a completed classical pattern or a fortune prediction.",
+  "cases": [
+    { "ruleId": "base.day-wood", "positive": ["갑자", "병인", "갑자", "경신"], "negative": ["갑자", "병인", "경자", "경신"] },
+    { "ruleId": "base.day-fire", "positive": ["갑자", "병인", "병자", "경신"], "negative": ["갑자", "병인", "갑자", "경신"] },
+    { "ruleId": "base.day-earth", "positive": ["갑자", "병인", "무자", "경신"], "negative": ["갑자", "병인", "갑자", "경신"] },
+    { "ruleId": "base.day-metal", "positive": ["갑자", "병인", "경자", "경신"], "negative": ["갑자", "병인", "갑자", "경신"] },
+    { "ruleId": "base.day-water", "positive": ["갑자", "병인", "임자", "경신"], "negative": ["갑자", "병인", "갑자", "경신"] },
+    { "ruleId": "base.month-spring", "positive": ["갑자", "병인", "갑자", "경신"], "negative": ["갑자", "정사", "갑자", "경신"] },
+    { "ruleId": "base.month-summer", "positive": ["갑자", "정사", "갑자", "경신"], "negative": ["갑자", "병인", "갑자", "경신"] },
+    { "ruleId": "base.month-autumn", "positive": ["갑자", "경신", "갑자", "경신"], "negative": ["갑자", "병인", "갑자", "경신"] },
+    { "ruleId": "base.month-winter", "positive": ["갑자", "계해", "갑자", "경신"], "negative": ["갑자", "병인", "갑자", "경신"] },
+    { "ruleId": "base.exact-hidden-root", "positive": ["갑인", "병자", "갑자", "경자"], "negative": ["임자", "병자", "갑자", "경자"] },
+    { "ruleId": "base.month-main-exposed", "positive": ["갑자", "병인", "갑자", "경자"], "negative": ["임자", "병인", "갑자", "경자"] },
+    { "ruleId": "base.month-other-exposed", "positive": ["임자", "병인", "갑자", "경자"], "negative": ["임자", "갑인", "갑자", "경자"] },
+    { "ruleId": "base.companions-visible", "positive": ["을축", "병인", "갑자", "경신"], "negative": ["병자", "경신", "갑자", "임자"] },
+    { "ruleId": "base.output-visible", "positive": ["병자", "경신", "갑자", "임자"], "negative": ["을축", "경신", "갑자", "임자"] },
+    { "ruleId": "base.wealth-visible", "positive": ["무진", "경신", "갑자", "임자"], "negative": ["을축", "병인", "갑자", "임자"] },
+    { "ruleId": "base.officers-visible", "positive": ["경신", "병인", "갑자", "임자"], "negative": ["을축", "병인", "갑자", "무진"] },
+    { "ruleId": "base.resources-visible", "positive": ["임자", "병인", "갑자", "경신"], "negative": ["을축", "병인", "갑자", "경신"] },
+    { "ruleId": "base.officer-killing-coexist", "positive": ["경신", "신유", "갑자", "을묘"], "negative": ["갑자", "갑자", "갑자", "갑자"] },
+    { "ruleId": "base.food-indirect-resource-coexist", "positive": ["임자", "병인", "갑자", "을묘"], "negative": ["갑자", "갑자", "갑자", "갑자"] },
+    { "ruleId": "base.hurting-direct-resource-coexist", "positive": ["정묘", "계축", "갑자", "을묘"], "negative": ["갑자", "갑자", "갑자", "갑자"] }
+  ]
+}

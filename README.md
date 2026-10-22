@@ -21,6 +21,8 @@ WBS-09의 [자시·시주와 미상 후보](src/domain/policy-calendar/README.md
 `calculate-policy` 명령으로 실행한다. 시각 미상은 확정 시주 없이 구간별 가능성을 반환한다.
 WBS-10의 [십성·지장간·오행 기초 계산](src/domain/natal-facts/README.md)은 `derive-facts`로 실행한다.
 확정된 기둥만 사용하며 오행 출현 개수와 강약 판단을 구분한다.
+WBS-11의 [고전 출처·기초 판단 20개](src/domain/judgment/README.md)는 `judge-facts`로 실행한다.
+각 결과에 출처·입력 근거·버전·예외와 미상 범위를 보존한다.
 
 - Node.js 24.x, npm 11.x (초기 검증: Node 24.12.0 / npm 11.6.2).
 - Next.js App Router / TypeScript / Vitest. 직접 의존성과 잠금 파일을 함께 고정한다.
