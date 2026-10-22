@@ -95,3 +95,56 @@ const same = manseryeokCalendarConversionAdapter.convert({
 
 `npm test -- tests/calendar-conversion.test.ts tests/calendar-conversion-errors.test.ts`로
 실제 패키지 왕복·독립 골든·경계와 명시적 SDK 오류 Mock을 각각 확인한다.
+
+## WBS-05 절기·연주·월주
+
+`manseryeokSolarCalendarAdapter`는 공급자 타입 없는 `SolarCalendarAdapter` 포트다.
+`getSolarTerms({ year })`는 소한부터 동지까지 24개를 시간순으로 반환한다.
+각 항목은 index/name/startsAt(UTC ISO 문자열)/isMonthBoundary를 포함하며,
+짝수 index의 **절 12개**만 월 경계다. Date 객체나 공급자 메서드는 반환하지 않는다.
+조회 범위는 1800~2300으로 제한하여 라이브러리의 범위 밖 근사 폴백을 허용하지 않는다.
+
+```ts
+import { manseryeokSolarCalendarAdapter } from "@/infrastructure/manseryeok";
+
+const schedule = manseryeokSolarCalendarAdapter.getSolarTerms({ year: 2024 });
+// schedule.terms[2].startsAt === "2024-02-04T08:27:00.000Z"
+const result = manseryeokSolarCalendarAdapter.calculateYearMonth({
+  year: 2024, month: 2, day: 4, hour: 17, minute: 27,
+  calendarType: "solar", isLeapMonth: false,
+  timeReference: "fixed-utc+09:00", dayBoundary: "midnight",
+});
+// result.pillars.year: 갑진, month: 병인. 1분 전에는 계묘/을축.
+```
+
+`calculateYearMonth`는 기존 CalendarRequest와 실제 사주 계산 포트를 재사용해
+연주·월주만 투영한다. 별도 간지/천문 계산식을 추가하지 않는다. 양력 1800~2300,
+음력 1800~2100 및 기존 날짜/정책 거절 계약을 유지한다.
+분 단위 known 시각과 **고정 UTC+09:00** 전용이다. 일반 IANA 민간시/DST·태양시·자시·미상 시각
+처리를 대신하지 않으며 CLI calculate 출력도 바꾸지 않는다.
+
+연주는 입춘, 월주는 12절의 **시작 포함** 경계다. 양력 새해/설날/음력 초하루·윤달,
+중기 12개에서 새 연주/월주로 바꾸지 않는다. 출력 provenance는 실제 공급자 버전 및
+ruleId=`calendar.solar-terms` 또는 `calendar.year-month-pillars`, ruleVersion=`1.0.0`,
+precision=`minute`를 기록한다. 연월주에는 yearBoundary=`lichun`, monthBoundary=`12-jeol`,
+boundaryInclusion=`start-inclusive`, timeReference도 명시한다. `minute`는 해상도이며
+전 연도의 천문 정확도 보증이나 초 단위 정밀도를 뜻하지 않는다.
+
+독립 기준은 [2024 공식 월력요항 보도자료와 HWP 첨부](https://www.kasi.re.kr/kor/publication/post/newsMaterial/29633?cPage=7)의
+24절기 **날짜**, [KASI 기본 경로 달력자료](https://astro.kasi.re.kr/life/post/calendardata)의
+2024년 **분 단위 시각**이다. 연월주 예상값은 입춘/12절 및 오호둔 정책으로 수기 고정했으며,
+KASI 음력 월건을 절기 월주로 사용하지 않았다. fixture에 출처·확인일·방법을 기록했다.
+
+- 12절 독립 시각은 허용오차 없이 일치하며 각각 1분 전/당시/1분 후를 검사한다.
+- 예비 웹 자료는 비공식이며 `/kor/...calendarData?search_year=2024`의 청명 16:00과
+  기본 경로의 16:02가 다르다. 공식 첨부는 날짜만 제공하므로 분 정확도의 공식 검증으로 부르지 않는다.
+- **소설 중기**는 KASI 웹 04:56, 고정 공급자 04:57로 1분 차이가 남는다.
+  fixture와 별도 회귀 테스트에 차이를 명시하고, 24개 시각 전부 독립 일치로 표시하지 않는다.
+  이 중기는 월 경계가 아니므로 연월주 변화가 없다. 공급자를 교체하거나 근거 없이 보정하지 않았다.
+- 절입 보정표는 공급자 주석상 6tail 천문 계산에서 생성한 값이다. 이번 독립 검증은 2024년이며
+  1800/2300 끝값은 공급자 회귀다. 전 지원 구간의 독립 정확도 검증은 남아 있다.
+
+잘못된 조회 입력/공급자 RangeError, 예상 밖 실패, 손상된 응답은 기존 CalendarAdapterError로
+정규화한다. 24개 수량/순서/명칭-index 대응/연도/분 해상도를 응답 경계에서 검사한다.
+`npm test -- tests/solar-calendar.test.ts tests/solar-calendar-errors.test.ts`로
+실제 절입 경계와 명시적 SDK 오류 Mock을 구분해 실행한다.

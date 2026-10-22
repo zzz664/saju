@@ -1,0 +1,38 @@
+{
+  "year": 2024,
+  "source": "https://astro.kasi.re.kr/life/post/calendardata",
+  "officialNotice": "https://www.kasi.re.kr/kor/publication/post/newsMaterial/29633?cPage=7",
+  "officialAttachment": "https://www.kasi.re.kr/file/1687408104839_1.hwp",
+  "officialPreview": "https://www.kasi.re.kr/file/htmlconverter_preview/1687408104839_1.hwp.files/4.html",
+  "checkedAt": "2026-10-22",
+  "scope": "Official 2024 notice gives dates only. Times below are independently transcribed from the KASI web 2024 table, fixed UTC+09:00, minute resolution. The web table is explicitly preliminary. The /kor/life/post/calendarData?search_year=2024 page differs at Qingming (16:00 instead of 16:02). Pillar expectations are hand-tabulated from adopted Lichun/12-jeol and five-tiger month-stem policy, not KASI lunar month labels or SDK output. Known SDK Xiaoxue offset is tested separately and not treated as independent timestamp agreement.",
+  "terms": [
+    ["소한", "01-06T05:49"], ["대한", "01-20T23:07"],
+    ["입춘", "02-04T17:27"], ["우수", "02-19T13:13"],
+    ["경칩", "03-05T11:23"], ["춘분", "03-20T12:06"],
+    ["청명", "04-04T16:02"], ["곡우", "04-19T23:00"],
+    ["입하", "05-05T09:10"], ["소만", "05-20T22:00"],
+    ["망종", "06-05T13:10"], ["하지", "06-21T05:51"],
+    ["소서", "07-06T23:20"], ["대서", "07-22T16:44"],
+    ["입추", "08-07T09:09"], ["처서", "08-22T23:55"],
+    ["백로", "09-07T12:11"], ["추분", "09-22T21:44"],
+    ["한로", "10-08T04:00"], ["상강", "10-23T07:15"],
+    ["입동", "11-07T07:20"], ["소설", "11-22T04:56"],
+    ["대설", "12-07T00:17"], ["동지", "12-21T18:21"]
+  ],
+  "boundaries": [
+    { "index": 0, "beforeYear": "계묘", "afterYear": "계묘", "beforeMonth": "갑자", "afterMonth": "을축" },
+    { "index": 2, "beforeYear": "계묘", "afterYear": "갑진", "beforeMonth": "을축", "afterMonth": "병인" },
+    { "index": 4, "beforeYear": "갑진", "afterYear": "갑진", "beforeMonth": "병인", "afterMonth": "정묘" },
+    { "index": 6, "beforeYear": "갑진", "afterYear": "갑진", "beforeMonth": "정묘", "afterMonth": "무진" },
+    { "index": 8, "beforeYear": "갑진", "afterYear": "갑진", "beforeMonth": "무진", "afterMonth": "기사" },
+    { "index": 10, "beforeYear": "갑진", "afterYear": "갑진", "beforeMonth": "기사", "afterMonth": "경오" },
+    { "index": 12, "beforeYear": "갑진", "afterYear": "갑진", "beforeMonth": "경오", "afterMonth": "신미" },
+    { "index": 14, "beforeYear": "갑진", "afterYear": "갑진", "beforeMonth": "신미", "afterMonth": "임신" },
+    { "index": 16, "beforeYear": "갑진", "afterYear": "갑진", "beforeMonth": "임신", "afterMonth": "계유" },
+    { "index": 18, "beforeYear": "갑진", "afterYear": "갑진", "beforeMonth": "계유", "afterMonth": "갑술" },
+    { "index": 20, "beforeYear": "갑진", "afterYear": "갑진", "beforeMonth": "갑술", "afterMonth": "을해" },
+    { "index": 22, "beforeYear": "갑진", "afterYear": "갑진", "beforeMonth": "을해", "afterMonth": "병자" }
+  ],
+  "knownProviderDifference": { "index": 21, "offsetMinutes": 1, "note": "Pinned SDK gives 04:57; KASI web table gives 04:56. This middle term does not change year/month pillars. No tolerance is applied to the twelve monthly boundaries." }
+}
