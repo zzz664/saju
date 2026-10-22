@@ -1,0 +1,16 @@
+{
+  "source": {
+    "publisher": "한국천문연구원",
+    "title": "2024년 달력자료 — 음력(2024, 갑진년), 각 월 1일의 일진",
+    "url": "https://astro.kasi.re.kr/kor/life/post/calendarData?search_year=2024",
+    "retrievedOn": "2026-10-22",
+    "sourceGeneratedAt": "2023-04-25 22:44 (V1.0a)",
+    "scope": "양력 날짜와 해당 일진만 대조. 음력 월건을 사주의 절기 월주로 일반화하지 않음. 시주·절입 시각·전체 역법 정확도 검증 자료가 아님.",
+    "notice": "원문은 공식 발표 자료가 아니라고 고지한다. 공급자 패키지 출력/README/테스트에서 기대값을 생성하지 않았다."
+  },
+  "cases": [
+    { "solarDate": "2024-02-10", "day": { "heavenlyStem": "갑", "earthlyBranch": "진" } },
+    { "solarDate": "2024-03-10", "day": { "heavenlyStem": "계", "earthlyBranch": "유" } },
+    { "solarDate": "2024-04-09", "day": { "heavenlyStem": "계", "earthlyBranch": "묘" } }
+  ]
+}
