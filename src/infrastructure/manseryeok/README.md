@@ -46,7 +46,8 @@ WBS-07/08/09의 독립 검증을 거친 시간 정규화·정책 적용이 선�
   함께 고정했다. [2024 KASI 달력자료](https://astro.kasi.re.kr/kor/life/post/calendarData?search_year=2024)의
   2월 10일/3월 10일/4월 9일 양력 날짜와 일진만 대조한다. 해당 웹 자료는 공식 발표 자료가
   아님을 고지한다. 음력 월건을 절기 월주로 일반화하거나 시주 전체의 독립 검증으로 취급하지 않는다.
-- 실제 절입·일주 경계/시간대/미상 시각·시주/태양시·대운·30건 종합 골든은 각 후속 WBS 범위다.
+- 절입·일주 경계의 추가 검증은 아래 WBS-05/06 절을 참고한다. 일반 시간대/미상 시각·시주/
+  태양시·대운·30건 종합 골든은 각 후속 WBS 범위다.
 
 `npm test -- tests/manseryeok-adapter.test.ts`는 네트워크 없이 설치된 실제 라이브러리를 호출한다.
 OpenAI·PG 등 외부 공급자 호출이나 API 키는 필요하지 않다.
@@ -148,3 +149,47 @@ KASI 음력 월건을 절기 월주로 사용하지 않았다. fixture에 출처
 정규화한다. 24개 수량/순서/명칭-index 대응/연도/분 해상도를 응답 경계에서 검사한다.
 `npm test -- tests/solar-calendar.test.ts tests/solar-calendar-errors.test.ts`로
 실제 절입 경계와 명시적 SDK 오류 Mock을 구분해 실행한다.
+
+## WBS-06 일주 계산과 독립 대조
+
+`manseryeokDayCalendarAdapter`는 `DayCalendarAdapter`를 구현하고 기존 공개 사주 계산
+포트를 재사용해 `pillars.day`만 반환한다. 일주 계산식을 복제하거나 다른 라이브러리를 추가하지 않는다.
+응답은 strict/readonly `DaySnapshotSchema`로 검증하며 실제 공급자 버전과
+ruleId=`calendar.day-pillar`, ruleVersion=`1.0.0`, timeReference, dayBoundary를 기록한다.
+
+```ts
+import { manseryeokDayCalendarAdapter } from "@/infrastructure/manseryeok";
+
+const snapshot = manseryeokDayCalendarAdapter.calculateDay({
+  year: 2024, month: 2, day: 10, hour: 0, minute: 0,
+  calendarType: "solar", isLeapMonth: false,
+  timeReference: "fixed-utc+09:00", dayBoundary: "midnight",
+});
+// snapshot.pillars.day: { heavenlyStem: "갑", earthlyBranch: "진" }
+```
+
+현재 입력은 기존 CalendarRequest와 동일하다. 양력 1800~2300, 음력 1800~2100,
+실재하는 날짜와 명시적 시각/윤달 플래그, 고정 UTC+09:00·midnight만 지원한다.
+23:00~23:59도 당일 일주를 유지하며 고정 지역 날짜 00:00에 다음 일주로 바뀐다.
+UTC 날짜나 호스트 날짜로 일주를 바꾸지 않는다. 미상 시각의 hour를 추정하거나
+일반 IANA 시간대/DST·태양시·자시·분리자시를 처리하지 않는다. 해당 정책과 후보 처리는 후속 WBS다.
+기존 CLI 및 전체 사주 계산 계약은 유지한다.
+
+`tests/fixtures/day-pillar-golden.json`의 직접 독립 기준 12건은
+[2024 공식 월력요항 보도자료](https://www.kasi.re.kr/kor/publication/post/newsMaterial/29633?cPage=7)의
+HWP 첨부 4쪽 음력 날짜 표에서 옮긴 **양력 날짜·음력 날짜·일진**이다.
+[공식 HTML 미리보기](https://www.kasi.re.kr/file/htmlconverter_preview/1687408104839_1.hwp.files/4.html)에서도
+같은 표를 확인했다. 공급자 출력·README·다른 계산 엔진을 기대값 생성에 사용하지 않았다.
+
+- 12개 날짜의 양력/음력 입력을 각각 원문 일진과 대조하고 00:00/22:59/23:00/23:59도 확인한다.
+- 윤일/60갑자 회귀(계해→갑자)/연말 경계 6건은 공식 갑진일·기사일 앵커에서 날짜 수와
+  일진 순환으로 수기 산출했다. 각 앵커와 일수 차이를 fixture에 기록하며 원문 직접 인용 12건과 구분한다.
+- 실제 SDK의 윤달 입력 동치, 1900/2100년 2월 29일 거절, 2000년 윤일과 60일 주기,
+  지원 범위 끝값은 추가 회귀다. 독립 골든이나 전체 역사 범위 정확도 보증으로 표시하지 않는다.
+- 초기 WBS-01의 예비 웹 자료 3건은 기존 연결 검증으로 유지하며, 이번 공식 자료와 출처를 혼동하지 않는다.
+- 일주만 반환하며 시주/대운 등 공급자 부가 결과와 원문 오류/cause를 노출하지 않는다.
+  기존 공통 CalendarAdapterError의 INPUT_REJECTED/CALCULATION_FAILED/OUTPUT_INVALID 계약을 유지한다.
+
+`npm test -- tests/day-calendar.test.ts tests/day-calendar-errors.test.ts`는 실제 패키지 독립 대조와
+명시적 SDK 오류 Mock을 구분한다. 이번 골든은 주로 2024년과 파생된 2025-01-01 경계이며
+역사 DST·일반 시간대·다른 일 경계 관법·전 지원 연도 검증을 완료로 표시하지 않는다.

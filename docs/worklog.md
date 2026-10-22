@@ -1,5 +1,39 @@
 # 작업 기록
 
+## 2026-10-22 — WBS-06: 일주 계산과 독립 대조
+
+### 선행 확인과 구현 전 완료 조건
+
+- PR #6 GitHub MERGED(2026-10-22 19:54:01 KST), base develop, merge commit `c252a2630cf2b256e345a90f4740597ff3fc64e6` 및 origin/develop 반영 확인. 열린 develop PR 없음. WBS 실행순서 08, 선행 WBS-04 merge commit도 ancestor 확인.
+- `git checkout develop`, `git pull --ff-only origin develop` 후 `git branch -d feature/WBS-05-solar-terms-year-month` 성공. 최신 develop에서 `feature/WBS-06-day-pillar-golden` 한 개 생성.
+- AGENTS, WBS, 02/05/06/08 및 기존 도메인/입력/포트/패키지 일주 구현을 확인했다. 고정 공급자 공개 사주 계산을 재사용하며 별도 일주 엔진은 추가하지 않는다. 사용자 지시 문서와 next-env.d.ts의 기존 변경은 보존/커밋 제외.
+- 완료 조건: 공급자 타입 없는 DayCalendarAdapter와 일주만 반환하는 strict/readonly DTO, fixed UTC+09:00·midnight 정책/규칙/공급자 버전 기록, 실제 패키지의 일주 계산 및 독립 골든 통과.
+- 정상: KASI 공식 2024 월력요항 첨부의 음력 월초 12개 양력 날짜/일진을 고정해 양력/음력 입력을 각각 대조한다. 원문의 날짜·일진만 사용하고 음력 월건을 사주 월주로 해석하지 않는다. 기대값을 패키지 출력으로 생성하지 않는다.
+- 경계: 공식 앵커에서 수기 산출한 윤일·60갑자 회귀·연말/새해 6건, 00:00/22:59/23:00/23:59·자정 전후, 1900/2000/2100 세기년과 1800/2300 범위 회귀. 직접 인용 골든/독립 앵커 파생/공급자 회귀를 구분한다.
+- 오류: 누락/틀린 타입/실재하지 않는 날짜·없는 윤달·지원 범위·미지원 정책 거절, 손상된 일주/버전 응답 차단 및 공급자 오류 원문·cause 미노출. 시각 미상/일반 IANA·DST·태양시·자시 후보는 후속 WBS 범위로 남긴다.
+- npm test, 일주 전용 검증, 타입/린트/빌드를 실행하고 명령·결과·제약·변경 파일을 기록한다. 개발 서버 충돌을 피한 임시 동일 소스 재현 검증은 위치를 구분한다. PR 한 건 생성 후 중지한다.
+
+### 구현과 검증 결과
+
+- `DayCalendarAdapter`와 DaySnapshotSchema를 추가하고 인프라에서 기존 실제 manseryeok 포트를 재사용해 일주만 투영한다. 날짜/시각/정책 거절 및 공급자 오류 정규화는 기존 계약을 유지한다. 일주 계산식·공급자 대체·시각 추정은 추가하지 않았다.
+- 공식 2024 월력요항 HWP 4쪽의 12개 양력 날짜·음력 날짜·일진을 [KASI 공식 HTML 미리보기](https://www.kasi.re.kr/file/htmlconverter_preview/1687408104839_1.hwp.files/4.html)에서 표 열별로 확인했다. 출처 보도자료·첨부·확인일·구간과 수기 산출 앵커를 fixture에 고정했다. 원문 직접 독립 기준 12건, 공식 앵커에서 수기 산출한 경계 6건, 별도 공급자 회귀를 구분한다.
+- 구현 전 `npm.cmd test -- tests/day-calendar.test.ts`: 예상한 종료 1, 없는 export로 63건 실패. 구현 후 같은 명령 종료 0, 실제 패키지 63건 통과. 이후 출력 스키마 검사 1건과 명시적 공급자 오류 Mock 6건을 추가했다. 실패 무시/skip 없음.
+- 원래 폴더 `npm.cmd test`: 종료 0, 11개 파일/412건 통과(신규 실제 패키지 64건 + 명시적 SDK 오류 Mock 6건). `npm.cmd run lint`, `node node_modules/typescript/bin/tsc --noEmit`도 각각 종료 0.
+- 동일 소스 임시 사본 `%TEMP%/saju-wbs06-validation-20839cbd3135469d8a78a0c48cf2e5cd`을 만들고 src/tests·설정·잠금 파일의 SHA-256 일치를 확인했다. 원래 개발 서버/node_modules/.next는 검증용 설치·빌드로 변경하지 않았다.
+- 임시 사본 `npm.cmd ci --no-fund`: 종료 0, 376개 재현 설치. 이후 `npm.cmd test`: 종료 0, 11개 파일/412건. `npm.cmd run typecheck`(Next typegen 포함), `npm.cmd run lint`, `npm.cmd run build`: 각각 종료 0. NEXT_TELEMETRY_DISABLED=1로 빌드했고 기존 루트/404 생성 성공.
+- 임시 사본 `npm.cmd audit --omit=dev --json`: 종료 0, 런타임 취약점 0건. 설치에서 기존 개발 의존성 high 5건과 ESLint 9 지원 종료 경고는 재확인되었다. 이전 worklog의 eslint-config-next → fast-glob → micromatch → braces 경로 제약을 유지하고 강제 수정/의존성 변경 또는 전체 감사 통과로 표시하지 않는다.
+- 사용자 지시 문서와 next-env.d.ts의 SHA-256이 시작과 동일함을 확인했다. 아래 기능 관련 9개 파일만 명시적으로 스테이징하며 staged diff 검사 후 develop 대상 PR 한 건을 생성하고 중지한다.
+- 공식 일진 12건의 양력/음력 입력과 00:00/22:59/23:00/23:59, 윤일·계해→갑자·연말/새해 자정 전후를 검증했다. 00:00 고정 UTC+9가 전날 UTC에 해당해도 당일 일주를 유지한다. 윤달 동치·2000년 윤일/60일 순환·세기년 오류·API 범위 끝값은 독립 인용이 아닌 회귀로 표시했다.
+
+### 변경 파일과 제약
+
+- `src/domain/calendar/index.ts`: 일주 전용 포트·strict/readonly 응답 및 정책/규칙/공급자 버전.
+- `src/infrastructure/manseryeok/day-calendar.ts`, `index.ts`: 기존 실제 계산 포트에서 검증된 일주 투영과 export.
+- `tests/day-calendar.test.ts`, `day-calendar-errors.test.ts`, `fixtures/day-pillar-golden.json`: 공식/앵커 파생 골든·경계·오류/버전 계약 및 명시적 SDK 오류 Mock.
+- `README.md`, `src/infrastructure/manseryeok/README.md`, `docs/worklog.md`: 사용법·독립 근거·지원 범위·검증 기록.
+- 이번 독립 기준은 공식 2024년 자료 및 파생된 2025-01-01 경계다. 역사 DST/일반 IANA 시간대·태양시·다른 자시 관법·전 지원 연도 정확도나 시각 미상 후보를 검증 완료로 표시하지 않는다. 명시적 known 시각, fixed UTC+9·midnight와 기존 API 지원 범위를 유지한다.
+- WBS-05의 소설 시각 1분 차이 등 기존 공급자 제약은 유지한다. 의존성/잠금 파일, 기존 전체 사주/CLI 계약, UI/API/DB/LLM/OAuth/PG/키/CI 변경은 없다. 사용자 지시 문서와 next-env.d.ts의 기존 변경은 보존한다.
+
 ## 2026-10-22 — WBS-05: 절기·연주·월주 계산
 
 ### 선행 확인과 구현 전 완료 조건

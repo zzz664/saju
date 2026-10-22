@@ -121,3 +121,19 @@ export interface SolarCalendarAdapter {
   readonly getSolarTerms: (request: SolarTermsRequest) => SolarTermsSnapshot;
   readonly calculateYearMonth: (request: CalendarRequest) => YearMonthSnapshot;
 }
+
+export const DaySnapshotSchema = z.strictObject({
+  pillars: z.strictObject({ day: PillarSchema }).readonly(),
+  provenance: z.strictObject({
+    libraryName: z.literal("manseryeok"), libraryVersion: z.literal("2.0.0"),
+    timeReference: z.literal("fixed-utc+09:00"), dayBoundary: z.literal("midnight"),
+    ruleId: z.literal("calendar.day-pillar"), ruleVersion: z.literal("1.0.0"),
+  }).readonly(),
+}).readonly();
+
+export type DaySnapshot = z.infer<typeof DaySnapshotSchema>;
+
+/** A known fixed-UTC+9 clock under the explicit midnight policy, not general civil time. */
+export interface DayCalendarAdapter {
+  readonly calculateDay: (request: CalendarRequest) => DaySnapshot;
+}
