@@ -15,6 +15,7 @@ npm run --silent saju -- arbitrate-facts < tests/fixtures/cli-input.json
 npm run --silent saju -- export-json < tests/fixtures/cli-input.json
 npm run --silent saju -- manual-prompt < tests/fixtures/cli-input.json
 npm run --silent saju -- export-schema
+npm run --silent saju -- hash-json < tests/fixtures/cli-input.json
 ```
 
 PowerShell에서는 실행 정책 변경 없이 다음과 같이 파이프한다.
@@ -24,7 +25,7 @@ Get-Content -Raw -Encoding utf8 tests/fixtures/cli-input.json | npm.cmd run --si
 $LASTEXITCODE
 ```
 
-인자는 `validate`, `calculate`, `normalize-time`, `calculate-policy`, `derive-facts`, `judge-facts`, `arbitrate-facts`, `export-json`, `manual-prompt`, `export-schema`, `--help` 중 하나다. 표준입력은 기존 `AnalysisInput` JSON
+인자는 `validate`, `calculate`, `normalize-time`, `calculate-policy`, `derive-facts`, `judge-facts`, `arbitrate-facts`, `export-json`, `manual-prompt`, `hash-json`, `export-schema`, `--help` 중 하나다. 표준입력은 기존 `AnalysisInput` JSON
 문서 한 개이며 인자에 생년월일을 넣지 않는다. `--silent`는 npm의 스크립트 안내만 숨겨
 stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다. stdout은 요청된 개발용
 결과이고, 입력 원문을 그대로 반사하거나 일반 로그에 기록하지 않는다.
@@ -45,6 +46,7 @@ stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다
 | `export-json` complete / partial·unavailable | 검증된 CoreExport JSON, 원본 출생정보·시각 후보 제외 | 없음 | 0 / 2 |
 | `manual-prompt` complete / partial·unavailable | 고정 한국어 지시문 + 확정·채택 finding 및 제한 JSON 블록 | 없음 | 0 / 2 |
 | `export-schema` | 구조용 draft 2020-12 JSON Schema. stdin 읽지 않음 | 없음 | 0 |
+| `hash-json` complete / partial·unavailable | 기존 document + 실제 버전 manifest·SHA-256 fingerprint | 없음 | 0 / 2 |
 | 시간 정규화 거절/미상·범위 미지원 | `status: rejected`(fold/gap, resolved 없음) 또는 `unavailable`(reasons) | 없음 | 2 |
 | 계산 미지원/실제 달력 입력 거절 | `status: unavailable`, reasons/미상 정보. snapshot 없음 | 없음 | 2 |
 | 잘못된 인자/JSON/입력/UTF-8/크기 초과 | 없음 | 고정 코드/메시지의 error JSON | 2 |
@@ -90,6 +92,9 @@ WBS-13 [JSON/수동 프롬프트](../domain/core-export/README.md)는 같은 계
 finding만 설명 대상으로 전달하며, 미상/제외/충돌 제한과 버전을 유지한다.
 제목부터 닫는 analysis_data 태그까지 복사한다. 실제 API 호출·응답 수집·UI·OS 클립보드 조작은 없다.
 `export-schema`는 입력이 필요 없으며, 구조 스키마 외의 교차 검증에는 런타임 Zod 계약을 사용한다.
+WBS-14 [hash-json](../domain/core-fingerprint/README.md)은 검증된 코어 문서만 정규화하고
+정책/버전을 포함한 체크섬을 추가한다. 스키마 형식 검사와 실제 해시 재검증은 구분하며,
+이 해시는 원본 입력의 보호된 캐시 키·서명·사용자 권한이나 저장 완료 판정에 사용하지 않는다.
 
 입력은 최대 64 KiB(65,536바이트), 유효한 UTF-8만 받는다. UTF-8 BOM과 청크 분할을
 처리하며 크기 초과·손상된 바이트·스트림 오류에서 부분 결과를 반환하지 않는다.

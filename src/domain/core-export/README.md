@@ -72,7 +72,9 @@ evaluation과 일치하는지 확인하고 중재 결과·미상 trace를 재연
 API provider/Mock·예산·페르소나/서술 검증은 각 후속 WBS이며 gpt-4o-mini API 정책을 변경하지 않는다.
 
 complete는 기초 관찰 내보내기 범위다. 수동 응답을 검증된 계산·저장 결과로 가져오지 않는다.
-P06·SSE·DB 완료 상태, F01~F11 기능 조합, WBS-14의 해시/캐시는 구현하지 않는다.
+P06·SSE·DB 완료 상태와 F01~F11 기능 조합은 이 내보내기에 포함하지 않는다.
+WBS-14의 [별도 hash-json](../core-fingerprint/README.md)은 코어 문서를 보존하고 체크섬을 추가한다.
+입력·서술 캐시와 실제 저장은 후속 기능이다.
 
 ```sh
 npm test -- tests/core-export.test.ts tests/core-export-service.test.ts

@@ -1,5 +1,37 @@
 # 작업 기록
 
+## 2026-10-23 — WBS-14: 결정성·버전·해시
+
+### 선행 확인과 구현 전 완료 조건
+
+- PR #14(WBS-13)이 develop에 MERGED(2026-10-23 00:40:14 KST)임을 GitHub에서 확인했다. merge commit `df6c7c6e4d3243f21d907d6c87639892f9104187`와 origin/develop 원격 hash 일치, fetch 후 ancestor 확인. WBS.csv 실행순서 16/선행 WBS-13을 충족하며 TODO 상태만으로 실제 완료를 판단하지 않았다.
+- develop checkout/ff-only pull 후 `git branch -d feature/WBS-13-json-manual-prompt` 안전 삭제 성공. 최신 develop에서 `feature/WBS-14-deterministic-versioned-hash` 하나를 생성했다. AGENTS/WBS/02/05/06/08 및 관련 10의 결정성·버전/캐시 경계, 기존 JSON·판단/중재/시간 정책·CLI를 읽었다.
+- 완료 조건: 검증된 코어 JSON을 변경하지 않는 결정적 정규화와 SHA-256 체크섬, 실제 계산/정규화/facts/판단/중재 버전 manifest 및 버전이 명시된 해시 정책. 같은 합성 입력의 전체 계산을 100회 실행해 같은 해시를 확인하고 내용·정책·실행 버전 변경/변조를 구분한다. 원본 출생 입력이나 모델/프롬프트를 코어 해시 입력에 넣지 않는다.
+- 정상 테스트 선작성: 객체/정수형 키 순서 독립, 배열·한국어/Unicode·null 보존, SHA-256 독립 기대값, 원본 JSON·버전 보존, 실제 100회 계산/각 공급자 100회 호출, CLI 호스트 시간대 독립. 오류: 비 JSON 값·접근자/순환/성긴 배열·잘못된 문서/버전/manifest/해시·공급자 오류. 경계: -0·중복 객체 참조·깊이 64/65, partial/unavailable 각 100회 해시, 버전/정책 변경, 기존 내보내기와 종료 코드/비식별 오류.
+
+### 구현과 검증 결과
+
+- `canonicalizeJson`의 sorted-json-v1은 객체 키를 UTF-16 순서로 직접 직렬화하고 배열 순서를 유지한다. 문자열/숫자의 JSON 표현을 사용하며 Unicode 정규화를 하지 않는다. 정수처럼 보이는 키의 삽입 순서에 의존하지 않고 비유한 수·undefined/BigInt·함수·심볼·접근자/비열거 속성·비평범 객체·순환·성긴/추가 속성 배열과 64단계 초과를 고정 오류로 거절한다. 프로젝트 정책이며 RFC 8785 전체 구현으로 표시하지 않는다.
+- `fingerprintCoreExport`는 기존 CoreExport를 검증하고 `{ policy, versions, document }` 전체의 정규화 UTF-8을 SHA-256으로 계산한다. fingerprint.core-export/1.0.0, sorted-json-v1 및 실제 SDK/기둥 규칙·Temporal/ICU/tzdb·파생 facts/출처·판단 규칙집/카탈로그·중재 provenance를 기록한다. 수행하지 않은 단계는 null이며 원래 문서와 complete/partial/unavailable을 보존한다.
+- 도메인은 SHA-256 포트만 사용하고 Node 내장 crypto 어댑터를 infrastructure에 추가했다. 키/환경변수·파일·네트워크·시계·난수를 사용하지 않는다. 해시 공급자의 잘못된 값이나 예외 전문은 고정 FingerprintError로 바꾼다.
+- HashedCoreExportSchema는 strict/readonly 문서·상태·정책/버전/manifest·해시 형식을 확인하고, verifyCoreFingerprint는 실제 바이트 체크섬을 다시 계산한다. 형식 검증과 실제 체크섬 일치 여부를 구분한다. 정책/실제 tzdb 버전/계산 내용이 바뀌면 해시가 바뀌고, manifest/정책/다이제스트나 문서를 변조하면 검증에 실패한다.
+- calculateHashedCoreExport와 hash-json CLI를 추가해 기존 계산을 한 번 호출하고 `{ status, document, fingerprint }`를 반환한다. 기존 JSON/수동 프롬프트/구조 스키마는 유지한다. complete/partial/unavailable 종료 0/2/2, 입력 2·구성/공급자 실패 1과 비식별 오류를 확인했다. 내용은 원래 기초 판단 범위이며 해시를 계산 완료·DB 커밋·권한 판정으로 사용하지 않는다.
+- 도메인/서비스 테스트는 각각 모듈 부재의 실패를 먼저 확인했다. 구현 후 도메인 9건은 통과했으나 테스트의 BigInt 리터럴이 기존 ES2017 target에 맞지 않아 타입 검사가 실패했다. 설정은 유지하고 BigInt 생성자로 수정했다. 이후 실제 전체 계산 100회(심볼 카탈로그/기둥 공급자 각각 100회), partial/unavailable 문서의 체크섬 각 100회 및 실제 CLI UTC/Pacific-Honolulu의 동일 해시를 확인했다.
+- 최종 `npm.cmd test -- tests/core-fingerprint.test.ts tests/core-fingerprint-service.test.ts tests/arbitration.test.ts`: 종료 0, 관련 3파일/32건 통과(신규 15건). `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`도 종료 0. 깊이 한계·미지원 정규화 정책 거절을 보강한 뒤 재검증했다. SHA-256 빈 문자열/abc 및 수기 정규화 문자열의 독립 기대값도 통과했다.
+- 이전에 확인된 격리 환경의 tsx Windows 사용자 조회 오류 때문에 실제 CLI를 포함한 최종 검사는 일반 실행 권한으로 수행했다. skip/실패 무시 옵션은 없다. AGENTS에 따라 관련 검사만 수행했다. 사용자가 수정한 cli-input.json은 읽어 골든으로 사용하거나 값을 로그에 출력하지 않고 별도 합성 입력을 사용했다. 기존 내보내기 CLI 회귀도 합성 입력으로 검증했다.
+- 의존성·Next 설정/라우트 변경이 없어 전체 테스트/설치/빌드는 반복하지 않았다. 기존 생성 타입과 개발 서버를 보존했다.
+
+### 변경 파일과 제약
+
+- `src/domain/core-fingerprint/index.ts`, `README.md`: 정규화·버전 manifest·해시/검증 계약 및 범위.
+- `src/infrastructure/hashing/index.ts`, `src/application/core-fingerprint/index.ts`: Node SHA-256 포트 구현과 기존 계산 재사용.
+- `src/cli/run.ts`, `main.ts`, `README.md`: hash-json 연결·종료 코드·사용법.
+- `tests/core-fingerprint.test.ts`, `tests/core-fingerprint-service.test.ts`, `tests/helpers/fingerprint-input.ts`: 결정성 100회·독립 해시 기대값·변조/버전/미상·실제 CLI·개인정보 없는 합성 입력.
+- 루트 `README.md`, `src/domain/core-export/README.md`, `docs/worklog.md`: 구현 경로·범위·검증 결과. 총 13개 작업 파일만 커밋한다.
+- 이 값은 내보낸 결과의 체크섬이며 원본 입력의 보호된 캐시 키·사용자 식별자·서명/MAC/출처 인증이 아니다. 다른 출생 입력이 동일한 내보내기 결과를 만들면 같은 해시가 된다. 문서와 해시를 함께 바꿀 수 있으므로 인증/권한/DB 완료 판정에 사용하지 않는다. 분석과 그 해시는 민감할 수 있으며 익명화 보장이나 공개 로그용 ID가 아니다. 입력·서술 캐시/DB 저장은 구현하지 않았다.
+- 같은 내용·정책·실제 버전에서의 재현성이다. ICU/tzdb 등 런타임 데이터가 바뀌면 원국 또는 버전 자체가 달라져 해시가 바뀔 수 있다. 모델/프롬프트 버전은 코어 해시와 분리하며 실제 서술 캐시는 해당 후속 WBS에서 구성한다.
+- AGENTS.md/작업지시 문서/next-env.d.ts/cli-input.json의 기존 사용자 수정은 보존·커밋 제외한다. WBS.csv 상태·기존 JSON/판단/중재·고전 카탈로그·역법/파생 계산·의존성·UI/DB/OAuth/PG/OpenAI/키/CI와 이후 WBS는 변경하지 않는다. develop 대상 PR 한 건 생성 후 중지한다.
+
 ## 2026-10-23 — WBS-13: JSON·수동 ChatGPT 프롬프트
 
 ### 선행 확인과 구현 전 완료 조건
