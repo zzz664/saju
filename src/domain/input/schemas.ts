@@ -27,7 +27,7 @@ function isTimezoneId(value: string): boolean {
   }
 }
 
-const TimezoneIdSchema = z.string().max(100).refine(isTimezoneId, {
+export const TimezoneIdSchema = z.string().max(100).refine(isTimezoneId, {
   message: "Use an IANA area/location timezone identifier or UTC.",
 });
 

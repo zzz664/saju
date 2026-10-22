@@ -3,6 +3,7 @@ export {
   BirthInputSchema,
   BirthTimeSchema,
   CalculationPolicySchema,
+  TimezoneIdSchema,
   type AnalysisInput,
   type BirthInput,
   type BirthTime,

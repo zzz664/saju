@@ -19,6 +19,7 @@
     "lint": "eslint . --max-warnings=0"
   },
   "dependencies": {
+    "@js-temporal/polyfill": "0.5.1",
     "manseryeok": "2.0.0",
     "next": "16.4.2",
     "react": "19.3.1",

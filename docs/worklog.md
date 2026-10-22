@@ -1,5 +1,46 @@
 # 작업 기록
 
+## 2026-10-22 — WBS-07: IANA 시간대와 역사 DST
+
+### 선행 확인과 구현 전 완료 조건
+
+- PR #7 GitHub MERGED(2026-10-22 20:20:55 KST), merge commit `9b822c1c337030031314670a3082588ac8b7a9cd` 및 origin/develop 반영 확인. 선행 WBS-02 PR #2도 MERGED 및 merge commit ancestor 확인. 열린 develop PR 없음. 실행순서 09.
+- develop checkout/ff-only pull 후 `git branch -d feature/WBS-06-day-pillar-golden` 성공. 최신 develop에서 `feature/WBS-07-iana-timezone-dst` 한 개 생성. AGENTS/WBS/02/05/06/08 및 기존 입력/CLI/계산 경계를 확인했다.
+- 완료 조건: IANA 현지 시각 → UTC 정규화 포트, unique/fold/gap 분류와 명시적 reject/earlier/later 정책, 원래 요청·해결된 현지 시각·초 단위 오프셋·UTC·공급자/ICU/tzdb/규칙 버전을 strict/readonly DTO로 반환. 날짜 범위는 기존 코어와 맞춘 양력 1800~2300이다.
+- Node 24.12.0에 native Temporal이 없어 npm 실제 버전/타입·공식 문서를 확인하고 `@js-temporal/polyfill@0.5.1`을 정확히 고정했다. 런타임 Intl의 IANA 데이터(현재 ICU 77.1/tzdb 2025b)를 사용한다. 기존 manseryeok 공급자는 그대로이며 수작업 DST/상수 오프셋 테이블을 제품 코드에 추가하지 않는다.
+- 정상/경계: IANA 2025b 원문에서 수기 계산한 서울 LMT·1954~1961 반시간대·1988 DST, New York fold/gap, Lord Howe 30분 전환, Apia 하루 생략을 독립 고정값으로 검증한다. reject는 fold/gap에서 UTC를 생성하지 않고, earlier/later가 gap의 현지 시각을 바꾸는 사실을 반환한다. 시간대 별칭/UTC·초 오프셋·날짜 넘김·버전·불변/JSON 왕복도 확인한다.
+- 오류: 잘못된 IANA/오프셋 문자열·날짜·시각·정책·범위, 누락 시각, 공급자 실패와 손상 응답을 검증한다. 공급자 원문/cause는 보관·노출하지 않는다. 서버 호스트 시간대나 현재 날짜를 기본값으로 사용하지 않는다.
+- AnalysisInput을 받는 순수 정규화 서비스와 `normalize-time` CLI를 연결한다. 음력은 기존 날짜 변환 포트로 양력화한 후 시간대를 적용하고, 미상 시각은 unavailable/호출 0회로 유지한다. 사주 calculate의 fixed UTC+9 계약을 자동 확대하지 않는다. 일반 지역의 일주/태양시·자시 연결은 WBS-08/09의 정책을 거쳐야 한다.
+- npm test, 전용 fold/gap·실제 CLI, 타입/린트/빌드 및 잠금 파일 재현 검증을 실행한다. 기존 사용자 문서/next-env.d.ts 변경은 보존/커밋 제외. PR 한 건 생성 후 중지한다.
+
+### 구현과 검증 결과
+
+- `domain/timezone`에 strict/readonly 요청·resolved/rejected DTO와 TimeZoneAdapter 포트를 추가했다. unique/fold/gap 및 UTC/현지 시각/초 오프셋·정책 일관성을 검증한다. 기존 TimezoneIdSchema를 공개 재사용해 입력 시간대 계약을 바꾸지 않았다.
+- Node 전용 인프라가 실제 설치된 Temporal polyfill의 이름/버전, 런타임 ICU/tzdb 및 규칙 버전을 반환한다. 공개 PlainDateTime/ZonedDateTime API로 두 선택지를 분류하며 원본 요청과 gap 이동 시각을 보존한다. 분 미만 오프셋 손실을 피하도록 offsetSeconds를 사용하고 Temporal/BigInt/Date 객체는 DTO 밖으로 내보내지 않는다.
+- `normalizeBirthTime`은 AnalysisInput 검증 → 필요한 경우 기존 음양력 변환 → IANA 시각 정규화를 수행한다. 미상 시각의 포트 호출 0회, 거절과 미지원 상태, 손상/요청 불일치 응답 및 오류 비식별화를 검증했다. 태양시/일 경계 정책의 적용 완료로 표시하지 않고 기존 미상/한계 메타데이터를 유지한다.
+- `normalize-time`을 기존 CLI에 연결했다. normalized는 종료 0, rejected/unavailable는 2, 손상/의존성 오류는 고정 메시지로 종료 1이다. 기존 UTF-8/64 KiB/stdout·stderr 계약을 재사용한다. 기존 calculate의 동작은 유지하고 서비스 주석만 현재 단계에 맞췄다.
+- `npm.cmd install --save-exact @js-temporal/polyfill@0.5.1 --no-fund`: 종료 0, 2개 패키지 추가. npm이 제거한 기존 선택 플랫폼 peer 항목 @emnapi/core 및 @emnapi/runtime을 HEAD 잠금 파일에서 보존했고 모든 기존 패키지 버전 불변을 비교 확인했다. 새로운 시간대 보조 의존성이며 만세력 공급자는 변경하지 않았다.
+- 테스트 선작성: `npm.cmd test -- tests/timezone.test.ts` 및 `tests/time-normalization.test.ts`는 구현 전 모듈 부재로 각각 스위트 실패(종료 1)했다. CLI 전용 선작성은 5건 중 4건 실패했다. 구현 후 시간대 41건, 서비스 12건, 오류 경계 3건, CLI 5건이 통과했다.
+- 전용 테스트 61건 통과 뒤 tsc가 테스트의 BigInt 리터럴에 TS2737을 보고했다. 기존 ES2017 target을 변경하지 않고 `BigInt(0)`으로 수정했다. 이후 원래 폴더 `npm.cmd test`: 종료 0, 15개 파일/473건. `npm.cmd run lint` 및 `node node_modules/typescript/bin/tsc --noEmit`: 각각 종료 0. 실패 무시/skip 없음.
+- 독립 기준 14건은 IANA 2025b Asia/US/Lord Howe/Apia 규칙과 Temporal 정책에서 수기 계산한 UTC·오프셋·이동 시각이다. fixture 출처/방법/한계를 기록했고 패키지 출력으로 생성하지 않았다. 미국 fold/gap의 정확한 구간 끝값 및 UTC/호놀룰루 호스트 환경의 실제 npm CLI 결과 일치도 확인했다.
+- 동일 소스 임시 사본 `%TEMP%/saju-wbs07-validation-51801c0d52a84e0b8d1d391f1b6e25fa`에서 src/tests·설정·잠금 파일 SHA-256 일치를 확인했다. 원래 개발 서버/node_modules/.next는 검증용 ci/빌드로 변경하지 않았다(루트에는 위 보조 패키지 설치만 수행).
+- 임시 사본 `npm.cmd ci --no-fund`: 종료 0, 378개 재현 설치. 이후 `npm.cmd test`: 종료 0, 15개 파일/473건. `npm.cmd run typecheck`(Next typegen 포함), `npm.cmd run lint`, `npm.cmd run build`: 각각 종료 0. NEXT_TELEMETRY_DISABLED=1로 기존 루트/404 빌드 성공.
+- 임시 사본 `npm.cmd audit --omit=dev --json`: 종료 0, 런타임 취약점 0건. 설치에서 기존 개발 의존성 high 5건과 ESLint 9 지원 종료 경고는 재확인되었다. 기존 eslint-config-next → fast-glob → micromatch → braces 제약이며 강제 수정/전체 감사 통과로 표시하지 않는다.
+- 기존 사용자 지시 문서와 next-env.d.ts의 SHA-256이 시작과 동일함을 확인했다. 아래 기능 관련 21개 파일만 명시적으로 스테이징하며 staged diff 검사 후 develop 대상 PR 한 건을 생성하고 중지한다.
+
+### 변경 파일과 제약
+
+- `src/domain/timezone/index.ts`, `README.md`: 시간대 포트·계약·정책·지원 범위·출처와 재현 한계.
+- `src/infrastructure/timezone/index.ts`: 지정 Temporal/Intl 구현과 실제 엔진/데이터 버전 metadata.
+- `src/application/time-normalization/index.ts`: 순수 입력/음양력 변환/시각 정규화 연결 및 응답 검증. `src/application/saju/index.ts`는 분리된 단계 설명 주석만 수정.
+- `src/domain/input/schemas.ts`, `index.ts`, `README.md`: 기존 시간대 validator의 공개 재사용 및 DST 문서 갱신.
+- `src/cli/run.ts`, `main.ts`, `README.md`: normalize-time 명령·의존성 조립·종료 코드/사용법.
+- `tests/timezone.test.ts`, `timezone-errors.test.ts`, `time-normalization.test.ts`, `normalize-time-cli.test.ts`, `fixtures/timezone-golden.json`: 독립/경계·오류/포트·실제 CLI 검증.
+- `package.json`, `package-lock.json`, 루트 `README.md`, `src/infrastructure/manseryeok/README.md`, `docs/worklog.md`: 정확한 의존성/잠금 및 기능 경계·결과 기록.
+- 요청의 양력 날짜는 1800~2300이며 음력은 기존 변환 범위 내에서 양력화 후 검사한다. 원본 AnalysisInput을 변경하지 않고 time.request는 변환된 양력 벽시계를 담는다. 미상 시각·태양시·자시·일반 지역 일주/시주 연결은 구현하지 않았다.
+- ICU/tzdb 데이터는 런타임에서 오며 package-lock만으로 고정되지 않는다. 응답의 해당 버전도 재현/저장·캐시 조건에 포함해야 한다. IANA 원문도 오래된 역사 자료의 불확실성을 고지한다. 이 검증은 IANA 규칙 호환성으로, 모든 역사적 실제 민간시·미래 법령 변화의 보증이 아니다. 필요한 버전 정보가 없는 런타임은 유효한 응답 없이 실패한다.
+- 기존 사용자 지시 문서/next-env.d.ts 변경은 보존한다. UI/API/DB/LLM/OAuth/PG/비밀키/CI 변경은 없다. 이후 WBS는 시작하지 않는다.
+
 ## 2026-10-22 — WBS-06: 일주 계산과 독립 대조
 
 ### 선행 확인과 구현 전 완료 조건

@@ -25,10 +25,10 @@
 | --- | --- |
 | `solarTime` | `standard`(표준시), `mean-solar`(평태양시), `true-solar`(진태양시) |
 | `dayBoundary` | `midnight`(00시 날짜 경계), `zi-start`(23시 자시 시작 경계) |
-| `dstDisambiguation` | `reject`, `earlier`, `later`. DST 중복/누락 현지 시각에 대한 명시적 요청이며 현재는 해석하지 않음 |
+| `dstDisambiguation` | `reject`, `earlier`, `later`. WBS-07 현지 시각 정규화에서 적용하는 중복/누락 시각 정책 |
 
 이 enum은 정책 선택을 저장하는 계약이며 적용 알고리즘/관법 채택 완료가 아니다.
-실제 음력 변환/윤달 실재/지원 연도는 WBS-01/04, 역사 TZ/DST는 WBS-07,
+실제 음력 변환/윤달 실재/지원 연도는 WBS-01/04, 역사 TZ/DST는 [WBS-07 정규화](../timezone/README.md),
 태양시는 WBS-08, 자시·시주는 WBS-09에서 구현·골든 검증한다.
 음력 `2023-02-30`을 구조적으로 받을 수 있어도 해당 달력 날짜의 실재를 보증하지 않는다.
 원본 음력 날짜를 JS Date/ISO 시점으로 강제 변환하지 않는다. 향후 DB 저장은 변환된
@@ -47,5 +47,5 @@ F01~F11의 완성 여부와 다르다. 후속 기능은 의존 항목에 따라 
 `InputInformationSchema`로 메타데이터도 검증할 수 있으며 목록은 고정 순서로 반환한다.
 원본 생년월일·시각·장소 값을 이 메타데이터에 복사하거나 일반 로그로 남기지 않는다.
 
-현재 스키마는 앱/API/UI/DB에 연결하지 않는다. `npm test -- tests/birth-input.test.ts`로
+현재 스키마는 CLI/애플리케이션 서비스에서 사용하며 API/UI/DB 연결은 후속 범위다. `npm test -- tests/birth-input.test.ts`로
 단독 검증할 수 있다. 스키마 API 참고: [Zod 공식 문서](https://zod.dev/api).

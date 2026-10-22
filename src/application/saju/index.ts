@@ -26,7 +26,8 @@ export function calculateSajuSnapshot(value: unknown, adapter: CalendarAdapter):
 
   if (birthTime.status === "unknown") reasons.push("BIRTH_TIME_UNKNOWN");
   // IANA Etc/GMT signs are reversed: -9 is explicit fixed UTC+09:00.
-  // Asia/Seoul is intentionally not mapped before historical-time support.
+  // WBS-07 civil-time normalization is separate; general pillar clock policies
+  // still need the subsequent solar-time/day-boundary integration.
   if (birthInput.timezoneId !== "Etc/GMT-9") reasons.push("TIMEZONE_UNSUPPORTED");
   if (calculationPolicy.solarTime !== "standard") reasons.push("SOLAR_TIME_UNSUPPORTED");
   if (calculationPolicy.dayBoundary !== "midnight") reasons.push("DAY_BOUNDARY_UNSUPPORTED");

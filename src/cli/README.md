@@ -7,6 +7,7 @@
 npm run --silent saju -- --help
 npm run --silent saju -- validate < tests/fixtures/cli-input.json
 npm run --silent saju -- calculate < tests/fixtures/cli-input.json
+npm run --silent saju -- normalize-time < tests/fixtures/cli-input.json
 ```
 
 PowerShell에서는 실행 정책 변경 없이 다음과 같이 파이프한다.
@@ -16,7 +17,7 @@ Get-Content -Raw -Encoding utf8 tests/fixtures/cli-input.json | npm.cmd run --si
 $LASTEXITCODE
 ```
 
-인자는 `validate`, `calculate`, `--help` 중 하나다. 표준입력은 기존 `AnalysisInput` JSON
+인자는 `validate`, `calculate`, `normalize-time`, `--help` 중 하나다. 표준입력은 기존 `AnalysisInput` JSON
 문서 한 개이며 인자에 생년월일을 넣지 않는다. `--silent`는 npm의 스크립트 안내만 숨겨
 stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다. stdout은 요청된 개발용
 결과이고, 입력 원문을 그대로 반사하거나 일반 로그에 기록하지 않는다.
@@ -25,6 +26,8 @@ stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다
 | --- | --- | --- | --- |
 | `validate` 성공 | `status: valid`, 미상/한계 메타데이터 | 없음 | 0 |
 | `calculate` 성공 | `status: calculated`, 4개 기둥 snapshot/출처/미상 정보 | 없음 | 0 |
+| `normalize-time` 성공 | `status: normalized`, 요청/해결된 현지 시각·UTC·초 오프셋·버전/미상 정보 | 없음 | 0 |
+| 시간 정규화 거절/미상·범위 미지원 | `status: rejected`(fold/gap, resolved 없음) 또는 `unavailable`(reasons) | 없음 | 2 |
 | 계산 미지원/실제 달력 입력 거절 | `status: unavailable`, reasons/미상 정보. snapshot 없음 | 없음 | 2 |
 | 잘못된 인자/JSON/입력/UTF-8/크기 초과 | 없음 | 고정 코드/메시지의 error JSON | 2 |
 | 어댑터/입출력 실패 | 없음 | 고정 코드/메시지의 error JSON(출력 파이프 자체가 닫혔으면 출력 불가) | 1 |
@@ -38,7 +41,11 @@ stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다
 - `birthTime.status`가 known, `solarTime: standard`, `dayBoundary: midnight`, `dstDisambiguation: reject`.
 - 기존 어댑터의 양력 1800~2300/음력 1800~2100 범위. 날짜 실재는 공급자가 검증한다.
 
-일반 시간대·DST/태양시/자시 정책은 이후 WBS에서 검증하므로 여기서는 unsupported다.
+`calculate`에서 일반 지역 시간대·DST/태양시/자시 정책 연결은 아직 unsupported다.
+WBS-07의 `normalize-time`은 별도 [IANA 현지 시각 정규화 서비스](../domain/timezone/README.md)를 실행한다.
+reject/earlier/later와 역사 오프셋·서머타임을 해석하고, 음력은 지정 변환 포트로 양력화한다.
+일반 지역의 일주/시주·태양시 연결은 후속 정책 작업을 거쳐야 하므로 `calculate`의 범위를 자동 확대하지 않는다.
+gap 이동 시각과 원래 양력 벽시계를 함께 반환한다. 해당 날짜·시각은 요청된 개발 도구 결과이며 일반 로그로 자동 기록하지 않는다.
 미상 시각도 자정/정오를 만들어 넘기지 않는다. `validate`는 미지원 계산 옵션을 포함한
 기존 입력 계약 전체를 받을 수 있지만, 스키마 통과가 계산 가능이나 음력 실재 보증은 아니다.
 위도/경도/순역 기준 미상 자체는 보정 없는 4기둥 호출을 차단하지 않고 metadata로 남긴다.

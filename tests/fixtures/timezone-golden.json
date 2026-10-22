@@ -1,0 +1,28 @@
+{
+  "sources": [
+    "https://data.iana.org/time-zones/tzdb-2025b/asia",
+    "https://data.iana.org/time-zones/tzdb-2025b/northamerica",
+    "https://data.iana.org/time-zones/tzdb-2025b/australasia",
+    "https://tc39.es/proposal-temporal/docs/timezone.html"
+  ],
+  "checkedAt": "2026-10-22",
+  "basis": "Expected UTC instants and shifted wall times hand-calculated from IANA 2025b Zone/Rule entries and Temporal earlier/later semantics, not generated from the package. This verifies compatibility with these IANA rules, not independent historical truth; tzdb explicitly notes historical uncertainty. Runtime ICU/tzdb versions are returned with each result.",
+  "unique": [
+    { "id": "modern-seoul", "zone": "Asia/Seoul", "local": "2024-01-01T00:00", "instant": "2023-12-31T15:00:00Z", "offsetSeconds": 32400 },
+    { "id": "seoul-lmt-seconds", "zone": "Asia/Seoul", "local": "1900-01-01T12:00", "instant": "1900-01-01T03:32:08Z", "offsetSeconds": 30472 },
+    { "id": "seoul-half-hour-standard", "zone": "Asia/Seoul", "local": "1955-01-01T12:00", "instant": "1955-01-01T03:30:00Z", "offsetSeconds": 30600 },
+    { "id": "seoul-summer-1988", "zone": "Asia/Seoul", "local": "1988-07-01T12:00", "instant": "1988-07-01T02:00:00Z", "offsetSeconds": 36000 },
+    { "id": "new-york-winter", "zone": "America/New_York", "local": "2024-01-01T00:00", "instant": "2024-01-01T05:00:00Z", "offsetSeconds": -18000 },
+    { "id": "utc-explicit", "zone": "UTC", "local": "2024-02-29T00:00", "instant": "2024-02-29T00:00:00Z", "offsetSeconds": 0 }
+  ],
+  "transitions": [
+    { "id": "new-york-fold", "zone": "America/New_York", "local": "2024-11-03T01:30", "kind": "fold", "earlier": ["2024-11-03T05:30:00Z", "2024-11-03T01:30:00", -14400], "later": ["2024-11-03T06:30:00Z", "2024-11-03T01:30:00", -18000] },
+    { "id": "new-york-gap", "zone": "America/New_York", "local": "2024-03-10T02:30", "kind": "gap", "earlier": ["2024-03-10T06:30:00Z", "2024-03-10T01:30:00", -18000], "later": ["2024-03-10T07:30:00Z", "2024-03-10T03:30:00", -14400] },
+    { "id": "seoul-1988-fold", "zone": "Asia/Seoul", "local": "1988-10-09T02:30", "kind": "fold", "earlier": ["1988-10-08T16:30:00Z", "1988-10-09T02:30:00", 36000], "later": ["1988-10-08T17:30:00Z", "1988-10-09T02:30:00", 32400] },
+    { "id": "seoul-1988-gap", "zone": "Asia/Seoul", "local": "1988-05-08T02:30", "kind": "gap", "earlier": ["1988-05-07T16:30:00Z", "1988-05-08T01:30:00", 32400], "later": ["1988-05-07T17:30:00Z", "1988-05-08T03:30:00", 36000] },
+    { "id": "seoul-1961-half-hour-gap", "zone": "Asia/Seoul", "local": "1961-08-10T00:15", "kind": "gap", "earlier": ["1961-08-09T15:15:00Z", "1961-08-09T23:45:00", 30600], "later": ["1961-08-09T15:45:00Z", "1961-08-10T00:45:00", 32400] },
+    { "id": "lord-howe-half-hour-fold", "zone": "Australia/Lord_Howe", "local": "2024-04-07T01:45", "kind": "fold", "earlier": ["2024-04-06T14:45:00Z", "2024-04-07T01:45:00", 39600], "later": ["2024-04-06T15:15:00Z", "2024-04-07T01:45:00", 37800] },
+    { "id": "lord-howe-half-hour-gap", "zone": "Australia/Lord_Howe", "local": "2024-10-06T02:15", "kind": "gap", "earlier": ["2024-10-05T15:15:00Z", "2024-10-06T01:45:00", 37800], "later": ["2024-10-05T15:45:00Z", "2024-10-06T02:45:00", 39600] },
+    { "id": "apia-skipped-day", "zone": "Pacific/Apia", "local": "2011-12-30T12:00", "kind": "gap", "earlier": ["2011-12-29T22:00:00Z", "2011-12-29T12:00:00", -36000], "later": ["2011-12-30T22:00:00Z", "2011-12-31T12:00:00", 50400] }
+  ]
+}
