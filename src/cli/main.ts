@@ -15,7 +15,7 @@ process.stderr.on("error", () => { process.exitCode = 1; });
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  const needsInput = args.length === 1 && ["validate", "calculate", "normalize-time", "calculate-policy", "derive-facts", "judge-facts"].includes(args[0]);
+  const needsInput = args.length === 1 && ["validate", "calculate", "normalize-time", "calculate-policy", "derive-facts", "judge-facts", "arbitrate-facts"].includes(args[0]);
   const text = needsInput ? await readUtf8Input(process.stdin) : "";
   writeResult(runCli(args, text, manseryeokCalendarAdapter, { timeZone: temporalTimeZoneAdapter, calendar: manseryeokCalendarConversionAdapter, equationOfTime: manseryeokEquationOfTimeAdapter, pillars: manseryeokPolicyCalendarAdapter, symbols: manseryeokSymbolCatalogAdapter }));
 }

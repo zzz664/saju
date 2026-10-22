@@ -11,6 +11,7 @@ npm run --silent saju -- normalize-time < tests/fixtures/cli-input.json
 npm run --silent saju -- calculate-policy < tests/fixtures/cli-input.json
 npm run --silent saju -- derive-facts < tests/fixtures/cli-input.json
 npm run --silent saju -- judge-facts < tests/fixtures/cli-input.json
+npm run --silent saju -- arbitrate-facts < tests/fixtures/cli-input.json
 ```
 
 PowerShell에서는 실행 정책 변경 없이 다음과 같이 파이프한다.
@@ -20,7 +21,7 @@ Get-Content -Raw -Encoding utf8 tests/fixtures/cli-input.json | npm.cmd run --si
 $LASTEXITCODE
 ```
 
-인자는 `validate`, `calculate`, `normalize-time`, `calculate-policy`, `derive-facts`, `judge-facts`, `--help` 중 하나다. 표준입력은 기존 `AnalysisInput` JSON
+인자는 `validate`, `calculate`, `normalize-time`, `calculate-policy`, `derive-facts`, `judge-facts`, `arbitrate-facts`, `--help` 중 하나다. 표준입력은 기존 `AnalysisInput` JSON
 문서 한 개이며 인자에 생년월일을 넣지 않는다. `--silent`는 npm의 스크립트 안내만 숨겨
 stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다. stdout은 요청된 개발용
 결과이고, 입력 원문을 그대로 반사하거나 일반 로그에 기록하지 않는다.
@@ -36,6 +37,8 @@ stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다
 | `derive-facts` partial/unavailable | 확정 범위의 facts 또는 null, 미상 한계와 기존 calculation | 없음 | 2 |
 | `judge-facts` complete | 기존 analysis 및 20개 기초 규칙 평가/근거 finding | 없음 | 0 |
 | `judge-facts` partial/unavailable | 기존 미상 범위 유지, 평가 가능한 관찰만 finding, evaluation 또는 null | 없음 | 2 |
+| `arbitrate-facts` complete | 원래 judgment 및 충돌의 채택/억제/보류·근거를 담은 resolution | 없음 | 0 |
+| `arbitrate-facts` partial/unavailable | 미상·부분 근거/미해결 충돌과 원본 trace, resolution 또는 null | 없음 | 2 |
 | 시간 정규화 거절/미상·범위 미지원 | `status: rejected`(fold/gap, resolved 없음) 또는 `unavailable`(reasons) | 없음 | 2 |
 | 계산 미지원/실제 달력 입력 거절 | `status: unavailable`, reasons/미상 정보. snapshot 없음 | 없음 | 2 |
 | 잘못된 인자/JSON/입력/UTF-8/크기 초과 | 없음 | 고정 코드/메시지의 error JSON | 2 |
@@ -73,6 +76,9 @@ WBS-10의 [derive-facts](../domain/natal-facts/README.md)는 정책 계산 결�
 WBS-11 [judge-facts](../domain/judgment/README.md)는 같은 facts를 재사용하고 출처가 연결된
 기초 관찰 규칙 20개를 평가한다. 미확인 부재는 unavailable이며 matched만 finding을 만든다.
 입력 근거·출처·버전·예외/범위를 보존하고 충돌 중재나 강약/길흉 판단은 수행하지 않는다.
+WBS-12 [arbitrate-facts](../domain/judgment/ARBITRATION.md)는 기존 판단을 한 번 계산해
+보존하고 별도 중재 결과와 미상 trace를 추가한다. 우선순위 동률·관법 차이·부분 근거의
+충돌은 보류한다. 기호 동시 존재를 충돌로 만들거나 부분 관찰을 확정으로 승격하지 않는다.
 
 입력은 최대 64 KiB(65,536바이트), 유효한 UTF-8만 받는다. UTF-8 BOM과 청크 분할을
 처리하며 크기 초과·손상된 바이트·스트림 오류에서 부분 결과를 반환하지 않는다.

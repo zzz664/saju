@@ -1,5 +1,36 @@
 # 작업 기록
 
+## 2026-10-23 — WBS-12: 충돌·불확실성 중재
+
+### 선행 확인과 구현 전 완료 조건
+
+- 직전 PR #12(WBS-11)가 develop에 MERGED(2026-10-23 00:02:35 KST)임을 GitHub에서 확인했다. merge commit `7c0de0ee5cdb139f9da05d9cb75e6c91c12b3f8b`와 origin/develop 원격 hash 일치, fetch 후 ancestor 확인. WBS.csv 실행순서 14/선행 WBS-11을 충족한다. CSV의 TODO만으로 완료를 판단하지 않았다.
+- develop checkout 및 `git pull --ff-only origin develop` 성공 후 `git branch -d feature/WBS-11-classical-evidence-rules` 안전 삭제 성공. 최신 develop에서 `feature/WBS-12-conflict-uncertainty-arbitration` 하나를 생성했다. AGENTS/WBS/02/05/06/08 및 관련 10 상세설계, 기존 기초 판단·서비스·CLI를 읽었다.
+- 완료 조건: 원래 사실·판단·출처/규칙 버전·예외/근거를 변경하지 않는 순수 중재, 동일 항목의 명시적 대안만 충돌 처리, 우선순위에 따른 채택/억제와 동률·관법 차이·부분 근거의 보류, 대칭 충돌 링크와 미상 trace 보존. upstream partial/unavailable 또는 개별 precision을 확정으로 승격하지 않는다.
+- 정상 테스트 선작성: 서로 다른 확정 우선순위, 같은 value의 여러 근거, 관법별 동의, 독립 관찰 보존, 실제 기초 관찰/십성 공존에서 충돌을 조작하지 않음. 오류: 중복 ID, 출처/근거 누락, priority 범위·정수/후보 개수/claim 키, precision·상태 모순, 결과/출처 평가 연결·중재 기록 변조. 경계: 동률/세 대안/0·100, 부분 근거가 높은/낮은 우선순위, 혼합 충돌 그룹, 미상·전체 미상·빈 평가, 순서/불변성, midnight/zi-start와 실제 CLI 종료 코드.
+
+### 구현과 검증 결과
+
+- `arbitrateJudgments`는 검증된 내부 후보의 원래 finding과 명시적인 claim key/value/method를 받는다. 같은 key의 다른 value만 충돌이다. 관법 차이·부분 근거·최상위 동률은 보류하며, 동일 관법의 전부 확정된 근거에서 최상위가 지지하는 value가 하나인 경우에만 그 value의 지지 후보들을 채택한다. 다른 value는 억제하되 모든 원문과 근거를 candidates에 보존한다.
+- 후보별 accepted/suppressed/deferred, 대칭 conflictingWith, 그룹별 사유/상태·후보/지지 ID, 원문 findings, limitations와 `arbitration.explicit-claims` 1.0.0을 반환한다. 미해결 충돌은 complete를 partial로 낮추며, 서로 다른 그룹이나 이미 알려진 일부 관찰을 지우지 않는다. sourceRefs나 기호 동시 존재만으로 충돌을 추측하지 않는다.
+- strict/readonly Zod 입력·출력 검증, 최대 100개 후보·ID/precision/예외 검증, 입력에서 중재 결정을 다시 구성하는 결과 일관성 검사와 로캘 비의존 정렬을 추가했다. 원래 finding/result 스키마는 동작 변경 없이 이름을 붙여 재사용했다.
+- `arbitrateBaseJudgments`는 기존 20개 평가의 matched만 후보화하고 coverage가 complete가 아닌 원래 결과 전부를 uncertainties에 남긴다. 일간/사계 대안만 각각 같은 key를 공유하고 다른 존재 관찰은 독립 key를 쓴다. 현재 유효한 기초 규칙은 서로 배타적인 관찰을 동시에 만들지 않으므로 실제 conflicts는 비어 있는 것이 정상이다. 가상 충돌 fixture는 중재 정책 검증용이며 새 고전/명리 규칙으로 등록하지 않았다.
+- `calculateArbitratedJudgments`와 `arbitrate-facts` CLI를 추가했다. 기존 계산·평가를 한 번 수행해 judgment에 보존하고 resolution을 원래 evaluation에 대조한다. 미지원/거절로 evaluation이 null이면 resolution도 null이며, 미상 후보의 일간·시주를 확정 근거로 사용하지 않는다. 기존 judge-facts/derive-facts 계약과 입력·개인정보 오류 처리를 유지했다.
+- 선작성 도메인 테스트는 모듈 부재로 종료 1, 구현 후 16건 통과. 타입 검사에서 중재 사유의 string 추론 오류를 확인해 enum 타입을 명시했다. 서비스/CLI 선작성 6건도 미구현 상태에서 실패를 확인한 뒤 연결했다.
+- 첫 관련 검사에서 격리 환경의 tsx가 `uv_os_get_passwd` ENOMEM으로 실제 CLI 7건을 실패시켰다(112건 통과). `--help` 단독으로 같은 OS 오류를 재현했다. 테스트나 tsx를 우회/수정하지 않고 일반 실행 권한으로 동일 CLI/관련 검사를 실행해 119건 통과를 확인했다. 혼합 충돌 그룹과 입력/출력 변조 경계를 보강한 후 최종 검사했다.
+- 최종 `npm.cmd test -- tests/arbitration.test.ts tests/arbitration-service.test.ts tests/judgment.test.ts tests/judgment-service.test.ts tests/cli.test.ts`: 일반 실행 환경에서 종료 0, 관련 5파일/120건 통과(신규 도메인 17건 + 서비스/CLI 6건). `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`도 종료 0. 실제 CLI known/unknown은 호스트 TZ=Pacific/Honolulu에서도 단일 JSON/종료 0·2를 확인했다. skip/실패 무시 옵션은 없다.
+- AGENTS에 따라 관련 검사만 실행했다. 의존성·잠금 파일·Next 라우트/설정 변경이 없어 전체 테스트/설치/빌드는 반복하지 않았다. 기존 생성 타입을 사용해 사용자 next-env.d.ts와 개발 서버를 보존했다.
+
+### 변경 파일과 제약
+
+- `src/domain/judgment/arbitration.ts`, `schemas.ts`, `ARBITRATION.md`, `README.md`: 중재/불확실성 계약·정책·순수 엔진과 기존 평가 연결, 범위 문서.
+- `src/application/judgment/index.ts`: 기존 판단 재사용, 평가와 중재/미상 trace의 연결·상태 검증.
+- `src/cli/run.ts`, `main.ts`, `README.md`: arbitrate-facts 명령·종료 코드·사용법.
+- `tests/arbitration.test.ts`, `tests/arbitration-service.test.ts`: 충돌·미상·입출력 무결성·기존 결과 보존·실제 CLI.
+- 루트 `README.md`, `docs/worklog.md`: 구현 경로·완료 기준·검증 결과와 제약. 총 12개 작업 파일만 커밋한다.
+- 중재 우선순위는 채택 정책이며 고전 간 보편적 진리/과학적 검증/전문가 승인을 뜻하지 않는다. 후보의 형태 검증이 출처·근거의 진실성을 증명하지 않으므로 내부 호출자는 먼저 계산/규칙/출처를 검증해야 한다. 사용자/LLM 후보를 받는 API는 추가하지 않았다. partial finding은 원래 precision을 유지하며 이후 서술에서 확정 판단으로 승격하면 안 된다.
+- AGENTS.md/작업지시 문서/next-env.d.ts의 기존 사용자 수정은 보존·커밋 제외한다. WBS.csv 상태·역법/facts/고전 카탈로그 내용·의존성·UI/DB/OAuth/PG/OpenAI/키/CI·WBS-13 이후 구현은 변경하지 않는다. develop 대상 PR 한 건 생성 뒤 중지한다.
+
 ## 2026-10-22 — WBS-11: 고전 출처 카탈로그와 기초 판단 규칙
 
 ### 선행 확인과 구현 전 완료 조건

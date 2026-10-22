@@ -51,13 +51,17 @@ const Trace = {
   exceptionsDeclared: z.array(ExceptionSchema).readonly(), exceptionsApplied: z.array(ExceptionSchema).readonly(),
   evidence: z.array(EvidenceSchema).readonly(), caveats: z.array(Nonempty).min(1).readonly(),
 };
+export const JudgmentFindingSchema = z.strictObject({ ...Trace, findingId: z.string().min(1), assertion: Nonempty,
+  precision: z.enum(["confirmed", "partial"]),
+}).readonly();
+export const RuleEvaluationSchema = z.strictObject({ ...Trace,
+  status: z.enum(["matched", "not-matched", "unavailable"]), coverage: z.enum(["complete", "partial", "none"]),
+}).readonly();
 export const EvaluationBaseSchema = z.strictObject({
   status: z.enum(["complete", "partial", "unavailable"]),
   sourcePillars: KnownPillarsSchema,
-  results: z.array(z.strictObject({ ...Trace, status: z.enum(["matched", "not-matched", "unavailable"]), coverage: z.enum(["complete", "partial", "none"]) }).readonly()).length(20).readonly(),
-  findings: z.array(z.strictObject({ ...Trace, findingId: z.string().min(1), assertion: Nonempty,
-    precision: z.enum(["confirmed", "partial"]),
-  }).readonly()).max(20).readonly(),
+  results: z.array(RuleEvaluationSchema).length(20).readonly(),
+  findings: z.array(JudgmentFindingSchema).max(20).readonly(),
   provenance: z.strictObject({ ruleSetVersion: z.literal("1.0.0"), sourceCatalogVersion: z.literal("1.0.0"),
     factsSchemaVersion: z.literal("1.0.0"), libraryName: z.literal("manseryeok"), libraryVersion: z.literal("2.0.0"),
     scope: z.literal("base-structural-observations"),
