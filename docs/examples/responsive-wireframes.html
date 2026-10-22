@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>v2.4 모바일 퍼스트·대화형 와이어프레임 · 설계 검토용</title>
+  <style>
+    :root {
+      --bg: #F8F5FB; --surface: #FFFFFF; --subtle:#F4EDF5;
+      --primary:#685DE4; --primary-2:#916FEE; --lavender:#A99EE1;
+      --peach:#F5D5A8; --orange:#ECA160; --ink:#1C1A1C;
+      --muted:#5D5666; --border:#E9E2F2; --r:22px;
+      font-family: -apple-system,BlinkMacSystemFont,'Pretendard','Noto Sans KR',sans-serif;
+    }
+    * {box-sizing:border-box}
+    body {margin:0;background:linear-gradient(145deg,#F4EDF5 0%,#EEE9FF 42%,#F8F5FB 90%); color:var(--ink)}
+    button {font:inherit;cursor:pointer}
+    .layout {display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
+    .sidebar {background:rgba(255,255,255,.88);padding:22px 16px;border-right:1px solid var(--border);position:sticky;top:0;height:100vh;overflow:auto}
+    .sidebar h1 {font-size:19px;line-height:1.3;margin:0 0 9px}
+    .sidebar p,.muted {color:var(--muted);font-size:12px;line-height:1.6}
+    .navlist {display:grid;gap:5px;margin-top:20px}
+    .navlist button {border:0;background:transparent;text-align:left;border-radius:12px;padding:11px 12px;color:#38304C;font-size:13px}
+    .navlist button:hover,.navlist button[aria-current="page"] {background:#EDE6FF;color:#4B31C5;font-weight:700}
+    .main {min-width:0;padding:28px 22px 50px}
+    .top {display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;align-items:start;max-width:1250px;margin:auto}
+    .top h2{margin:0 0 4px;font-size:23px}
+    .toolbar{display:flex;gap:6px;flex-wrap:wrap}
+    .toolbar button{border:1px solid #DCD1F5;border-radius:999px;background:white;color:var(--muted);padding:9px 13px;font-size:12px}
+    .toolbar button[aria-pressed="true"]{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .stage {max-width:1250px;margin:24px auto 0;overflow:auto;padding:4px 0 30px}
+    .device{width:390px;max-width:none;min-height:690px;background:#fff;border-radius:32px;border:5px solid #433B77;overflow:hidden;box-shadow:0 20px 60px rgba(79,57,149,.20);margin:auto;transition:width .2s ease}
+    .device[data-width="768"] {width:768px}
+    .device[data-width="1180"] {width:1180px}
+    .app-head {background:linear-gradient(135deg,#F4EDF5,#F1ECFF 68%,#FBE9DE);padding:17px 17px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+    .brand {font-size:15px;font-weight:800;color:#23184C}
+    .badge {display:inline-flex;border-radius:50px;background:#EDE6FF;color:#5C50D2;font-size:10px;font-weight:700;padding:5px 8px}
+    .app-body{padding:18px 16px 80px;max-width:100%}
+    .device[data-width="768"] .app-body,.device[data-width="1180"] .app-body {padding:28px 30px 90px}
+    .device[data-width="1180"] .app-body {max-width:1060px;margin:auto}
+    .page-title{font-size:21px;line-height:1.4;margin:4px 0 8px;font-weight:800;letter-spacing:-.6px}
+    .page-desc{font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 19px}
+    .card{border-radius:var(--r);border:1px solid var(--border);box-shadow:0 8px 24px rgba(104,93,228,.08);padding:16px;background:#fff;margin-bottom:12px}
+    .card.tint{background:linear-gradient(135deg,#F7F3FF,#FFF9FA)}
+    .card h3{font-size:14px;margin:0 0 6px}
+    .card p{font-size:12px;line-height:1.6;color:var(--muted);margin:0}
+    .grid{display:grid;grid-template-columns:1fr;gap:11px}
+    .device[data-width="768"] .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .device[data-width="1180"] .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid .card{margin-bottom:0}
+    .button{width:100%;display:block;text-align:center;border:0;border-radius:999px;padding:14px 16px;font-weight:700;font-size:13px;background:linear-gradient(135deg,#916FEE,#685DE4);color:#fff;margin-top:11px;min-height:48px}
+    .button.outline{background:#fff;color:#5849C6;border:1px solid #D7CBFA}
+    .button.kakao{background:#F5D5A8;color:#362C28}
+    .button.google{background:#fff;color:#292739;border:1px solid var(--border)}
+    .field{margin:12px 0;display:grid;gap:7px}
+    .field label{font-size:12px;font-weight:750}
+    .field .input{border:1px solid #D9D0EA;background:#fff;min-height:48px;border-radius:14px;padding:14px;font-size:12px;color:#756F88}
+    .chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+    .chip{border:1px solid #DFD5F4;background:#F4EDF5;padding:8px 11px;border-radius:999px;font-size:12px;color:#514A73}
+    .chip.on{background:#E7DEFF;color:#4D35C7;font-weight:700}
+    .note{border:1px dashed #C8BCEC;border-radius:14px;background:#F9F7FF;color:#5E5477;font-size:12px;padding:12px;line-height:1.6;margin:12px 0}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .inline{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .spacer{height:7px}
+    .skeleton{height:11px;background:linear-gradient(90deg,#EAE4F5,#F6F3FB);border-radius:9px;margin:12px 0}
+    .skeleton.mid{width:70%}.skeleton.short{width:43%}
+    .navbar {height:64px;display:flex;gap:4px;align-items:center;justify-content:space-around;border-top:1px solid var(--border);background:#fff;font-size:11px;position:relative;margin-top:18px}
+    .navbar span{color:#524B76;text-align:center;flex:1}
+    .foot {font-size:11px;color:#706989;margin-top:16px;line-height:1.7}
+    .guard{font-weight:800;color:#5441BD;background:#F1EBFF;padding:10px 13px;border-radius:13px;font-size:12px;margin-bottom:15px}
+    .tag{font-size:10px;border-radius:7px;padding:4px 7px;background:#FFF0D3;color:#84551F}
+
+    /* v2.4 대화형 풀이 로우파이 UI */
+    .chat-wrap{display:flex;flex-direction:column;gap:12px;border:1px solid var(--border);background:linear-gradient(180deg,#FAF8FF 0%,#FFFFFF 100%);border-radius:20px;padding:14px 10px;min-height:370px;}
+    .chat-head{font-size:12px;color:#554A80;padding:6px 7px;border-bottom:1px solid var(--border)}
+    .messages{display:flex;flex-direction:column;align-items:stretch;gap:12px;min-height:210px;max-height:420px;overflow:auto;padding:8px 5px;}
+    .msg-row{display:flex;flex-direction:column;max-width:85%;gap:4px;min-width:0}
+    .msg-row.assistant{align-self:flex-start}.msg-row.user{align-self:flex-end}
+    .msg-label{font-size:10px;color:#635A86}
+    .msg-row.user .msg-label{text-align:right}
+    .bubble{border:1px solid #E3DAF5;border-radius:18px 18px 18px 6px;background:#F2ECFF;color:#241E41;padding:11px 13px;font-size:12px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+    .msg-row.user .bubble{background:#685DE4;border-color:#685DE4;color:#fff;border-radius:18px 18px 6px 18px}
+    .chat-progress{font-size:11px;color:#5C50D2;padding:6px 4px}
+    .composer{display:flex;gap:7px;align-items:flex-end;border-top:1px solid var(--border);padding-top:12px}
+    .composer textarea{resize:none;flex:1;min-width:0;min-height:46px;border:1px solid #D9D0EA;border-radius:14px;padding:12px;font:inherit;font-size:12px;line-height:1.5;background:#fff;color:#292238}
+    .composer textarea:disabled{background:#EEEAF3;color:#6E658B}
+    .composer button{min-width:60px;height:46px;border:0;border-radius:12px;color:#fff;background:#685DE4;padding:0 12px;font-size:12px;font-weight:700}
+    .composer button:disabled{opacity:.44;cursor:not-allowed}
+    .device[data-width="768"] .msg-row,.device[data-width="1180"] .msg-row{max-width:75%}
+    @media(prefers-reduced-motion:reduce){.device{transition:none}}
+
+    @media(max-width:850px){
+      .layout{grid-template-columns:1fr}.sidebar{position:relative;height:auto;max-height:250px;border-right:0;border-bottom:1px solid var(--border)}
+      .navlist{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;max-height:150px;overflow:auto}
+      .main{padding:19px 10px 40px}.top h2{font-size:20px}.device{margin:auto}
+    }
+    @media(max-width:410px){.stage{margin-left:-2px;margin-right:-2px}.device{transform:scale(.82);transform-origin:top left;margin-left:calc((100vw - 320px)/2);margin-bottom:-120px}}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" aria-label="화면 선택">
+    <h1>UI 와이어프레임 <span class="badge">v2.4</span></h1>
+    <p>모바일 퍼스트 · 반응형 · 색상 참조만 · 일러스트 없음<br>P06에는 백엔드 없는 모의 스트림 UI가 있습니다.</p>
+    <nav class="navlist" id="nav"></nav>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <div><h2 id="screen-title">화면 선택</h2><p class="muted" id="screen-desc">입력/결과/로그인/PG 테스트/계정 화면을 확인합니다.</p></div>
+      <div class="toolbar" role="group" aria-label="시뮬레이션 너비">
+        <button data-width="390" aria-pressed="true">모바일 390</button>
+        <button data-width="768" aria-pressed="false">태블릿 768</button>
+        <button data-width="1180" aria-pressed="false">데스크톱 1180</button>
+      </div>
+    </div>
+    <div class="stage"><div class="device" id="device" data-width="390"><div class="app-head"><span class="brand">[서비스명 미정]</span><span class="badge">임시 UI</span></div><section class="app-body" id="screen"></section><div class="navbar"><span>시작</span><span>기능</span><span>보관함</span><span>계정</span></div></div></div>
+    <p class="muted" style="max-width:1250px;margin:0 auto">※ P06 모의 스트리밍/질문은 브라우저 안의 예시 애니메이션입니다. 실제 API, OAuth, 결제, DB 저장 기능은 없습니다.</p>
+  </main>
+</div>
+<script>
+const card=(title,body,extra='')=>`<div class="card ${extra}"><h3>${title}</h3><p>${body}</p></div>`;
+const btn=(label,style='')=>`<button type="button" class="button ${style}">${label}</button>`;
+const field=(label,example)=>`<div class="field"><label>${label}</label><div class="input">${example}</div></div>`;
+const note=(s)=>`<div class="note">${s}</div>`;
+const screens=[
+ ['P01','시작 화면','공개 진입·기능 둘러보기',`<h2 class="page-title">나의 사주를 살펴보는 시간</h2><p class="page-desc">서비스명·캐릭터·상품명 확정 전 임시 문구입니다.</p>${btn('해석 기능 살펴보기 →')}${btn('출생 정보 입력하기','outline')}<div class="spacer"></div><div class="grid">${card('기본 원국','F01~F07 기본 성향 중심 결과','tint')}${card('시기별 운','F08~F10 시간 흐름 분석')}${card('관계 분석','F11 두 사람의 원국 비교')}</div>`],
+ ['P02','기능 목록','F01~F11을 그룹별로 노출',`<h2 class="page-title">분석 기능</h2><div class="chips"><span class="chip on">전체</span><span class="chip">원국</span><span class="chip">시기</span><span class="chip">궁합</span></div><div class="grid">${['F01 종합 원국','F02 성격·기질','F03 오행·십성','F04 직업·적성','F05 재물 성향','F06 연애·관계','F07 신살','F08 대운','F09 세운','F10 월운·일운','F11 궁합'].map(x=>card(x,'분석 결과 및 전제조건 보기 →')).join('')}</div>`],
+ ['P03','기능 상세','필요 입력·해석 제한·CTA',`<span class="badge">F02</span><h2 class="page-title">타고난 성격·기질</h2><p class="page-desc">이 설명은 상품명이 아니라 명리 분석 기능의 범위입니다.</p>${card('주요 결과','일간·월령·십성 기반 성향. 타고난 기질을 단정하지 않음','tint')}${card('필요한 입력','양음력·생년월일·출생 시간(미상 허용)')}${note('성격 판단은 명리학의 전통적 해석이며 성격검사 결과나 객관적 사실과 구분합니다.')}${btn('출생 정보 입력 →')}`],
+ ['P04','출생 정보 입력','모바일 단일 폼·시간 미상',`<h2 class="page-title">출생 정보 입력</h2><div class="chips"><span class="chip on">양력</span><span class="chip">음력</span><span class="chip">윤달</span></div>${field('생년월일','YYYY - MM - DD')}<div class="inline">${field('출생 시각','00 : 00')}${field('출생시간 미상','□ 체크')}</div>${field('출생지 / 시간대','검색 또는 Asia/Seoul')}${note('절기 경계 및 진태양시 보정으로 간지가 달라질 수 있습니다.')}${btn('입력 확인 계속 →')}`],
+ ['P05','분석 실행 확인','사용자 입력과 계산 정책 확인',`<h2 class="page-title">분석 전 확인</h2>${card('선택한 기능','F02 — 성격·기질')}${card('입력 요약','양력 · 생년월일 · 출생 시간 · 시간대')}${card('계산 정책','절기 · 시간 보정 · 자시 정책')}${note('시간 미상 또는 경계 사례는 일부 분석이 제한됩니다.')}${btn('분석 요청하기')}`],
+ ['P06','대화형 풀이 결과','캐릭터 말풍선 스트리밍 → 전체 완료 → 질문 허용',`<h2 class="page-title">F02 · 대화형 사주풀이</h2><p class="page-desc">AI 가상 캐릭터가 검증된 명리 판단을 설명하는 화면 예시입니다.</p><div class="chat-wrap"><div class="chat-head">캐릭터 서술 · 분석 근거는 별도로 확인 가능</div><div class="messages" id="chat-messages"></div><div class="chat-progress" id="chat-progress">풀이 생성 전 · 질문 잠금</div><div class="composer"><textarea id="chat-question" rows="1" placeholder="풀이 완료 후 질문할 수 있어요" disabled></textarea><button id="chat-send" disabled>전송</button></div></div><button type="button" class="button" id="chat-start">모의 스트리밍 시작</button>${note('이 미리보기는 실제 AI/DB와 연결되지 않은 시각 동작 예시입니다. 섹션·대화 내용은 샘플이며 사용자 사주 분석 결과가 아닙니다.')}${btn('판단 근거 보기','outline')}`],
+ ['P07','소셜 로그인/가입','Google/Kakao 동일 진입',`<h2 class="page-title">로그인 · 회원가입</h2><p class="page-desc">처음 로그인하면 계정이 생성됩니다. 비밀번호는 별도 저장하지 않습니다.</p>${btn('G　Google로 계속하기','google')}${btn('K　Kakao로 계속하기','kakao')}${note('인증 제공자의 동의 화면으로 이동합니다. 인증 취소 시 이 화면으로 돌아옵니다.')}<p class="foot">개인정보 처리방침 | 이용약관</p>`],
+ ['P09','마이페이지','계정 상태·저장 정보',`<h2 class="page-title">내 계정</h2>${card('계정 프로필','표시 이름 / 소셜 연결 공급자','tint')}${card('내 출생 정보','보관·수정·삭제 →')}${card('저장된 풀이','11개 기능별 결과 보기 →')}${card('테스트 주문 내역','결제 상태 조회 →')}${btn('설정 및 로그아웃','outline')}`],
+ ['P10','출생정보 관리','프로필 소유자 기반 관리',`<h2 class="page-title">내 출생 정보</h2>${btn('새 출생정보 추가 +')}${card('기본 프로필','생년월일(마스킹) · 시간대　[수정] [삭제]','tint')}${card('출생시각 미상 프로필','분석에 제한이 있을 수 있음　[수정] [삭제]')}${note('등록한 출생정보는 계정 내 저장된 데이터입니다. 선택한 데이터만 분석에 사용됩니다.')}`],
+ ['P11','분석 보관함','기능/날짜/캐릭터 버전',`<h2 class="page-title">저장된 풀이</h2><div class="chips"><span class="chip on">전체</span><span class="chip">원국</span><span class="chip">시기별</span><span class="chip">궁합</span></div>${card('F02 성격·기질','생성일 · 캐릭터 프로필 버전 →','tint')}${card('F08 대운','생성일 · 판단 엔진 버전 →')}${note('저장된 풀이가 없다면 먼저 출생정보를 입력해 분석을 실행합니다.')}`],
+ ['P12','테스트 체크아웃','PG 연동용 임시 주문서',`<div class="guard">테스트 결제 · 실제 금액이 청구되지 않습니다</div><h2 class="page-title">주문 정보 확인</h2>${card('테스트 기능','Fxx 기능 사용 테스트')}${card('테스트 결제 금액','DB 기준 금액 · KRW (예시 가격 미확정)')}${note('주문 ID, 금액, 계정 소유자는 서버에서 확인합니다. 결제창 이후 서버 승인 전에는 권한이 부여되지 않습니다.')}${btn('테스트 결제창 열기')}`],
+ ['P13','결제 승인 결과','승인 확인 후 접근권 활성화',`<span class="badge">결제 상태 확인</span><h2 class="page-title">승인 결과 확인</h2>${card('결제 승인 진행 중','PG 응답과 서버 주문 금액을 대조하고 있습니다.','tint')}${note('주소창의 성공 URL만으로 결제가 완료된 것은 아닙니다.')}${btn('결제 상태 다시 확인','outline')}`],
+ ['P14','결제 실패/취소','결제 미완료 시 재시도',`<h2 class="page-title">결제가 완료되지 않았어요</h2>${card('결제 실패 또는 취소','주문이 처리되지 않았고 접근권도 활성화되지 않았습니다.','tint')}${btn('다시 시도하기')}${btn('기능 목록으로','outline')}`],
+ ['P15','주문 상세','서버 승인 상태만 노출',`<h2 class="page-title">테스트 주문 내역</h2>${card('주문번호','orderId (개인 식별 정보 제외)')}${card('테스트 금액','금액 / 승인 상태 / PG 결제 방식')}${card('부여된 테스트 권한','해당 기능 Fxx · 테스트 환경 전용')}${note('실거래 내역이 아닙니다. PG 승인 결과는 서버 조회를 통해 재확인합니다.')}`],
+ ['P16','계정 설정','삭제/약관/로그아웃',`<h2 class="page-title">계정 설정</h2>${card('연결된 계정','Google 또는 Kakao')}${card('내 정보 삭제','출생 데이터/분석·LLM 서술 삭제 요청 →')}${card('개인정보/약관','정책 문서 확인 →')}${btn('로그아웃','outline')}`],
+ ['P17','개발자 검증','개발환경 전용 JSON 패널',`<div class="guard">개발자 전용 · 외부 공개 금지</div><h2 class="page-title">계산 검증</h2><div class="chips"><span class="chip on">원국</span><span class="chip">규칙</span><span class="chip">JSON</span><span class="chip">LLM</span></div>${card('계산 정책','calculationPolicyVersion / rulesVersion')}${card('출력 검증','schemaVersion / source evidence / warnings')}${card('보안 안내','비밀키·출생 정보 원문·토큰 기록 금지')}`]
+];
+const nav=document.querySelector('#nav');const screen=document.querySelector('#screen');const device=document.querySelector('#device');
+let current=0;
+function select(i){current=i;const [id,name,desc,html]=screens[i];screen.innerHTML=html;
+ document.querySelector('#screen-title').textContent=id+' · '+name;
+ document.querySelector('#screen-desc').textContent=desc;
+ nav.querySelectorAll('button').forEach((b,j)=>b.setAttribute('aria-current',String(j===i?'page':'false')));
+ if(id==='P06') setupChatDemo();
+}
+screens.forEach(([id,name],i)=>{const b=document.createElement('button');b.textContent=id+' · '+name;b.addEventListener('click',()=>select(i));nav.appendChild(b)});
+document.querySelectorAll('.toolbar button[data-width]').forEach(b=>b.addEventListener('click',()=>{
+ const width=b.getAttribute('data-width');device.setAttribute('data-width',width);
+ document.querySelectorAll('.toolbar button').forEach(t=>t.setAttribute('aria-pressed',String(t===b)));
+}));
+
+let chatTimer=null;
+function setupChatDemo(){
+  if(chatTimer){clearInterval(chatTimer);chatTimer=null;}
+  const list=document.getElementById('chat-messages');
+  const progress=document.getElementById('chat-progress');
+  const start=document.getElementById('chat-start');
+  const input=document.getElementById('chat-question');
+  const send=document.getElementById('chat-send');
+  if(!list||!progress||!start||!input||!send) return;
+  let completed=false, replying=false;
+  const samples=['분석이 시작되면, 검증된 원국 판단에서 중요한 부분부터 차례로 짚어볼게요.',
+    '각 말풍선은 하나의 해석 구간을 맡아요. 이렇게 보면 긴 풀이도 대화하듯 읽기 편하죠.',
+    '여기까지가 첫 풀이예요. 이제 이 내용에 관해 무엇이든 편하게 질문해 주세요.'];
+  function addBubble(side,label){
+    const row=document.createElement('div');row.className='msg-row '+side;
+    const head=document.createElement('div');head.className='msg-label';head.textContent=label;
+    const body=document.createElement('div');body.className='bubble';
+    row.append(head,body);list.appendChild(row);list.scrollTop=list.scrollHeight;
+    return body;
+  }
+  function feedString(text,target,done){
+    let offset=0;
+    chatTimer=setInterval(()=>{
+      const take=Math.min(2, text.length-offset);
+      target.textContent += text.slice(offset, offset+take);
+      offset+=take;list.scrollTop=list.scrollHeight;
+      if(offset>=text.length){clearInterval(chatTimer);chatTimer=null;done();}
+    },22);
+  }
+  function unlock(){
+    completed=true;input.disabled=false;send.disabled=false;
+    start.disabled=false;start.textContent='모의 스트리밍 다시보기';
+    progress.textContent='✓ 전체 풀이 완료 · 궁금한 점을 질문할 수 있어요';
+    input.placeholder='풀이에 관해 질문해 주세요';
+  }
+  function step(i){
+    if(i>=samples.length){unlock();return;}
+    progress.textContent='풀이 생성 중 · '+(i+1)+'/'+samples.length;
+    const b=addBubble('assistant','가상 캐릭터 · 풀이 '+(i+1));
+    feedString(samples[i],b,()=>step(i+1));
+  }
+  start.addEventListener('click',()=>{
+    if(chatTimer){clearInterval(chatTimer);chatTimer=null;}
+    completed=false;replying=false;list.textContent='';
+    input.value='';input.disabled=true;send.disabled=true;
+    start.disabled=true;start.textContent='진행 중(모의 SSE)';
+    step(0);
+  });
+  function sendQuestion(){
+    if(!completed||replying||!input.value.trim()) return;
+    const value=input.value.trim().slice(0,800);input.value='';
+    addBubble('user','사용자').textContent=value;
+    replying=true;send.disabled=true;
+    progress.textContent='답변 생성 중(모의)';
+    const answer=addBubble('assistant','가상 캐릭터 · 답변');
+    feedString('좋은 질문이에요. 실제 서비스에서는 방금 생성된 풀이의 판단 근거와 대화 기록을 참고해 이 부분을 더 자세히 설명하게 됩니다. 이 미리보기는 실제 해석을 하지 않아요.',answer,()=>{
+      replying=false;send.disabled=false;
+      progress.textContent='✓ 답변 완료 · 다음 질문 가능';
+    });
+  }
+  send.addEventListener('click',sendQuestion);
+  input.addEventListener('keydown',(e)=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();sendQuestion();}});
+}
+
+select(0);
+</script>
+</body>
+</html>

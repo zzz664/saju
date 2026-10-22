@@ -1,0 +1,56 @@
+{
+  "color": {
+    "bg": {
+      "base": "#F8F5FB",
+      "subtle": "#F4EDF5",
+      "elevated": "#FFFFFF"
+    },
+    "primary": {
+      "500": "#916FEE",
+      "600": "#685DE4",
+      "700": "#5C50D2"
+    },
+    "secondary": {
+      "500": "#A99EE1",
+      "600": "#67639B"
+    },
+    "accent": {
+      "pink": "#D4B1DE",
+      "gold": "#F5D5A8",
+      "peach": "#ECA160"
+    },
+    "text": {
+      "primary": "#1C1A1C",
+      "secondary": "#5D5666",
+      "muted": "#8C86A0",
+      "onPrimary": "#FFFFFF"
+    },
+    "border": {
+      "subtle": "#E9E2F2",
+      "default": "#D9D0EA",
+      "strong": "#B8ACD6"
+    }
+  },
+  "gradient": {
+    "primary": "linear-gradient(135deg, #916FEE 0%, #685DE4 100%)",
+    "hero": "linear-gradient(135deg, #F4EDF5 0%, #EDE6FF 45%, #F9F1E8 100%)",
+    "surface": "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(244,237,245,0.92) 100%)"
+  },
+  "radius": {
+    "button": 999,
+    "card": 24,
+    "input": 16
+  },
+  "spacing": {
+    "containerMobile": 16,
+    "containerTablet": 24,
+    "section": 24,
+    "cardGap": 16
+  },
+  "breakpoints": {
+    "sm": 360,
+    "md": 480,
+    "lg": 768,
+    "xl": 1024
+  }
+}

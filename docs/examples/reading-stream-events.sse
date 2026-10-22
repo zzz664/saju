@@ -1,0 +1,26 @@
+event: report.started
+data: {"conversationId":"00000000-0000-4000-a000-000000000001","totalSegments":2}
+
+event: bubble.started
+data: {"messageId":"00000000-0000-4000-a000-000000000002","sectionId":"overview","index":1}
+
+event: bubble.delta
+data: {"messageId":"00000000-0000-4000-a000-000000000002","text":"이번 분석에서 먼저 살펴볼 부분은 "}
+
+event: bubble.delta
+data: {"messageId":"00000000-0000-4000-a000-000000000002","text":"원국의 전체적인 구조예요."}
+
+event: bubble.completed
+data: {"messageId":"00000000-0000-4000-a000-000000000002","sectionId":"overview"}
+
+event: bubble.started
+data: {"messageId":"00000000-0000-4000-a000-000000000003","sectionId":"details","index":2}
+
+event: bubble.delta
+data: {"messageId":"00000000-0000-4000-a000-000000000003","text":"다음으로는 판단에 사용한 근거를 알려드릴게요."}
+
+event: bubble.completed
+data: {"messageId":"00000000-0000-4000-a000-000000000003","sectionId":"details"}
+
+event: report.completed
+data: {"conversationId":"00000000-0000-4000-a000-000000000001","followupEnabled":true}

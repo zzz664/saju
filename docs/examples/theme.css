@@ -1,0 +1,21 @@
+/* 임시 UI 토큰 예시 */
+:root {
+  --bg-base: #F8F5FB;
+  --bg-subtle: #F4EDF5;
+  --bg-elevated: #FFFFFF;
+  --primary-500: #916FEE;
+  --primary-600: #685DE4;
+  --primary-700: #5C50D2;
+  --secondary-500: #A99EE1;
+  --secondary-600: #67639B;
+  --accent-pink: #D4B1DE;
+  --accent-gold: #F5D5A8;
+  --accent-peach: #ECA160;
+  --text-primary: #1C1A1C;
+  --text-secondary: #5D5666;
+  --border-subtle: #E9E2F2;
+  --radius-card: 24px;
+  --radius-input: 16px;
+  --shadow-soft: 0 8px 24px rgba(104, 93, 228, 0.10);
+  --gradient-primary: linear-gradient(135deg, #916FEE 0%, #685DE4 100%);
+}
