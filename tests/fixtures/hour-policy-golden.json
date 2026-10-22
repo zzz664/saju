@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-22",
+  "hourSource": "https://www.hko.gov.hk/tc/gts/time/stemsandbranches.htm",
+  "daySource": "https://www.kasi.re.kr/file/htmlconverter_preview/1687408104839_1.hwp.files/4.html",
+  "basis": "HKO tables 3 and 5 independently specify the twelve two-hour branches and day-stem-to-hour-stem correspondence. The values below are the table's gap/gi-day row rendered in Korean. The 2024-02-10 gapjin day is the existing WBS-06 official KASI anchor. Next-day and zi-start results are hand-derived from daily sexagenary progression and the explicitly adopted day boundary, not provider output or a claim that an observatory endorses an astrology convention.",
+  "dayAnchor": { "solarDate": "2024-02-10", "day": "갑진" },
+  "gapGiHours": [
+    { "clock": "00:59", "hour": "갑자" },
+    { "clock": "01:00", "hour": "을축" },
+    { "clock": "02:59", "hour": "을축" },
+    { "clock": "03:00", "hour": "병인" },
+    { "clock": "05:00", "hour": "정묘" },
+    { "clock": "07:00", "hour": "무진" },
+    { "clock": "09:00", "hour": "기사" },
+    { "clock": "11:00", "hour": "경오" },
+    { "clock": "13:00", "hour": "신미" },
+    { "clock": "15:00", "hour": "임신" },
+    { "clock": "17:00", "hour": "계유" },
+    { "clock": "19:00", "hour": "갑술" },
+    { "clock": "21:00", "hour": "을해" }
+  ]
+}

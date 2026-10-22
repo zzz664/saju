@@ -16,7 +16,9 @@ WBS-06의 일주 전용 포트는 고정 UTC+9·자정 정책을 명시하며 �
 WBS-07의 [IANA 시간대 정규화](src/domain/timezone/README.md)는 역사 오프셋과 fold/gap을 해석한다.
 `npm run --silent saju -- normalize-time`으로 실행하며 전체 사주 계산 연결과 구분한다.
 WBS-08의 [태양시 정책](src/domain/solar-time/README.md)은 같은 명령에서 명시적 경도와 EoT를
-적용하고 보정량·정책 시계를 반환한다. 시주·자시 연결은 WBS-09 범위다.
+적용하고 보정량·정책 시계를 반환한다.
+WBS-09의 [자시·시주와 미상 후보](src/domain/policy-calendar/README.md)는
+`calculate-policy` 명령으로 실행한다. 시각 미상은 확정 시주 없이 구간별 가능성을 반환한다.
 
 - Node.js 24.x, npm 11.x (초기 검증: Node 24.12.0 / npm 11.6.2).
 - Next.js App Router / TypeScript / Vitest. 직접 의존성과 잠금 파일을 함께 고정한다.

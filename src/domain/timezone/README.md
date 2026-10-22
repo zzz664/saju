@@ -54,7 +54,7 @@ solarTime/dayBoundary는 후속 정책 단계이고 기존 미상/한계 메타�
 [`prepareBirthTime`](../solar-time/README.md)을 통해 이 서비스와 명시적 태양시 정책을 순서대로 실행한다.
 기존 `calculate`는 fixed UTC+9 전용 계약을 유지한다. 일반 지역의 민간시/UTC와
 공급자의 고정 UTC+9 계산 시각을 이름만 바꿔 연결하면 일주·시주가 달라질 수 있으므로,
-WBS-09의 일 경계/시주 연결에서 검증해야 한다.
+[WBS-09의 별도 정책 계산](../policy-calendar/README.md)은 실제 UTC와 정책 시계를 나누어 연결한다.
 
 독립 fixture는 [IANA 2025b Asia](https://data.iana.org/time-zones/tzdb-2025b/asia),
 [North America](https://data.iana.org/time-zones/tzdb-2025b/northamerica),
