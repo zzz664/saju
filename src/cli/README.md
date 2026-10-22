@@ -26,7 +26,7 @@ stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다
 | --- | --- | --- | --- |
 | `validate` 성공 | `status: valid`, 미상/한계 메타데이터 | 없음 | 0 |
 | `calculate` 성공 | `status: calculated`, 4개 기둥 snapshot/출처/미상 정보 | 없음 | 0 |
-| `normalize-time` 성공 | `status: normalized`, 요청/해결된 현지 시각·UTC·초 오프셋·버전/미상 정보 | 없음 | 0 |
+| `normalize-time` 성공 | `status: normalized`, 현지 시각·UTC·오프셋 및 `solarTime` 정책 시계/보정량/EoT/버전·미상 정보 | 없음 | 0 |
 | 시간 정규화 거절/미상·범위 미지원 | `status: rejected`(fold/gap, resolved 없음) 또는 `unavailable`(reasons) | 없음 | 2 |
 | 계산 미지원/실제 달력 입력 거절 | `status: unavailable`, reasons/미상 정보. snapshot 없음 | 없음 | 2 |
 | 잘못된 인자/JSON/입력/UTF-8/크기 초과 | 없음 | 고정 코드/메시지의 error JSON | 2 |
@@ -42,9 +42,13 @@ stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다
 - 기존 어댑터의 양력 1800~2300/음력 1800~2100 범위. 날짜 실재는 공급자가 검증한다.
 
 `calculate`에서 일반 지역 시간대·DST/태양시/자시 정책 연결은 아직 unsupported다.
-WBS-07의 `normalize-time`은 별도 [IANA 현지 시각 정규화 서비스](../domain/timezone/README.md)를 실행한다.
+`normalize-time`은 [IANA 현지 시각 정규화](../domain/timezone/README.md)와
+[WBS-08 태양시 정책](../domain/solar-time/README.md)을 순서대로 실행한다.
 reject/earlier/later와 역사 오프셋·서머타임을 해석하고, 음력은 지정 변환 포트로 양력화한다.
-일반 지역의 일주/시주·태양시 연결은 후속 정책 작업을 거쳐야 하므로 `calculate`의 범위를 자동 확대하지 않는다.
+standard는 법정 현지 시각(DST 포함)을 유지하고, mean/true는 경도 보정 및 선택적 EoT를 적용한다.
+경도 미상으로 평/진태양시를 요청하면 unavailable/LONGITUDE_UNKNOWN(종료 2)이며 표준시로 대체하지 않는다.
+실제 UTC를 보존하며 `solarTime.policyClock`은 시간대 없는 계산 시계다. 일반 지역의 일주/시주 연결은
+WBS-09에서 검증하므로 `calculate`의 범위를 자동 확대하지 않는다.
 gap 이동 시각과 원래 양력 벽시계를 함께 반환한다. 해당 날짜·시각은 요청된 개발 도구 결과이며 일반 로그로 자동 기록하지 않는다.
 미상 시각도 자정/정오를 만들어 넘기지 않는다. `validate`는 미지원 계산 옵션을 포함한
 기존 입력 계약 전체를 받을 수 있지만, 스키마 통과가 계산 가능이나 음력 실재 보증은 아니다.

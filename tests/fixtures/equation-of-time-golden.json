@@ -1,0 +1,13 @@
+{
+  "source": "https://gml.noaa.gov/grad/solcalc/solareqns.PDF",
+  "signReference": "https://aa.usno.navy.mil/faq/eqtime",
+  "checkedAt": "2026-10-22",
+  "basis": "NOAA General Solar Position Calculations page 1: gamma=(2*pi/366)*(dayOfYear-1+(UTC_hour-12)/24), and its annual harmonic equation for eqtime. Four UTC-noon values were calculated from this independent reference formula, never from the provider. Positive EoT means apparent solar time minus mean solar time. These are approximate-model comparisons, not exact observed goldens.",
+  "toleranceSeconds": 30,
+  "cases": [
+    { "instant": "2024-02-11T12:00:00Z", "dayOfYear": 42, "minutes": -14.195371320747096 },
+    { "instant": "2024-04-15T12:00:00Z", "dayOfYear": 106, "minutes": -0.05436034117724439 },
+    { "instant": "2024-07-26T12:00:00Z", "dayOfYear": 208, "minutes": -6.576866288050695 },
+    { "instant": "2024-11-03T12:00:00Z", "dayOfYear": 308, "minutes": 16.361776115279703 }
+  ]
+}

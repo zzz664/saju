@@ -1,5 +1,43 @@
 # 작업 기록
 
+## 2026-10-22 — WBS-08: 평태양시·진태양시 정책
+
+### 선행 확인과 구현 전 완료 조건
+
+- PR #8 GitHub MERGED(2026-10-22 20:43:42 KST), merge commit `ae0b94e67171b1dfb946d2878f412c8d2df3d777` 및 origin/develop ancestor 확인. 선행 WBS-07 충족, 실행순서 10, 열린 develop PR 없음.
+- develop checkout/ff-only pull 및 `git branch -d feature/WBS-07-iana-timezone-dst` 성공. 최신 develop에서 `feature/WBS-08-solar-time-policy` 한 개 생성. AGENTS/WBS/02/05/06/08, 기존 입력/IANA/계산 경계와 설치된 manseryeok 2.0.0의 공개 equationOfTimeMinutes 타입·구현을 읽었다.
+- 완료 조건: 명시적 standard/mean-solar/true-solar 정책을 검증된 WBS-07 시각에 적용하는 순수 도메인, 공급자 독립 EoT 포트와 고정 manseryeok 공개 API 어댑터, AnalysisInput 연결 및 normalize-time CLI의 정책 결과 노출. 각 보정량·실제 UTC·민간 시각·정책 시각과 규칙/공급자 버전을 반환한다.
+- 채택 정책: standard는 IANA에서 해결한 법정 현지 시각을 추가 보정 없이 보존한다(DST 포함). mean-solar는 UTC + 동경 양수 경도×240초, true-solar는 여기에 EoT(겉보기−평균)를 더한다. 경도는 명시값만 사용하며 null이면 unavailable, 0은 유효하다. 경도·EoT 적용으로 실제 UTC 자체를 변경하지 않는다. DST는 WBS-07에서 UTC 해석 후 다시 빼지 않는다.
+- 정상/경계: 동/서경·0·±180·소수 경도, IANA 역사/DST/날짜 경계, 동일 UTC의 서로 다른 법정 시간대에서 같은 태양시, 진태양시에서만 실제 UTC로 EoT 호출 1회, 보정 후 날짜 넘김과 최근접 밀리초 반올림을 검증한다. 계산 해상도와 천문 정확도를 구분한다.
+- 독립 EoT 기준은 NOAA General Solar Position Calculations의 별도 연주기 근사식으로 2024년 네 UTC 정오 값을 계산해 고정한다. 이 근사식과 공급자 Meeus 모델 비교의 사전 허용차는 30초이며 전 연도 정확도 보증이 아니다. 부호/경도 배율은 NOAA 및 USNO 정의로 확인한다.
+- 오류: 경도/시각 누락과 범위, 잘못된 EoT·버전·반환 시점·공급자 예외와 손상 응답을 검증하고 원문/cause를 노출하지 않는다. 전체 사주·시주/자시·미상 시각 후보는 WBS-09 범위로 남긴다. 공급자의 한국 DST/default longitude 옵션은 켜지 않는다.
+- npm test, 경도/EoT 전용·실제 CLI, 타입/린트/빌드를 실행하고 결과·제약·변경 파일을 기록한다. 기존 사용자 지시 문서/next-env.d.ts 변경을 보존/커밋 제외한다. PR 한 건 생성 후 중지한다.
+
+### 구현과 검증 결과
+
+- `domain/solar-time`에 순수 정책 함수와 strict/readonly 요청·결과·EoT 포트를 추가했다. UTC/민간 시각과 정책 시계를 분리하고 동경 양수 경도, 분 단위 EoT, 초 단위 보정량과 최근접 밀리초 시계 출력을 명시한다. 부호·산술·UTC 시점·고정 모델/버전 일관성을 검증한다.
+- `manseryeokEquationOfTimeAdapter`는 기존 고정 2.0.0의 공개 EoT 함수만 호출하며 실제 패키지 버전을 기록한다. 새 의존성/잠금 파일 변경 없이 기존 공급자를 유지한다. 손상 응답과 공급자 예외는 고정 SolarTimeError로 정규화한다.
+- `prepareBirthTime`은 기존 음양력 변환/IANA 정규화를 재사용하고 이후에만 태양시를 적용한다. 경도/시각 미상에는 포트 호출 없이 unavailable, 거절된 fold/gap에는 태양시 없음, 명시적 earlier/later에는 해결된 시점에 한 번 적용한다. 기존 민간시 전용 normalizeBirthTime 계약은 유지한다.
+- 기존 `normalize-time` CLI에 정책 시계/보정량/EoT를 추가했다. 실제 UTC는 그대로이며 전체 사주/일주/시주를 호출하지 않는다. `calculate`의 고정 UTC+9 및 정책 제한은 유지한다. 경도 누락 종료 2와 비식별 오류 종료 1을 확인했다.
+- 테스트 선작성 `npm.cmd test -- tests/solar-time.test.ts`: 구현 모듈 부재로 종료 1. 구현 중 readonly 스키마 접근과 기존 필드명 오류를 실행/타입 검사로 찾아 수정했다. 이후 도메인 34건, 서비스/오류/실제 CLI 포함 57건이 통과했고 부호/표준시 회귀 4건을 더해 최종 신규 테스트는 61건이다. 실패 무시/skip 옵션은 사용하지 않았다.
+- 독립 EoT 네 건은 [NOAA 원문](https://gml.noaa.gov/grad/solcalc/solareqns.PDF)의 연주기 근사식으로 고정하고 [USNO 정의](https://aa.usno.navy.mil/faq/eqtime)로 부호를 확인했다. 사전 허용차 30초를 변경하지 않았다. 동/서경·0·±180·소수 경도와 날짜 넘김, 서울 LMT/반시차/DST, gap 선택, 같은 UTC의 서로 다른 시간대, 민간시 범위 끝의 UTC 1799/2301년 이동을 검증했다.
+- 원래 폴더 `npm.cmd test`: 종료 0, 18파일/530건. `npm.cmd run lint`와 `node node_modules/typescript/bin/tsc --noEmit`: 각각 종료 0. 이후 추가 회귀와 최종 오류 전달 변경은 아래 동일 소스 임시 복사본의 전체 검사로 검증했다.
+- `%TEMP%/saju-wbs08-validation-208829cdbec14cec81acf519c491b7d6`에 src/tests·설정·잠금 파일 62개를 복사하고 SHA-256 일치를 확인했다. 최종 변경 세 파일도 다시 복사/해시 확인했다. `npm.cmd ci --no-fund`: 종료 0, 378개 설치. 사용 중인 원래 개발 서버/node_modules/.next는 변경하지 않았다.
+- 최종 동일 소스 임시 복사본 `npm.cmd test`: 종료 0, 18파일/534건. `npm.cmd run typecheck`(Next typegen 포함), `npm.cmd run lint`, `npm.cmd run build`: 각각 종료 0. NEXT_TELEMETRY_DISABLED=1에서 기존 루트/404 정적 빌드 성공.
+- `npm.cmd audit --omit=dev --json`: 종료 0, 런타임 취약점 0건. npm ci는 기존 개발 의존성 high 5건과 ESLint 9 지원 종료 경고를 보고했다. 기존 eslint-config-next의 전이 의존성 문제이며 전체 감사 통과로 표시하거나 강제 수정하지 않았다.
+- 기존 사용자 지시 문서와 next-env.d.ts의 SHA-256이 작업 시작과 동일함을 확인했다. 재개 중 사용자가 수정한 AGENTS.md의 관련 테스트 중심 지침도 읽었으며 추가 재실행 없이 기존 검증 결과를 사용한다. AGENTS.md 수정도 보존/커밋 제외한다. WBS-08 관련 17개 파일만 명시적으로 스테이징하고 diff 검토 후 develop 대상 PR 한 건을 생성한다.
+
+### 변경 파일과 제약
+
+- `src/domain/solar-time/index.ts`, `README.md`: 순수 경도/EoT 정책, 포트·검증·근거·정밀도/정확도 한계.
+- `src/application/solar-time/index.ts`: AnalysisInput부터 정책 시계까지의 순수 서비스와 미상/거절 상태.
+- `src/infrastructure/manseryeok/equation-of-time.ts`, `index.ts`, `README.md`: 고정 공개 SDK EoT 구현과 export/지원 범위.
+- `src/cli/main.ts`, `run.ts`, `README.md`: 의존성 조립·기존 normalize-time 명령 연결·사용법.
+- `tests/solar-time.test.ts`, `solar-time-errors.test.ts`, `solar-time-application.test.ts`, `fixtures/equation-of-time-golden.json`: 실제 공급자·독립 근사·오류·실제 CLI 검증.
+- 루트 `README.md`, `src/domain/input/README.md`, `src/domain/timezone/README.md`, `docs/worklog.md`: 정책 연결과 현재 지원 범위/결과 기록.
+- 계산용 policyClock은 시간대 없는 라벨이며 새로운 UTC가 아니다. 밀리초는 출력 해상도다. UTC 기반 SDK 근사에 별도 UT1/DUT1 보정은 없으며 NOAA 비교는 2024년 네 시점만 포함한다. 전 지원 연도의 천문/지역 법정시 정확도 보증으로 표시하지 않는다.
+- 시주/자시/미상 시각 후보·일반 지역의 전체 사주 계산 연결은 WBS-09 범위다. WBS.csv 상태를 임의 완료로 바꾸지 않는다. UI/API/DB/LLM/OAuth/PG/비밀키/CI 및 이후 WBS 변경은 없다. 기존 사용자 지시 문서/next-env.d.ts 변경은 보존하고 커밋에서 제외한다.
+
 ## 2026-10-22 — WBS-07: IANA 시간대와 역사 DST
 
 ### 선행 확인과 구현 전 완료 조건

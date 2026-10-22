@@ -50,10 +50,11 @@ ruleId=`time.local-to-instant`, ruleVersion=`1.0.0`과 함께 기록한다.
 solarTime/dayBoundary는 후속 정책 단계이고 기존 미상/한계 메타데이터를 유지한다.
 전체 사주 계산이나 F01~F11 완료를 의미하지 않는다.
 
-`npm run --silent saju -- normalize-time < input.json`으로 이 서비스를 실행할 수 있다.
+`npm run --silent saju -- normalize-time < input.json`은 WBS-08의
+[`prepareBirthTime`](../solar-time/README.md)을 통해 이 서비스와 명시적 태양시 정책을 순서대로 실행한다.
 기존 `calculate`는 fixed UTC+9 전용 계약을 유지한다. 일반 지역의 민간시/UTC와
 공급자의 고정 UTC+9 계산 시각을 이름만 바꿔 연결하면 일주·시주가 달라질 수 있으므로,
-태양시/일 경계 정책을 다루는 WBS-08/09에서 연결을 검증해야 한다.
+WBS-09의 일 경계/시주 연결에서 검증해야 한다.
 
 독립 fixture는 [IANA 2025b Asia](https://data.iana.org/time-zones/tzdb-2025b/asia),
 [North America](https://data.iana.org/time-zones/tzdb-2025b/northamerica),
