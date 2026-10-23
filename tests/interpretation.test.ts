@@ -39,23 +39,34 @@ const withData = (status: "passed" | "failed" = "passed") =>
   );
 
 describe("classical interpretation lookup catalog", () => {
-  it("lets a collected passage carry the page it was actually found on", () => {
+  it("lets a collected passage carry the page and locator it was actually found with", () => {
     const moved =
-      "https://zh.wikisource.org/wiki/%E4%B8%89%E5%91%BD%E9%80%9A%E6%9C%83%2F%E5%8D%B7%E5%85%AD";
+      "https://zh.wikisource.org/wiki/%E4%B8%89%E5%91%BD%E9%80%9A%E6%9C%83%2F%E5%8D%B7%E4%B8%83";
     const catalog = composeInterpretationCatalog(
       {
         schemaVersion: "1.0.0",
         note: "test",
         passages: {
-          "src.smth.resource": { passage, retrievedAt, passageDigest: digest(passage), url: moved },
+          "src.smth.peer": {
+            passage,
+            retrievedAt,
+            passageDigest: digest(passage),
+            url: moved,
+            locator: "論劫財",
+          },
         },
       },
       { schemaVersion: "1.0.0", note: "test", summaries: {} },
     );
-    expect(catalog.sources.find((s) => s.sourceId === "src.smth.resource")?.url).toBe(moved);
-    expect(catalog.sources.find((s) => s.sourceId === "src.smth.output")?.url).toContain(
-      "%E5%8D%B7%E4%BA%94",
+    const peer = catalog.sources.find((s) => s.sourceId === "src.smth.peer");
+    expect(peer?.url).toBe(moved);
+    expect(peer?.locator).toBe("論劫財");
+    const authority = catalog.sources.find((s) => s.sourceId === "src.smth.authority");
+    expect(authority?.url).toContain("%E5%8D%B7%E4%BA%94"); // 卷五
+    expect(catalog.sources.find((s) => s.sourceId === "src.smth.resource")?.url).toContain(
+      "%E5%8D%B7%E5%85%AD", // 卷六
     );
+    expect(authority?.locator).toBe("論正官");
   });
   it("scaffolds every day-master×month, day-master, family and pair slot without any prose", () => {
     const scaffold = buildScaffold();
