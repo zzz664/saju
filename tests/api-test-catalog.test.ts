@@ -18,10 +18,9 @@ describe("synthetic persona prompt consistency", () => {
     for (const text of supplied) expect(text).toMatch(register === "haeyo" ? /요[.!?]?$/ : /니다[.!?]?$/);
   });
 
-  it("uses the corrected formal profile for the evaluation matrix and rejects retired or unknown selections", () => {
+  it("uses the same approved JSON profiles for API and evaluation and rejects retired or unknown selections", () => {
     const catalog = createApiTestCatalog(), selection = catalog.selection("synthetic-formal");
-    const formal = catalog.registry.load(selection);
-    expect(evaluationProfiles.find(item => item.personaId === selection.personaId)).toEqual(formal);
+    expect(evaluationProfiles).toEqual(catalog.personas.map(item => catalog.registry.load(catalog.selection(item.id))));
     expect(() => catalog.selection("unapproved")).toThrow();
     expect(() => catalog.registry.load({ ...selection, personaVersion: "1.0.0" })).toThrow();
   });

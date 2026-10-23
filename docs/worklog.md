@@ -907,3 +907,16 @@
 - 최초 신규 회귀 4건 FAIL(선택 버전 조회 미구현)을 확인한 뒤 구현했다. `npm.cmd test -- tests/api-test-catalog.test.ts tests/api-test.test.ts tests/live-narration.test.ts tests/persona-evaluation.test.ts`: **4파일/76건 PASS**, 현재 합쇼체 1.0.1로 Mock **180/180 완료/실패·문체 플래그 0** 행렬 검사 포함.
 - 원래 작업 트리 전체 `npm.cmd test -- --maxWorkers=1`: **44개 파일/1079건 PASS**, exit 0(127.39초). 타입 검사/lint/로컬 문서 검사도 PASS, 경고 0. 사용자 두 수정 파일 SHA256 동일, 과거 평가 JSON/독립 골든 기대값 diff 없음. 실제 OpenAI 요청 **0회 / LIVE_NOT_RUN**.
 - 최종 `npm.cmd run test:e2e:api-test`: **exit 0, 개발 9/9 + production 차단 1/1 PASS**, 격리 production build/route typegen/tsc PASS. 실제 로컬 합쇼체 Mock 실행/partial 상태/최상위 및 결과 내부 personaVersion=1.0.1을 확인했다. 서버 키 빈 값/Live false 유지. 같은 PR #25를 업데이트하고 대기한다.
+
+## PR #25 추가 리뷰 — 다중 페르소나 JSON 구조 일관성
+
+- 사용자 요청: 합쇼체만 TS 파일로 분리하고 해요체를 API에 남긴 비일관성을 수정하고 향후 여러 페르소나 추가 구조를 고려한다. PR #25 OPEN 확인, 같은 기능 브랜치에서 리뷰 수정만 진행한다.
+- 문서 11의 서버 관리 JSON/Zod/불변 버전 및 05의 열린 PR 수정 규칙을 따른다. 정상: 두 프로필 원문/버전을 유지한 JSON 이동, API/평가의 완전 동일 프로필, 세 번째 페르소나를 데이터/활성 목록만으로 추가. 오류/경계: 미승인/누락 버전/중복 활성 ID/위조 경로 거절, 과거 승인 버전 유지 및 명시 활성 버전만 선택, 10개 초과 목록/무자동호출/분석 불변을 먼저 테스트로 정의했다.
+- 최초 회귀는 공통 카탈로그 부재 및 API/평가 해요체 메타 차이로 FAIL을 확인했다. 과거 평가용 해요체 fixture는 그대로 보존하고 현재 품질 평가는 런타임 승인 JSON을 사용하도록 통합한다.
+- 변경: `src/infrastructure/persona/profiles/*.json`에 두 프로필을 같은 방식으로 배치하고 `synthetic-catalog.ts`에서 서버 승인 manifest/활성 버전을 명시했다. `src/domain/persona/catalog.ts`는 기존 Zod 승인 로더와 정확한 버전 선택을 재사용하며 승인 버전 보존과 ID당 활성 버전 1개를 지원한다. API 카탈로그의 프로필 본문/선택 로직 및 별도 합쇼체 TS 파일을 제거하고, 평가도 같은 카탈로그로 통합했다.
+- `src/application/dev-api-test/index.ts`의 persona 목록 상한을 공통 카탈로그와 같은 50으로 맞췄다. `tests/persona-catalog.test.ts` 4건 및 API 12개 목록/0콜 검사를 추가하고 기존 API/평가 일치 검사를 두 문체 전체 비교로 강화했다. 사용자 프로필 업로드나 자동 파일 스캔 승인은 추가하지 않았다.
+- 관련 5개 파일 **81건 PASS**. 기존 커밋의 두 프로필 객체와 새 JSON을 필드 전체 deepEqual로 비교해 동일함을 확인했다. 실행 중 프로필 버전은 해요체 1.0.0/합쇼체 1.0.1 유지. 현재 평가의 해요체 표시명/설명도 런타임과 일치시키며 과거 JSON/단위 fixture는 보존한다.
+- 문서 11, 도메인 README, 새 infrastructure README 및 QA 보고서에 JSON 추가 → 서버 승인 등록 → 활성 버전 지정 → 회귀 검증 절차와 제품용/합성 승인 분리를 기록했다. DB/관리 UI/제품 캐릭터 구현 및 실 API 호출은 하지 않는다.
+- 전체 `npm.cmd test -- --maxWorkers=1`: **45개 파일/1084건 PASS**, exit 0(118.40초). 현재 공통 JSON 프로필로 180건 Mock 행렬도 통과했다. `tsc --noEmit`/lint PASS, 경고 0. 최종 로컬 링크 검사 **47개 문서/73개 링크/문제 0건**.
+- `npm.cmd run test:e2e:api-test`: **개발 9/9 + production 차단 1/1 PASS**, 격리 production build/route typegen/tsc PASS(exit 0). 정적 JSON을 실제 Next 개발/운영 빌드에 포함해 두 문체 선택/실행과 운영 차단을 확인했다. 키 빈 값/Live false이며 추가 실제 호출 **0회 / LIVE_NOT_RUN**.
+- 최종 사용자 두 수정 파일 SHA256 동일, .env/실제 장부/과거 평가 산출물/독립 골든 변경 없음. 새 PR 없이 기존 #25에 커밋·푸시하고 설명을 갱신한 뒤 중지한다.

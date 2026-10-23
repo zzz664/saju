@@ -22,6 +22,8 @@ PersonaProfile은 docs/11의 식별/가상 서술자 공개, 성격/강도, 한�
 `tests/fixtures/persona-style.json`은 테스트 합성 자료다. 문서의 character-a와 예시 서비스/상품명은
 실제 제품 캐릭터나 기본값으로 등록하지 않았다. 런타임에서 문서 예제를 읽거나 자동 승인하지 않는다.
 
+현재 개발자 API와 품질 평가는 [서버 JSON 카탈로그](../../infrastructure/persona/README.md)를 함께 사용한다. 해요체/합쇼체 모두 버전별 JSON 파일이며, 공통 `createApprovedPersonaCatalog(manifest, activeSelections)`가 승인 목록과 ID별 활성 버전을 구분한다. 새 페르소나 추가는 JSON과 서버 승인/활성 목록 변경으로 처리하며, API/프롬프트에 캐릭터별 분기를 넣지 않는다. 제품용 승인 manifest는 로컬 합성 프로필과 별도로 관리한다.
+
 ## 세 계층과 공급자 경계
 
 1. instructions: docs/12의 text 코드 블록을 제목/코드펜스 없이 그대로 사용한 공통 정책.

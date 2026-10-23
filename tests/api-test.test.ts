@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApiTestHandler } from "@/server/api-test";
 import { createApiTestCatalog } from "@/server/api-test-catalog";
 import { createPersonaMockProvider } from "@/infrastructure/llm/persona-mock";
+import { createApprovedPersonaCatalog } from "@/domain/persona/catalog";
 
 const secret = "synthetic-unlock-secret-for-tests-only-0001";
 const origin = "http://127.0.0.1:3000";
@@ -26,6 +27,19 @@ const body = (requestId = crypto.randomUUID()) => ({ mode: "mock", scenario: "na
 beforeEach(() => { now = Date.parse("2026-10-23T00:00:00Z"); });
 
 describe("WBS-65 protected local API settings and Mock runs", () => {
+  it("lists more than ten approved personas through the same configuration endpoint without provider calls", async () => {
+    const source = createApiTestCatalog(), base = source.registry.load(source.selection("synthetic-style"));
+    const profiles = Array.from({ length: 12 }, (_, i) => ({ ...base, personaId: `synthetic-extra-${i}`, displayName: `추가 합성 프로필 ${i}` }));
+    const catalog = createApprovedPersonaCatalog(profiles.map(profile => ({ status: "approved", personaId: profile.personaId, personaVersion: profile.personaVersion, json: JSON.stringify(profile) })),
+      profiles.map(({ personaId, personaVersion }) => ({ personaId, personaVersion })));
+    const provider = createPersonaMockProvider(), generate = vi.spyOn(provider, "generate");
+    const { env } = make();
+    const handler = createApiTestHandler({ environment: () => env, now: () => now, provider, catalog: { ...source, ...catalog } });
+    const { config } = await unlock(handler);
+    expect(config.personas).toEqual(profiles.map(profile => ({ id: profile.personaId, label: profile.displayName })));
+    expect(generate).not.toHaveBeenCalled();
+  });
+
   it("uses the selected formal revision in the Mock request and exported result metadata", async () => {
     const { handler, generate } = make(), { cookie, config } = await unlock(handler);
     const response = await handler(request("runs", { ...body(), personaId: "synthetic-formal" }, cookie, config.csrfToken));

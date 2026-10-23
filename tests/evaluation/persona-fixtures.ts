@@ -1,12 +1,10 @@
 import { z } from "zod";
 import golden from "../fixtures/independent-core-golden.json";
 import manifest from "../fixtures/persona-evaluation-cases.json";
-import profile from "../fixtures/persona-style.json";
 import { fingerprintDependencies } from "../helpers/fingerprint-input";
 import { calculateCoreExport } from "../../src/application/core-export/index";
 import { AnalysisInputSchema, BirthInputSchema, CalculationPolicySchema } from "../../src/domain/input/index";
-import { createApprovedPersonaRegistry } from "../../src/domain/persona/index";
-import { syntheticFormalProfile } from "../../src/domain/persona/synthetic-formal";
+import { createSyntheticPersonaCatalog } from "../../src/infrastructure/persona/synthetic-catalog";
 import { createPersonaMockProvider } from "../../src/infrastructure/llm/persona-mock";
 import { MemoryExperimentBudgetStore } from "../../src/infrastructure/llm/experiment-budget";
 import { nodeSha256Adapter } from "../../src/infrastructure/hashing/index";
@@ -29,7 +27,7 @@ export function loadEvaluationCases() {
 }
 
 // Local evaluation registrations only; these are not approved product characters.
-export const evaluationProfiles = [profile, syntheticFormalProfile];
+export const evaluationProfiles = createSyntheticPersonaCatalog().profiles;
 export const evaluationSelections = evaluationProfiles.map(item => ({ personaId: item.personaId, personaVersion: item.personaVersion }));
 export const evaluationSpec = { specId: "quality-core-observations", specVersion: "1.0.0", featureId: "core-base",
   sections: [{ id: "overview", purpose: "기초 관찰과 한계", minFindings: 0 }], maxCharactersPerSection: 1200,
@@ -37,7 +35,7 @@ export const evaluationSpec = { specId: "quality-core-observations", specVersion
 
 export function evaluationOptions(now = Date.now()) {
   const budget = { calls: 180, tokens: 100_000_000, microUsd: 100_000_000 };
-  return { registry: createApprovedPersonaRegistry(evaluationProfiles.map(item => ({ status: "approved", personaId: item.personaId, personaVersion: item.personaVersion, json: JSON.stringify(item) }))),
+  return { registry: createSyntheticPersonaCatalog().registry,
     selections: evaluationSelections, spec: evaluationSpec, hash: nodeSha256Adapter, repetitions: evaluationManifest.repetitions,
     provider: createPersonaMockProvider(), store: new MemoryExperimentBudgetStore(),
     policy: { enabled: true, expiresAt: now + 600_000, allowedPrincipalIds: ["quality-evaluator"], maxConcurrent: 1, maxRequestBytes: 131072, maxOutputTokens: 1024,
