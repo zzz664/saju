@@ -92,7 +92,7 @@ describe("F03 production strengths executor", () => {
     ).toBe(true);
     expect(executeFeature(request, featureDependencies).cacheKey).toBe(result.cacheKey);
     expect(JSON.stringify(result)).not.toContain(request.birthInput.birthDate);
-    expect(executeFeature(featureRequest("F02"), featureDependencies).limitations).toContain(
+    expect(executeFeature(featureRequest("F04"), featureDependencies).limitations).toContain(
       "EXECUTOR_NOT_IMPLEMENTED",
     );
   });

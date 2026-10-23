@@ -7,6 +7,15 @@ import {
   type ModuleId,
 } from "@/domain/features/schemas";
 import { TopicSchema, type Topic } from "@/domain/judgment/topics/schemas";
+import { strengthsExecutor } from "@/application/saju/features/profiles/strengths";
+import { temperamentExecutor } from "@/application/saju/features/profiles/temperament";
+import type { FeatureExecutor } from "@/application/saju/features/ports";
+
+export const BUILTIN_FEATURE_EXECUTORS: Readonly<Partial<Record<FeatureId, FeatureExecutor>>> =
+  Object.freeze({
+    F02: temperamentExecutor,
+    F03: strengthsExecutor,
+  });
 const profileSchema = z
   .strictObject({
     featureId: FeatureIdSchema,
@@ -39,7 +48,7 @@ export const FEATURE_PROFILES = z
       modules,
       topics,
       children,
-      version: featureId === "F03" ? "1.1.0" : "1.0.0",
+      version: featureId === "F02" || featureId === "F03" ? "1.1.0" : "1.0.0",
     })),
   );
 export const MODULE_DEPENDENCIES: Readonly<Record<ModuleId, readonly ModuleId[]>> = Object.freeze({
