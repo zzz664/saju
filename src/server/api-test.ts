@@ -1,6 +1,6 @@
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { isLocalDeveloperHost } from "./developer-analysis";
+import { isLocalDevelopmentEnvironment, isLocalDeveloperRequest } from "./developer-access";
 import { apiTestLimits, apiTestPolicy, ApiTestRequestSchema, ApiTestConfigSchema, ApiTestRunSchema, type ApiTestConfig } from "../application/dev-api-test/index";
 import { createPersonaExperiment } from "../application/narration/persona";
 import { canonicalizeJson } from "../domain/core-fingerprint/index";
@@ -24,17 +24,10 @@ const json = (value: unknown, status = 200, extra = {}) => Response.json(value, 
 const error = (status: number, code: string, evidence?: string) => json({ error: { code }, ...(evidence ? { evidence } : {}) }, status);
 const equal = (left: string, right: string) => timingSafeEqual(createHash("sha256").update(left).digest(), createHash("sha256").update(right).digest());
 export function apiTestLocalEnvironment(env: Env) {
-  return env.NODE_ENV === "development" && env.API_TEST_LOCAL_ONLY === "true" && !env.CI && !env.VERCEL && !env.VERCEL_ENV;
+  return isLocalDevelopmentEnvironment(env) && env.API_TEST_LOCAL_ONLY === "true";
 }
 export function apiTestLocalRequest(request: Request) {
-  const host = request.headers.get("host") ?? new URL(request.url).host;
-  if (!isLocalDeveloperHost(host)) return false;
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded && !forwarded.split(",").every(peer => ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(peer.trim()))) return false;
-  const realPeer = request.headers.get("x-real-ip");
-  if (realPeer && !["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(realPeer)) return false;
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  return !request.headers.has("forwarded") && (!forwardedHost || forwardedHost === host);
+  return isLocalDeveloperRequest(request);
 }
 function signed(session: Session, secret: string) {
   const payload = Buffer.from(JSON.stringify(session)).toString("base64url");

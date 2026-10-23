@@ -2,11 +2,9 @@ import { AnalysisInputSchema } from "../domain/input/index";
 import { calculateDeveloperAnalysis } from "../application/developer-analysis/index";
 import type { NatalFactsDependencies } from "../application/natal-facts/index";
 import type { Sha256Adapter } from "../domain/core-fingerprint/index";
+import { isLocalDeveloperRequest } from "./developer-access";
+export { isLocalDeveloperHost } from "./developer-access";
 
-export function isLocalDeveloperHost(host: string | null): boolean {
-  const match = host?.match(/^(localhost|127\.0\.0\.1|\[::1\])(?::([0-9]{1,5}))?$/i);
-  return !!match && (match[2] === undefined || Number(match[2]) > 0 && Number(match[2]) <= 65535);
-}
 const headers = { "cache-control": "no-store, max-age=0", "x-robots-tag": "noindex, nofollow" };
 function error(status: number, code: string, message: string, extra = {}) {
   return Response.json({ error: { code, message } }, { status, headers: { ...headers, ...extra } });
@@ -47,7 +45,7 @@ export function createDeveloperAnalysisHandler(options: {
     const url = new URL(request.url);
     // Next may normalize a loopback URL to localhost; Host retains the browser's origin.
     const host = request.headers.get("host") ?? url.host;
-    if (!options.isDevelopment() || !isLocalDeveloperHost(host)) return error(404, "NOT_FOUND", "Not found.");
+    if (!options.isDevelopment() || !isLocalDeveloperRequest(request)) return error(404, "NOT_FOUND", "Not found.");
     if (request.method !== "POST") return error(405, "METHOD_NOT_ALLOWED", "Use POST.", { allow: "POST" });
     if (request.headers.get("origin") !== new URL(url.protocol + "//" + host).origin) return error(403, "ORIGIN_REJECTED", "Same-origin request required.");
     if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") return error(415, "CONTENT_TYPE_REJECTED", "Use application/json.");

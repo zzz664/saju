@@ -4,14 +4,36 @@ import { DeveloperAnalysisResponseSchema } from "@/domain/developer-analysis";
 import { nodeSha256Adapter } from "@/infrastructure/hashing";
 import { verifyCoreFingerprint } from "@/domain/core-fingerprint";
 import { fingerprintInput, fingerprintDependencies } from "./helpers/fingerprint-input";
+import { POST as analysisRoute } from "@/app/api/analysis/route";
 
 const origin = "http://127.0.0.1:3197";
+const remoteProxyHeaders: Record<string, string>[] = [
+  { "x-forwarded-for": "203.0.113.1" }, { "x-forwarded-for": "127.0.0.1, 203.0.113.1" },
+  { "x-real-ip": "203.0.113.1" }, { "x-forwarded-host": "example.test" }, { forwarded: "for=203.0.113.1;host=localhost" },
+];
 function request(value: unknown = fingerprintInput, headers: Record<string, string> = {}) {
   return new Request(origin + "/api/analysis", { method: "POST", headers: { origin, "content-type": "application/json", ...headers }, body: JSON.stringify(value) });
 }
 const handler = createDeveloperAnalysisHandler({ isDevelopment: () => true, dependencies: fingerprintDependencies, hash: nodeSha256Adapter });
 
 describe("local developer analysis API", () => {
+  it.each([{ CI: "true" }, { VERCEL: "1" }, { VERCEL_ENV: "preview" }, { NODE_ENV: "production" }])("blocks the real route in restricted environment %j before reading input", async extra => {
+    try {
+      for (const [key, value] of Object.entries({ NODE_ENV: "development", CI: "", VERCEL: "", VERCEL_ENV: "", ...extra })) vi.stubEnv(key, value);
+      const req = request();
+      expect((await analysisRoute(req)).status).toBe(404);
+      expect(req.bodyUsed).toBe(false);
+    } finally { vi.unstubAllEnvs(); }
+  });
+
+  it.each(remoteProxyHeaders)("rejects remote proxy metadata %j before input or calculation", async headers => {
+    const calculate = vi.fn(fingerprintDependencies.pillars.calculate);
+    const handle = createDeveloperAnalysisHandler({ isDevelopment: () => true, dependencies: { ...fingerprintDependencies, pillars: { calculate } }, hash: nodeSha256Adapter });
+    const req = request(fingerprintInput, headers);
+    expect((await handle(req)).status).toBe(404);
+    expect(req.bodyUsed).toBe(false); expect(calculate).not.toHaveBeenCalled();
+  });
+
   it("returns validated core/hash/manual data with no raw birth input or caching", async () => {
     const calculate = vi.fn(fingerprintDependencies.pillars.calculate);
     const run = createDeveloperAnalysisHandler({ isDevelopment: () => true, dependencies: { ...fingerprintDependencies, pillars: { calculate } }, hash: nodeSha256Adapter });

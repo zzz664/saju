@@ -920,3 +920,21 @@
 - 전체 `npm.cmd test -- --maxWorkers=1`: **45개 파일/1084건 PASS**, exit 0(118.40초). 현재 공통 JSON 프로필로 180건 Mock 행렬도 통과했다. `tsc --noEmit`/lint PASS, 경고 0. 최종 로컬 링크 검사 **47개 문서/73개 링크/문제 0건**.
 - `npm.cmd run test:e2e:api-test`: **개발 9/9 + production 차단 1/1 PASS**, 격리 production build/route typegen/tsc PASS(exit 0). 정적 JSON을 실제 Next 개발/운영 빌드에 포함해 두 문체 선택/실행과 운영 차단을 확인했다. 키 빈 값/Live false이며 추가 실제 호출 **0회 / LIVE_NOT_RUN**.
 - 최종 사용자 두 수정 파일 SHA256 동일, .env/실제 장부/과거 평가 산출물/독립 골든 변경 없음. 새 PR 없이 기존 #25에 커밋·푸시하고 설명을 갱신한 뒤 중지한다.
+
+# WBS-26 — 운영 차단·개인정보·비용 QA
+
+- PR #25 MERGED/develop, merge `43aae3e08cbb132b52dee9b476e7be3a7db9667d`(2026-10-23T12:33:07Z) 및 최종 리뷰 102346a의 origin/develop 포함 확인. 선행 WBS-25/#22 MERGED 및 반영도 확인했다. develop ff-only 갱신 후 직전 `feature/WBS-17-core-quality-qa`를 `git branch -d`로 삭제하고 `feature/WBS-26-security-cost-qa` 생성.
+- AGENTS/05/WBS/02/06/08/21과 기존 접근·개인정보·예산 테스트를 확인했다. WBS-26은 실행순서 27, 선행 17/25이며 단일 범위다. [완료 조건/정상·오류·경계 계획](evaluations/WBS-26-security-cost-qa.md)을 구현 전에 정의했다.
+- 사용자 수정 next-env.d.ts/CLI 입력/.env 및 실제 장부는 보존한다. 운영/CI·프록시 접근 차단을 통일하고 합성 키/Live 활성 운영 조건에서 실제 빌드·정적 파일·차단 응답을 검증한다. 외부 fetch는 QA 차단 장치로 막으며 실제 OpenAI 호출은 하지 않는다. 나머지 미완료 WBS/CI/PG/DB/제품 캐릭터 구현 없음.
+- 선행 TDD: 계산 API 신규 환경/프록시 9건 중 8건에서 200→404 기대 불일치를 재현했다. `src/server/developer-access.ts`에 환경/호스트/프록시 게이트를 공통화하고 `src/server/{developer-analysis,api-test}.ts`, 계산 API route 및 validation page에 적용했다. 수정 후 기존/신규 관련 3파일 **74건 PASS**.
+- `tests/security-cost-qa.test.ts`: 운영/CI/배포 차단은 키·Live flag가 있어도 본문/계산/공급자/장부 사용 전 거절한다. 가짜 HTTP로 입력 위조 차단, 전송/오류 응답/console 5종/장부의 원문·키 비노출, 알려진 usage 정산, 유효 쿠키 재시작 replay/신규 세션의 공유 일 한도, 미상 usage 예약 유지·무재시도를 확인했다.
+- `scripts/deny-external-fetch.cjs`, `tests/security-harness.test.ts`: QA 전용 자식 Node fetch 차단/메타 없는 marker, 실제 loopback 허용 및 외부/오류 URL 차단 검증. CommonJS require 린트 오류를 동적 import로 수정했다. 타입 검사에서 두 테스트 행 배열의 union/Record 불일치를 정정했다. 규칙 비활성/실패 무시 없음.
+- `scripts/developer-e2e.mjs`, `playwright.config.ts`, `package.json`, `tests/e2e/security-production.spec.ts`: `test:e2e:security`를 추가했다. 합성 키/Live=true production 빌드·유효 서명 쿠키/CSRF/동의 차단·공개 JS/HTML 비노출을 검사하며 외부 fetch marker 발생 시 실패한다. 최초 E2E는 Windows NODE_OPTIONS 역슬래시 경로 해석으로 서버 시작 전 실패했고, 구분자 정규화 후 공백 포함 경로 테스트 PASS. 해당 임시 사본은 runner의 경로 검증 후 정리했다.
+- 신규 QA 관련 **27/27 PASS**, 원래 작업 트리 전체 `npm.cmd test -- --maxWorkers=1` **47파일/1101건 PASS**(104.48초). TypeScript PASS, lint 경고 0. 실제 키/환경/장부를 읽는 대신 Git metadata에서 환경/실제 장부 비추적 및 ignore 확인. 사용자 두 파일 SHA256도 시작 값과 동일했다.
+- 변경 문서: README/06 체크리스트/본 worklog/전용 WBS-26 평가 기록. 무료 혜택·실 금액·다중 서버 한도·실계정/배포/향후 OAuth/RLS/PG/SSE QA 및 사람 품질 평가를 이번 통과로 대체하지 않는다. 실제 OpenAI 호출은 0회/LIVE_NOT_RUN이다.
+- 보안 E2E 두 번째 실행은 개발 22건 PASS 후 외부 fetch marker로 실패했다. 설치된 Next의 getVersionInfo 고정 npm 조회 코드를 확인하고, 헤더/본문 없는 해당 GET만 오프라인 503으로 대체했다. 버전 조회를 실제 실행/최신 판정으로 표시하지 않으며 별도 marker로 집계한다. OpenAI URL·추가 쿼리·인증 헤더 요청은 계속 차단하는 음성 검사를 추가했다. 네트워크 허용이나 실패 무시는 하지 않았다.
+- 이후에도 marker가 있어 원문 없는 분류 코드를 추가해 npm 조회임을 확인했다. 설치된 Next의 기본 agentUpgrade=security 외부 조회가 별도로 있어 `scripts/security-next-config.mjs`가 임시 사본에만 false를 적용하도록 했다. 원본 next.config.ts/잠금 파일은 유지한다. 임시 import wrapper의 TS 경로 해석 오류는 검토된 named export 앞에 QA 옵션만 추가하는 방식으로 수정했고 실제 Next 설정 로더로 기존 계산 패키지 설정 보존/비활성화 및 타입/lint를 재검증했다. 원본 설정 형식이 달라지면 명시 오류로 중단한다.
+- 오프라인 QA helper 정정 전 전체 재실행도 **47개 파일/1101건 PASS (97.87초)**였고, 마지막 변경 helper의 별도 Node 계약 검사도 PASS다. 외부 Next 보안 권고/최신 버전 검사는 이번 완료 범위로 주장하지 않는다. 최종 보안 E2E 결과는 아래 기록한다.
+- 최종 `npm.cmd run test:e2e:security`: **exit 0, 개발 22/22 + production 4/4 PASS**, 격리 production build/route typegen/tsc PASS. 합성 키/Live=true/유효 서명 쿠키/CSRF/동의를 주어도 페이지 2개와 개발자 API 모든 메서드는 404/no-store였다. 실제 공개 HTML 및 정적 JS/CSS/JSON/map에서 합성 비밀이 없음을 확인했다. 예상치 않은 외부 fetch 시도 **0회**, Next 버전 조회 오프라인 503 **1회** 집계.
+- 최종 타입/lint PASS, lint 경고 0, 문서 **48개/76개 링크/문제 0건**, diff --check PASS. 원본 next.config.ts/lockfile/계산·페르소나/기존 평가 데이터 변경 없음. 다음 WBS-27은 시작하지 않는다.
+- 작업 도중 AGENTS.md의 관련 테스트 우선 지침 변경을 발견했다. 전체 회귀는 이 변경 전에 실행했으며 이후는 수정 helper의 관련 계약/정적 검사와 E2E만 실행했다. 해당 사용자 변경과 기존 next-env.d.ts/CLI 수정은 보존·PR 제외한다. 두 기존 파일 SHA256은 시작 시와 동일했다. 실제 .env/키/장부 변경 및 OpenAI 요청 0회/LIVE_NOT_RUN 유지.
