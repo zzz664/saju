@@ -1,0 +1,11 @@
+{
+  "mode": "mock",
+  "scenario": "narration",
+  "featureId": "F01",
+  "personaId": "character-a",
+  "fixtureId": "synthetic-fixture-001",
+  "acknowledgedCost": false,
+  "modelId": "gpt-4o-mini",
+  "maxOutputTokens": 1200,
+  "_note": "예시 UI 초기 상태. 실제 키/개인정보 포함 금지. 서버의 허용 권한과 예산이 우선."
+}

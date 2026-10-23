@@ -68,3 +68,17 @@ type ConfirmPaymentRequest = {
 ## 5. 미확정 항목
 
 서비스/상품/캐릭터 이름, 운영 PG/실 가격, 비회원 저장형 대화, 데이터 보관 기간, 유료 질문 정책, 상용 출시 승인은 사용자 별도 의사결정이 필요하다.
+
+---
+
+## v2.5 — 개발자 전용 OpenAI 실API 테스트 API
+
+|Method|Endpoint|사용 목적|게이트|
+|---|---|---|---|
+|GET|`/api/dev/api-test/config`|허용 모드·키 준비 상태·잔여 예산·시나리오 조회|서버 개발자 권한 + 환경 제한|
+|POST|`/api/dev/api-test/unlock`|WBS-65 초기 로컬 잠금해제|로컬 한정, 서버 비밀 검증, CSRF·rate limit|
+|POST|`/api/dev/api-test/runs`|기본 서술 Mock/Live 실행|명시 실행·비용 동의·예산 예약|
+|POST|`/api/dev/api-test/runs/stream`|R02/R03 동일 서비스 경로를 통한 실 SSE|개발자 인증·기능 선행 완료·멱등/동시성|
+|GET|`/api/dev/api-test/runs/[runId]`|테스트 상태·비식별 사용량 조회|해당 테스터만|
+
+위 경로는 사용자용 `/api/readings/...`과 분리된 **진입점**이지만 내부 실행기는 동일한 R01/R02/R03 서비스를 재사용한다. 공개 고객 API에서 전달하는 `mode=live`는 무시/거부해야 하며, 프런트 입력만으로 공급자 모드를 전환하지 않는다. WBS-65~68의 수용 기준과 이벤트 상세는 `21_실제_OpenAI_API_테스트_설계.md`를 따른다.
