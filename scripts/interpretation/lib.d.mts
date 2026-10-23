@@ -1,0 +1,28 @@
+export function digestText(text: string): string;
+export function stripWikitext(source: string): string;
+export function extractSection(wikitext: string, locator: string): string | null;
+export function boundPassage(text: string, maxCharacters?: number): string;
+export function wikisourceApiUrl(title: string): string;
+export function titleFromUrl(url: string): string;
+export const SUMMARY_PROMPT_VERSION: string;
+export const SUMMARY_INSTRUCTIONS: string;
+export const ENTAILMENT_INSTRUCTIONS: string;
+export function summaryRequestBody(
+  model: string,
+  passage: string,
+  locator: string,
+): {
+  model: string;
+  store: false;
+  stream: false;
+  instructions: string;
+  input: { role: "user"; content: string }[];
+  max_output_tokens: number;
+};
+export function entailmentRequestBody(
+  model: string,
+  passage: string,
+  summary: string,
+): ReturnType<typeof summaryRequestBody>;
+export function outputTextOf(envelope: unknown): string | null;
+export function parseEntailmentVerdict(text: string | null | undefined): "passed" | "failed" | null;

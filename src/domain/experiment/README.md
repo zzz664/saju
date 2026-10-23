@@ -1,4 +1,4 @@
-> developer-json/narrateCore는 기존 Mock 비교 계약입니다. 현재 서버 실행 경로는 narratePersona와 승인형 페르소나 카탈로그를 사용합니다. 신규 제품 기능에 기존 비교 경로를 연결하지 않습니다.
+> 현재 서버 실행 경로는 `narrateFeature`(서술 계획 → 렌더링 → 검증)와 승인형 페르소나 카탈로그다. `createExperimentRunner`는 실행 전략(`execute`)을 서버 코드에서 받으며 기본 전략은 없다.
 
 현재 공통 계약은 `BudgetLedger.reserve → BudgetLease.settle`이다. Memory는 동시성만 해제하고 예약 금액은 환불하지 않으며, File은 검증된 실제 usage가 있을 때만 사용량을 정산한다. `release/finish`는 기존 호출자 호환 별칭이다. Live는 가짜 금액 정책을 만들지 않고 `estimateNarrationTokens`의 토큰 견적과 실제 로컬 호출/토큰 한도만 사용한다. Mock 금액 견적은 실과금 보장이 아니다.
 
@@ -21,18 +21,21 @@ WBS-23의 **로컬 단일 프로세스 mock 평가**를 위한 서버 진입점�
 ```ts
 import { createExperimentRunner } from "@/application/narration/experiment";
 import { MemoryExperimentBudgetStore } from "@/infrastructure/llm/experiment-budget";
-import { createMockNarrationProvider } from "@/infrastructure/llm/mock";
+import { createPlanMockProvider } from "@/infrastructure/llm/plan-mock";
+import { narrateFeature } from "@/application/narration/feature";
 
 // 서버 시작 시 한 번 생성해 같은 원장을 공유한다. 요청마다 새로 만들지 않는다.
 const store = new MemoryExperimentBudgetStore();
 const runner = createExperimentRunner({
   policy: serverOwnedMockPolicy,
-  provider: createMockNarrationProvider(),
+  provider: createPlanMockProvider(),
+  execute: (source, provider, control) =>
+    narrateFeature(source, provider, narrationOptions, control),
   store,
   environment: () => process.env.NODE_ENV,
   resolveAccess: resolveTrustedServerExperimentSession,
 });
-const draft = await runner.run(validatedCore, { signal });
+const narration = await runner.run(featureResult, { signal });
 ```
 
 위 policy/resolver 변수는 서버 조합 예시이며 실제 승인·계정 설정이 적용됐다는 의미가 아니다.

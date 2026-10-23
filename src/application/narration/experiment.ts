@@ -1,4 +1,3 @@
-import { narrateCore } from "@/application/narration";
 import { NarrationError, type NarrationProvider } from "@/domain/narration";
 import {
   experimentDay,
@@ -19,20 +18,16 @@ export interface ExperimentRunnerOptions {
   readonly resolveAccess?: () => Promise<unknown>;
   readonly model?: string;
 }
-type Execution<T> = (
-  core: unknown,
+export type Execution<T> = (
+  source: unknown,
   provider: NarrationProvider,
   options: { readonly signal?: AbortSignal },
 ) => Promise<T>;
+
+/** Execution is a trusted server strategy (never a request body callback or prompt). */
 export function createExperimentRunner<T>(
   options: ExperimentRunnerOptions & { readonly execute: Execution<T> },
-): { run(core: unknown, options?: { readonly signal?: AbortSignal }): Promise<T> };
-export function createExperimentRunner(options: ExperimentRunnerOptions): {
-  run(core: unknown, options?: { readonly signal?: AbortSignal }): ReturnType<typeof narrateCore>;
-};
-export function createExperimentRunner(
-  options: ExperimentRunnerOptions & { readonly execute?: Execution<unknown> },
-) {
+): { run(source: unknown, options?: { readonly signal?: AbortSignal }): Promise<T> } {
   const parsed = ExperimentPolicySchema.safeParse(options.policy);
   if (!parsed.success) throw new ExperimentError("POLICY_REJECTED");
   const policy = parsed.data;
@@ -51,7 +46,7 @@ export function createExperimentRunner(
     }
   }
   return Object.freeze({
-    async run(core: unknown, { signal }: { readonly signal?: AbortSignal } = {}) {
+    async run(source: unknown, { signal }: { readonly signal?: AbortSignal } = {}) {
       if (signal?.aborted) throw new NarrationError("CANCELLED");
       checkEnvironment();
       if (options.provider.kind !== "mock") throw new NarrationError("LIVE_DISABLED");
@@ -97,12 +92,8 @@ export function createExperimentRunner(
           }
         },
       };
-      // Execution is a trusted server strategy, never a request body callback or prompt.
       try {
-        return await (options.execute ?? narrateCore)(core, guarded, {
-          signal,
-          model: options.model,
-        });
+        return await options.execute(source, guarded, { signal });
       } catch (cause) {
         if (denial) throw denial;
         throw cause;

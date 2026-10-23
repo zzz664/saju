@@ -1,5 +1,13 @@
 # WBS-65/66 개발자 API 테스트 설정
 
+## v2.6 (WBS-70) 변경 요약
+
+- 기능 선택은 **F03만** 제공한다(`core-base` 삭제). 실행 경로는 `FeatureResult → 해석 카탈로그 조회 → 서술 계획(beat) → 캐릭터 스타일 산문 → strict JSON → 근거 검증(hard) → 문체 점수(soft)`다. 상세: [서술 계획 README](../../../domain/narration/README.md).
+- 결과 화면은 말풍선(제목·문단)과 **근거 검증 통과/거절 사유 코드**, **문체 점수(참고)**를 보인다. 문체 점수는 실패 사유가 아니다. 거절은 `OUTPUT_REJECTED_<CODE>`(예: `ALIAS_UNKNOWN`, `JSON_PARSE`)로 기록되어 WBS-71 실측 보정 루프에서 분포를 집계한다.
+- 기본 출력 상한은 2,000 토큰(`LIVE_API_TEST_MAX_OUTPUT_TOKENS`)이다. 말풍선 4개 계획에 맞춰 올렸다.
+- 해석 카탈로그가 비어 있으면(현재 상태) 해석 말풍선은 생략되고 한계 말풍선에 "승인된 한국어 요약이 아직 없어"가 적힌다. 카탈로그 채우기는 [해석 카탈로그 README](../../../domain/interpretation/README.md).
+- 아래 WBS-66/65 절의 `core-base`·`sections`·`REGISTER` 문체 실패 설명은 당시 기록이다.
+
 ## WBS-66 현재 사용법과 범위
 
 WBS-65의 보호된 설정에 **비스트리밍 R01 Live Provider**를 추가했다. 아래 WBS-65 구현 전 계획/최종 결과는 당시 기록이다. 현재 사용법은 이 절을 기준으로 하며 WBS-31에서 F03을 추가 연결했다. P06·R02/R03과 나머지 Fxx는 후속 범위다.

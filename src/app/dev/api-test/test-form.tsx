@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ApiTestConfigSchema,
   ApiTestRunSchema,
+  apiTestRejectionMessage,
   apiTestRunHeading,
   apiTestStyleIssueMessage,
   type ApiTestConfig,
@@ -30,7 +31,7 @@ export default function ApiTestForm() {
     [ack, setAck] = useState(false);
   const [fixture, setFixture] = useState("synthetic-known"),
     [persona, setPersona] = useState("synthetic-style");
-  const [feature, setFeature] = useState("core-base");
+  const [feature, setFeature] = useState("F03");
   const [busy, setBusy] = useState(false),
     [notice, setNotice] = useState("잠금 상태를 확인하고 있습니다."),
     [run, setRun] = useState<ApiTestRun | null>(null);
@@ -272,8 +273,8 @@ export default function ApiTestForm() {
           </select>
           {feature === "F03" && (
             <p>
-              관측 사실을 바탕으로 강점 활용·보완점을 점검하는 부분 해석입니다. 실제
-              성격·능력·약점을 확정하지 않습니다.
+              계산으로 확정된 관측 사실과 승인된 고전 해석 요약만 말풍선 계획으로 전달합니다. 해석
+              요약이 없는 조건은 한계로 표시되며 실제 성격·능력·약점을 확정하지 않습니다.
             </p>
           )}
           <label htmlFor="scenario">단계</label>
@@ -328,19 +329,22 @@ export default function ApiTestForm() {
               강점·약점의 확정을 뜻하지 않습니다.
             </p>
           )}
-          {run.mode === "live" &&
-            run.providerStatus === "completed" &&
-            run.verdict?.styleHeuristicPassed === false && (
-              <p>
-                OpenAI 응답 생성은 완료됐습니다. 아래 문체 검사 항목을 통과하지 못해 종합 결과는
-                LIVE_FAILED입니다. 사용 토큰은 그대로 반영되며 자동 재호출하지 않습니다.
-              </p>
-            )}
-          {run.result?.sections
-            .flatMap((section) => section.paragraphs)
-            .map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
+          {run.rejection && run.providerStatus === "completed" && (
+            <p>
+              OpenAI 응답 생성은 완료됐지만 근거 검증에서 거절되었습니다:{" "}
+              {apiTestRejectionMessage(run.rejection.code)}
+              {run.rejection.beatId ? ` (말풍선: ${run.rejection.beatId})` : ""}. 사용 토큰은 그대로
+              반영되며 자동 재호출하지 않습니다.
+            </p>
+          )}
+          {run.result?.beats.map((beat) => (
+            <section key={beat.beatId} aria-label={beat.title}>
+              <h3>{beat.title}</h3>
+              {beat.paragraphs.map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
+            </section>
+          ))}
           {run.errorCode && <p>오류 코드: {run.errorCode}</p>}
           <p>
             {run.mode === "mock"
@@ -350,17 +354,17 @@ export default function ApiTestForm() {
           <p>소요 시간: {run.durationMs ?? "미확인"}ms</p>
           {run.verdict && (
             <p>
-              근거 ID 검사: {run.verdict.evidenceIdsValid ? "통과" : "실패"} · 문체 규칙 검사:{" "}
-              {run.verdict.styleHeuristicPassed ? "통과" : "실패"}. 의미·자연스러움은 수동 검토가
-              필요합니다.
+              근거 검증: {run.verdict.groundingPassed ? "통과" : "거절"} · 문체 점수(참고):{" "}
+              {run.verdict.styleScore.toFixed(2)} · 문체 참고 항목 {run.verdict.styleIssueCount}
+              건. 문체 점수는 실패 사유가 아니며 의미·자연스러움은 수동 검토가 필요합니다.
             </p>
           )}
           {!!run.styleIssues?.length && (
-            <ul aria-label="문체 검사 상세">
+            <ul aria-label="문체 참고 상세">
               {run.styleIssues.map((issue) => (
-                <li key={`${issue.sectionId}:${issue.code}`}>
-                  {issue.code} · {apiTestStyleIssueMessage(issue.code, run.expectedRegister)} (섹션:{" "}
-                  {issue.sectionId})
+                <li key={`${issue.beatId}:${issue.code}`}>
+                  {issue.code} · {apiTestStyleIssueMessage(issue.code, run.expectedRegister)}{" "}
+                  {issue.detail ? `· ${issue.detail}` : ""} (말풍선: {issue.beatId})
                 </li>
               ))}
             </ul>

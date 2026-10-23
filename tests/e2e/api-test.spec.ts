@@ -17,7 +17,7 @@ test("F03 selection explicitly runs shared Mock prose and preserves partial/unkn
   await unlock(page);
   await page.getByLabel("기능", { exact: true }).selectOption("F03");
   await page.getByLabel("가상 사례", { exact: true }).selectOption("synthetic-unknown");
-  await expect(page.getByText(/관측 사실을 바탕으로/)).toBeVisible();
+  await expect(page.getByText(/말풍선 계획으로 전달합니다/)).toBeVisible();
   expect(calls).toBe(0);
   const pending = page.waitForResponse(
     (r) => r.url().endsWith("/runs") && r.request().method() === "POST",
@@ -35,9 +35,11 @@ test("F03 selection explicitly runs shared Mock prose and preserves partial/unkn
   await expect(page.getByRole("region", { name: "Mock 실행 결과" })).toContainText(
     "판단 상태: partial",
   );
+  await expect(page.getByRole("region", { name: "Mock 실행 결과" })).toContainText(
+    "해석 범위와 한계",
+  );
   expect(calls).toBe(1);
-  await page.getByLabel("기능", { exact: true }).selectOption("core-base");
-  await expect(page.getByRole("region", { name: "Mock 실행 결과" })).toHaveCount(0);
+  await page.getByLabel("가상 사례", { exact: true }).selectOption("synthetic-known");
   expect(calls).toBe(1);
 });
 test("locked developer APIs require a session and no mode interaction automatically runs", async ({
@@ -64,7 +66,9 @@ test("locked developer APIs require a session and no mode interaction automatica
   expect(cookie.sameSite).toBe("Strict");
 });
 
-test("Mock button reuses R01, shows prose and exports only evidence metadata", async ({ page }) => {
+test("Mock button reuses the plan path, shows beats and exports only evidence metadata", async ({
+  page,
+}) => {
   await unlock(page);
   const response = page.waitForResponse(
     (response) => response.url().endsWith("/runs") && response.request().method() === "POST",
@@ -80,7 +84,7 @@ test("Mock button reuses R01, shows prose and exports only evidence metadata", a
   expect(fetched.status()).toBe(200);
   expect((await fetched.json()).testRunId).toBe(run.testRunId);
   await expect(page.getByRole("heading", { name: "MOCK_PASS" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Mock 실행 결과" })).toContainText("확인된 관찰");
+  await expect(page.getByRole("region", { name: "Mock 실행 결과" })).toContainText("원국 한눈에");
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "비식별 증빙 내보내기" }).click();
   const exported = await download;
@@ -92,9 +96,9 @@ test("Mock button reuses R01, shows prose and exports only evidence metadata", a
   expect(content).not.toMatch(/birthDate|synthetic-unlock-secret|csrfToken/);
   expect(JSON.parse(content)).toMatchObject({
     personaVersion: "1.0.0",
-    promptVersion: "1.0.1",
-    commonPromptVersion: "1.0.0",
-    schemaVersion: "1.0.0",
+    promptVersion: "2.0.0",
+    commonPromptVersion: "1.1.0",
+    schemaVersion: "2.0.0",
   });
   expect(await page.locator("body").innerText()).not.toContain("synthetic-unlock-secret");
 });
@@ -151,14 +155,14 @@ test("simulated Live UI requires consent and an explicit click, locks controls a
         testRunId: "00000000-0000-4000-8000-000000000001",
         mode: "live",
         scenario: "narration",
-        featureId: "core-base",
+        featureId: "F03",
         modelId: "gpt-4o-mini",
         personaId: "synthetic-style",
         status: "passed",
         personaVersion: "1.0.0",
-        promptVersion: "1.0.0",
-        commonPromptVersion: "1.0.0",
-        schemaVersion: "1.0.0",
+        promptVersion: "2.0.0",
+        commonPromptVersion: "1.1.0",
+        schemaVersion: "2.0.0",
         startedAt: "2026-10-23T00:00:00Z",
         finishedAt: "2026-10-23T00:00:01Z",
         durationMs: 1000,
@@ -166,7 +170,7 @@ test("simulated Live UI requires consent and an explicit click, locks controls a
         outputTokens: 60,
         providerStatus: "completed",
         evidence: "LIVE_PASS",
-        verdict: { evidenceIdsValid: true, styleHeuristicPassed: true },
+        verdict: { groundingPassed: true, styleScore: 1, styleIssueCount: 0 },
       },
     });
   });
@@ -194,7 +198,7 @@ test("simulated Live UI requires consent and an explicit click, locks controls a
   expect(calls).toBe(1);
 });
 
-test("completed Live response shows quality failure reasons separately from API completion", async ({
+test("completed Live response shows a grounding rejection separately from API completion", async ({
   page,
 }) => {
   await page.route("**/api/dev/api-test/config", async (route) => {
@@ -222,27 +226,21 @@ test("completed Live response shows quality failure reasons separately from API 
         testRunId: "00000000-0000-4000-8000-000000000002",
         mode: "live",
         scenario: "narration",
-        featureId: "core-base",
+        featureId: "F03",
         modelId: "gpt-4o-mini",
         personaId: "synthetic-style",
         status: "failed",
         personaVersion: "1.0.0",
-        promptVersion: "1.0.1",
-        commonPromptVersion: "1.0.0",
-        schemaVersion: "1.0.0",
+        promptVersion: "2.0.0",
+        commonPromptVersion: "1.1.0",
+        schemaVersion: "2.0.0",
         startedAt: "2026-10-23T00:00:00Z",
         inputTokens: 100,
         outputTokens: 60,
         providerStatus: "completed",
         evidence: "LIVE_FAILED",
-        expectedRegister: "haeyo",
-        styleIssues: [{ code: "REGISTER", sectionId: "overview" }],
-        verdict: { evidenceIdsValid: true, styleHeuristicPassed: false },
-        result: {
-          sections: [{ paragraphs: ["확인된 범위만 설명합니다."] }],
-          styleEvaluation: { passed: false },
-          meta: { providerKind: "openai", modelId: "gpt-4o-mini" },
-        },
+        errorCode: "OUTPUT_REJECTED_ALIAS_UNKNOWN",
+        rejection: { code: "ALIAS_UNKNOWN", beatId: "observation" },
       },
     });
   });
@@ -251,11 +249,10 @@ test("completed Live response shows quality failure reasons separately from API 
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "테스트 실행" }).click();
   await expect(
-    page.getByRole("heading", { name: "API 호출 완료 · 문체 검사 미통과" }),
+    page.getByRole("heading", { name: "API 호출 완료 · 근거 검증 거절 (ALIAS_UNKNOWN)" }),
   ).toBeVisible();
-  await expect(page.getByRole("list", { name: "문체 검사 상세" })).toContainText("REGISTER");
-  await expect(page.getByRole("list", { name: "문체 검사 상세" })).toContainText("해요체");
   const region = page.getByRole("region", { name: "Live 실행 결과" });
+  await expect(region).toContainText("계획에 없는 근거 별칭");
   await expect(region).toContainText("종합 검증 결과: LIVE_FAILED");
   await expect(region).toContainText("응답 상태: completed");
   await expect(region).toContainText("자동 재호출하지 않습니다");

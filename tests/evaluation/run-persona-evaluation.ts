@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import {
-  evaluatePersonaMatrix,
-  renderPersonaReview,
+  evaluateNarrationMatrix,
+  renderNarrationReview,
 } from "../../src/application/narration/evaluation";
 import { evaluationManifest, evaluationOptions, loadEvaluationCases } from "./persona-fixtures";
 import { readOpenAiModel } from "../../src/server/openai-model";
@@ -11,7 +11,7 @@ import { readOpenAiModel } from "../../src/server/openai-model";
 async function main() {
   if (process.env.NODE_ENV === "production" || process.argv.length !== 2)
     throw new Error("Evaluation invocation rejected.");
-  const report = await evaluatePersonaMatrix(
+  const report = await evaluateNarrationMatrix(
     {
       suiteId: evaluationManifest.suiteId,
       suiteVersion: evaluationManifest.suiteVersion,
@@ -21,13 +21,13 @@ async function main() {
   );
   const directory = new URL("../../docs/evaluations/", import.meta.url);
   writeFileSync(
-    new URL("WBS-25-persona-quality-results.json", directory),
+    new URL("narration-plan-mock-results.json", directory),
     JSON.stringify(report, null, 2) + "\n",
     "utf8",
   );
   writeFileSync(
-    new URL("WBS-25-persona-quality-samples.md", directory),
-    renderPersonaReview(report),
+    new URL("narration-plan-mock-samples.md", directory),
+    renderNarrationReview(report),
     "utf8",
   );
   // Aggregate metrics only; source prose and raw birth inputs never go to stdout.
@@ -36,12 +36,13 @@ async function main() {
       suiteId: report.suiteId,
       providerKind: report.providerKind,
       ...report.summary,
+      rejectionCounts: report.rejectionCounts,
       humanEvaluation: report.humanEvaluation,
     }),
   );
-  if (!report.summary.contractPassed || report.summary.styleFlagged > 0) process.exitCode = 1;
+  if (!report.summary.groundingPassed) process.exitCode = 1;
 }
 main().catch(() => {
-  console.error("Persona mock evaluation failed.");
+  console.error("Narration mock evaluation failed.");
   process.exitCode = 1;
 });

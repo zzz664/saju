@@ -9,7 +9,9 @@ import {
 } from "@/infrastructure/manseryeok/schemas";
 
 type AdapterErrorCode =
-  "LIBRARY_REJECTED_INPUT" | "LIBRARY_CALCULATION_FAILED" | "LIBRARY_OUTPUT_INVALID";
+  | "LIBRARY_REJECTED_INPUT"
+  | "LIBRARY_CALCULATION_FAILED"
+  | "LIBRARY_OUTPUT_INVALID";
 
 const errorMessages: Record<AdapterErrorCode, string> = {
   LIBRARY_REJECTED_INPUT: "The pinned calendar library rejected the request.",

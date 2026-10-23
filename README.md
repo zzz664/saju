@@ -4,10 +4,11 @@
 WBS-03의 CLI·어댑터 포트 사용법과 현재 지원 범위는 [CLI 문서](src/cli/README.md)를 참고한다.
 기능 개발 순서는 `docs/WBS.csv`의 `실행순서`와 실제 `develop` 병합 상태를 따른다.
 OpenAI 실험 전 수동 점검은 [WBS-22 조직 설정 체크리스트](docs/checklists/WBS-22-openai-account-review.md)를 따른다. 계정/무료 혜택 점검과 실호출 증빙은 별도 상태로 관리한다.
-WBS-23의 [LLM provider·프롬프트·mock](src/domain/narration/README.md)은 기존 확정 판단의 내부 JSON 검증용이다. 오프라인 진입점은 Mock 전용이며, 실제 호출은 WBS-65/66의 보호된 서버 경로에서만 허용한다. P06 스트리밍 경로와 구분한다.
+**2026-10-24 해석 층 재설계**([결정 메모](docs/decisions/2026-10-24_해석층_재설계_결정.md)): 해석 내용은 [해석 카탈로그](src/domain/interpretation/README.md)(퍼블릭 도메인 원전 구절의 AI 요약, 조건 키 조회, 미감수 표시)에서 오고, LLM은 [서술 계획](src/domain/narration/README.md)(확정 관측 + 승인 요약 + 한계, 캐릭터 무관) 안에서만 문장을 만든다. 근거 검증은 거절 사유 코드가 있는 hard 게이트, 문체는 soft 점수다. 이전 R01 `sections` JSON 계약과 `core-base` 경로는 삭제되었다. Codex 작업 절차는 [22](docs/22_Codex_해석층_작업지시.md).
+WBS-23의 [서술 공급자 경계](src/domain/narration/README.md)는 공급자 중립 요청/응답 계약과 Mock을 제공한다. 실제 호출은 WBS-65/66의 보호된 서버 경로에서만 허용한다.
 WBS-24의 [실험 접근·예산·동시성 가드](src/domain/experiment/README.md)는 서버가 허용한 로컬 Mock에 일/사용자/세션 예약 한도를 적용한다. WBS-66 Live는 별도의 파일 영속 예산 장부를 사용한다.
-WBS-47의 [승인형 R01 페르소나](src/domain/persona/README.md)는 세 계층 프롬프트·내부 서술 JSON·문체/근거·캐시 키를 mock으로 검증한다. 제품 캐릭터나 P06 스트리밍에 연결하지 않는다.
-WBS-25의 [반복 품질 평가](docs/evaluations/WBS-25-persona-quality.md)는 `npm run eval:persona`로 30사례 × 합성 문체 2종 × 3회 Mock 결과와 읽기용 샘플을 생성한다. 사람 점수와 실 모델 평가는 별도다.
+WBS-47의 [승인형 페르소나](src/domain/persona/README.md)는 승인 JSON 로더와 산문 스타일 가이드 렌더링을 제공한다. 캐릭터는 문체에만 관여하며 `planKey`는 캐릭터와 무관하다.
+WBS-25의 [반복 품질 평가](docs/evaluations/WBS-25-persona-quality.md)는 `npm run eval:persona`로 30사례 × 합성 문체 2종 × 3회 Mock을 서술 계획 경로로 돌려 `docs/evaluations/narration-plan-mock-*`를 생성한다(근거 검증 통과율·거절 코드 분포·문체 점수). 과거 WBS-25 산출물은 기록으로 보존한다. 사람 점수와 실 모델 평가(WBS-71)는 별도다.
 WBS-65/66의 [개발자 API 테스트 설정](src/app/dev/api-test/README.md)은 `npm run dev:api-test`로 시작한 로컬 서버의 `/dev/api-test`에서 잠금해제 후 공통 R01 Mock/Live를 실행한다. 기본 Mock이며 Live는 서버 키/플래그·비용 동의·명시 실행·예산 예약이 필요하다. 모델은 서버 `OPENAI_MODEL` 공통 설정(기본 `gpt-4o-mini`)을 사용한다.
 WBS-17의 [코어 QA 기록](docs/evaluations/WBS-17-core-qa.md)은 계산/Mock/화면·문서 검증 범위, 발견 사항과 Live/사람 평가 잔여 항목을 구분한다.
 WBS-26의 [운영·개인정보·비용 QA](docs/evaluations/WBS-26-security-cost-qa.md)는 공통 로컬 접근 게이트, 운영 차단, 재시작 예산과 비노출 검증을 기록한다. `npm run test:e2e:security`는 실제 키 없이 합성 키/Live=true의 격리 production 빌드와 브라우저 검사를 수행한다. Next의 개발용 버전 조회는 오프라인 503으로 대체하며, 그 외 외부 fetch 시도는 차단하고 실패로 처리한다.
@@ -48,7 +49,7 @@ F01~F11 요청을 라우팅하고 필요한 모듈을 공유하며 후속 실행
 WBS-31의 [F03 강점·약점](src/domain/features/README.md)은 관측 사실과 조건부 점검 방향을 제공한다.
 WBS-32의 [F02 성격·기질](src/domain/features/temperament.md)은 `feature-json`에서 근거·충돌·미상 한계를 확인한다.
 WBS-33의 [F04 직업 적성·업무 성향](src/domain/features/career.md)은 `feature-json`에서 조건부 업무 검토 방향을 제공한다.
-`feature-json` 또는 보호된 `/dev/api-test`의 F03 선택에서 검토하며 Mock/명시 Live 서술 경로를 공유한다.
+`feature-json` 또는 보호된 `/dev/api-test`의 F03에서 검토하며, 서술은 해석 카탈로그 조회 → 서술 계획 → Mock/명시 Live 경로를 공유한다(WBS-69/70).
 WBS-16의 [독립 골든 30건 검토표](docs/checklists/WBS-16-independent-golden-review.md)는 날짜·간지·DST·태양시·미상 경계를 통합 계산/JSON 경로에서 대조한다. 자동 검증 통과와 사용자 승인을 구분한다.
 WBS-20의 [개발자 검증 화면과 API](src/app/dev/validation/README.md)는
 로컬 개발 서버의 `/dev/validation`에서 입력·미상·원국·근거·JSON/프롬프트 복사를 확인한다.

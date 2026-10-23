@@ -11,13 +11,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { createApiTestHandler } from "@/server/api-test";
 import { createApiTestCatalog } from "@/server/api-test-catalog";
-import { createPersonaMockProvider } from "@/infrastructure/llm/persona-mock";
+import { createPlanMockProvider } from "@/infrastructure/llm/plan-mock";
 import { FileLiveBudget } from "@/infrastructure/openai/live-budget";
 import {
   createOpenAiNarrationProvider,
   type LiveObservation,
 } from "@/infrastructure/openai/narration";
-import { preparePersonaNarration } from "@/domain/persona/narration";
+import { prepareFeatureNarration } from "@/application/narration/feature";
 import {
   apiTestRunHeading,
   apiTestStyleIssueMessage,
@@ -49,12 +49,12 @@ afterEach(() => {
   }
 });
 const catalog = createApiTestCatalog(),
-  mock = createPersonaMockProvider();
-const context = preparePersonaNarration(catalog.core("synthetic-known"), {
+  mock = createPlanMockProvider();
+const context = prepareFeatureNarration(catalog.source("synthetic-known", "F03"), {
   ...catalog,
   selection: { personaId: "synthetic-style", personaVersion: "1.0.0" },
 });
-const prompt = { ...context.request, maxOutputTokens: 1200 };
+const prompt = { ...context.request, maxOutputTokens: 2000 };
 const requestBody = toOpenAiResponsesBody(prompt);
 async function envelope(request = requestBody) {
   const result = (await mock.generate(promptFromWire(request))) as { outputText: string };
@@ -97,7 +97,7 @@ const input = () => ({
   mode: "live",
   scenario: "narration",
   fixtureId: "synthetic-known",
-  featureId: "core-base",
+  featureId: "F03",
   personaId: "synthetic-style",
   acknowledgedCost: true,
   requestId: crypto.randomUUID(),
@@ -169,12 +169,14 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
       result: { sourceStatus: "partial", meta: { providerKind: "openai" } },
     });
     const wire = JSON.parse(String(transport.mock.calls[0][1]?.body));
-    expect(wire).toMatchObject({ store: false, stream: false, max_output_tokens: 1200 });
-    expect(wire.text.format.schema.properties.featureId.const).toBe("F03");
-    expect(JSON.stringify(wire)).not.toMatch(/birthDate|birthTime|2024-02-10/);
-    expect(
-      wire.input.find((message: { role: string }) => message.role === "user").content,
-    ).toContain("f03.observation.");
+    expect(wire).toMatchObject({ store: false, stream: false, max_output_tokens: 2000 });
+    expect(wire.text.format.schema.properties.beats.items.properties.beatId.enum).toEqual(
+      run.result.beats.map((beat: { beatId: string }) => beat.beatId),
+    );
+    expect(JSON.stringify(wire)).not.toMatch(/birthDate|birthTime|2024-02-10|primary:M03|iu\./);
+    const user = wire.input.find((message: { role: string }) => message.role === "user").content;
+    expect(user).toContain("오행 개수");
+    expect(user).toContain('"featureId":"F03"');
     expect(budget.inspect(now)).toEqual({ calls: 1, tokens: 160 });
     expect(await (await handler(req("runs", body, cookie, config.csrfToken))).json()).toEqual(run);
     expect(transport).toHaveBeenCalledTimes(1);
@@ -200,7 +202,7 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
       inputTokens: 100,
       outputTokens: 60,
       providerStatus: "completed",
-      verdict: { evidenceIdsValid: true, styleHeuristicPassed: true },
+      verdict: { groundingPassed: true, styleIssueCount: 0 },
       result: { meta: { providerKind: "openai" } },
     });
     expect(transport).toHaveBeenCalledTimes(1);
@@ -350,7 +352,7 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
     expect(result).toMatchObject({ evidence: "LIVE_FAILED", errorCode: code, inputTokens: null });
     expect(JSON.stringify(result)).not.toContain(apiKey);
     expect(transport).toHaveBeenCalledTimes(1);
-    expect(budget.inspect(now).tokens).toBeGreaterThan(1200);
+    expect(budget.inspect(now).tokens).toBeGreaterThan(2000);
   });
   it.each([
     ["incomplete", "INCOMPLETE"],
@@ -358,8 +360,8 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
     ["refusal", "REFUSED"],
     ["missingUsage", "USAGE_MISSING"],
     ["model", "MODEL_MISMATCH"],
-    ["badJSON", "OUTPUT_REJECTED"],
-    ["badEvidence", "OUTPUT_REJECTED"],
+    ["badJSON", "OUTPUT_REJECTED_JSON_PARSE"],
+    ["badEvidence", "OUTPUT_REJECTED_ALIAS_UNKNOWN"],
   ])("rejects %s while preserving known usage or its reservation", async (kind, code) => {
     const { handler, budget } = setup({}, async () => {
       const value = await envelope();
@@ -374,7 +376,7 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
       if (kind === "badJSON") value.output[0].content[0].text = "invalid";
       if (kind === "badEvidence") {
         const draft = JSON.parse(value.output[0].content[0].text);
-        draft.sections[0].evidenceIds = ["forged"];
+        draft.beats[0].usedAliases = ["E99"];
         value.output[0].content[0].text = JSON.stringify(draft);
       }
       return Response.json(value);
@@ -382,54 +384,53 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
     const { cookie, config } = await unlock(handler),
       result = await (await handler(req("runs", input(), cookie, config.csrfToken))).json();
     expect(result).toMatchObject({ evidence: "LIVE_FAILED", errorCode: code });
-    if (kind === "missingUsage") expect(budget.inspect(now).tokens).toBeGreaterThan(1200);
+    if (kind === "missingUsage") expect(budget.inspect(now).tokens).toBeGreaterThan(2000);
     else expect(budget.inspect(now).tokens).toBe(160);
   });
-  it("marks style failures separately from valid source IDs", async () => {
+  it("reports style issues as a soft score while grounding still passes", async () => {
     const { handler } = setup({}, async () => {
       const value = await envelope(),
         draft = JSON.parse(value.output[0].content[0].text);
-      draft.sections[0].paragraphs = ["반드시 성공합니다."];
+      draft.beats[0].paragraphs = ["반드시 성공합니다."];
       value.output[0].content[0].text = JSON.stringify(draft);
       return Response.json(value);
     });
     const { cookie, config } = await unlock(handler);
     const result = await (await handler(req("runs", input(), cookie, config.csrfToken))).json();
     expect(result).toMatchObject({
-      status: "failed",
-      evidence: "LIVE_FAILED",
-      verdict: { evidenceIdsValid: true, styleHeuristicPassed: false },
+      status: "passed",
+      evidence: "LIVE_PASS",
+      verdict: { groundingPassed: true },
     });
-    expect(result.styleIssues).toEqual(
-      expect.arrayContaining([
-        { code: "REGISTER", sectionId: "overview" },
-        { code: "CERTAINTY", sectionId: "overview" },
-      ]),
+    expect(result.verdict.styleScore).toBeLessThan(1);
+    expect(result.styleIssues.map((issue: { code: string }) => issue.code)).toEqual(
+      expect.arrayContaining(["CERTAINTY"]),
     );
   });
-  it("explains a completed API call with a formal/haeyo mismatch without hiding failure or retrying", async () => {
+  it("flags a formal answer to a haeyo persona as a register mix without failing the run", async () => {
     const { handler, transport, budget } = setup({}, async (_url, options) => {
       const value = await envelope(JSON.parse(String(options?.body))),
         draft = JSON.parse(value.output[0].content[0].text);
-      draft.sections[0].paragraphs = ["제공된 근거를 살펴보겠습니다. 확인된 범위만 설명합니다."];
+      for (const beat of draft.beats)
+        beat.paragraphs = ["제공된 근거를 살펴보겠습니다. 확인된 범위만 설명합니다."];
       value.output[0].content[0].text = JSON.stringify(draft);
       return Response.json(value);
     });
     const { cookie, config } = await unlock(handler);
-    const failed = ApiTestRunSchema.parse(
+    const mixed = ApiTestRunSchema.parse(
       await (await handler(req("runs", input(), cookie, config.csrfToken))).json(),
     );
-    expect(failed).toMatchObject({
-      status: "failed",
-      evidence: "LIVE_FAILED",
+    expect(mixed).toMatchObject({
+      status: "passed",
+      evidence: "LIVE_PASS",
       providerStatus: "completed",
       expectedRegister: "haeyo",
       inputTokens: 100,
       outputTokens: 60,
     });
-    expect(failed.styleIssues).toEqual([{ code: "REGISTER", sectionId: "overview" }]);
-    expect(apiTestRunHeading(failed)).toBe("API 호출 완료 · 문체 검사 미통과");
-    expect(apiTestStyleIssueMessage("REGISTER", failed.expectedRegister)).toContain("해요체");
+    expect(mixed.styleIssues?.map((issue) => issue.code)).toContain("REGISTER_MIX");
+    expect(apiTestRunHeading(mixed)).toBe("LIVE_PASS");
+    expect(apiTestStyleIssueMessage("REGISTER_MIX", mixed.expectedRegister)).toContain("해요체");
     expect(transport).toHaveBeenCalledTimes(1);
     expect(budget.inspect(now)).toEqual({ calls: 1, tokens: 160 });
     const formal = await (
@@ -440,21 +441,20 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
     expect(formal).toMatchObject({
       evidence: "LIVE_PASS",
       expectedRegister: "hapsyo",
-      styleIssues: [],
       personaVersion: "1.0.1",
       result: { meta: { personaVersion: "1.0.1" } },
     });
+    expect(
+      formal.styleIssues.some((issue: { code: string }) => issue.code === "REGISTER_MIX"),
+    ).toBe(false);
     const formalSent = JSON.parse(String(transport.mock.calls[1][1]!.body));
-    const formalProfile = JSON.parse(formalSent.input[0].content.split("\n").at(-1)).persona;
-    expect(formalProfile).toMatchObject({
-      personaVersion: "1.0.1",
-      voice: { register: "hapsyo", preferredExpressions: ["먼저 살펴보겠습니다"] },
-      examples: [{ prefer: "제공된 근거만으로 확정할 수는 없습니다." }],
-    });
+    expect(formalSent.input[0].content).toContain("[캐릭터 스타일 안내] synthetic-formal 1.0.1");
+    expect(formalSent.input[0].content).toContain("합쇼체");
+    expect(formalSent.input[0].content).toContain("먼저 살펴보겼습니다".replace("겼", "겠"));
     const sent = JSON.parse(String(transport.mock.calls[0][1]!.body));
-    expect(sent.input[0].content).toContain("haeyo이면 해요체");
-    expect(sent.input[0].content).toContain("sentencesPerParagraph");
-    expect(failed.promptVersion).toBe("1.0.1");
+    expect(sent.input[0].content).toContain("해요체");
+    expect(sent.input[0].content).toContain("usedAliases");
+    expect(mixed.promptVersion).toBe("2.0.0");
   });
   it("compares Mock/Live with identical normalized data, profiles and prompts", async () => {
     const { handler, transport } = setup(),
@@ -463,7 +463,7 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
       await handler(req("runs", { ...input(), mode: "mock" }, cookie, config.csrfToken))
     ).json();
     const liveRun = await (await handler(req("runs", input(), cookie, config.csrfToken))).json();
-    expect(liveRun.result.sections).toEqual(mockRun.result.sections);
+    expect(liveRun.result.beats).toEqual(mockRun.result.beats);
     expect(liveRun.result.cache).toEqual(mockRun.result.cache);
     expect(liveRun.result.limitations).toEqual(mockRun.result.limitations);
     expect(transport).toHaveBeenCalledTimes(1);
@@ -516,7 +516,7 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
         if (kind === "truncated") return new Response("{");
         const value = await envelope();
         if (kind === "invalidUsage") value.usage.input_tokens = -1;
-        if (kind === "excessOutput") value.usage.output_tokens = 1201;
+        if (kind === "excessOutput") value.usage.output_tokens = 2001;
         return Response.json(value);
       });
       const { cookie, config } = await unlock(handler);
@@ -526,7 +526,7 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
         evidence: "LIVE_FAILED",
         errorCode: "OUTPUT_REJECTED",
       });
-      expect(budget.inspect(now).tokens).toBeGreaterThan(1200);
+      expect(budget.inspect(now).tokens).toBeGreaterThan(2000);
     },
   );
   it("handles network failure, timeout and explicit cancellation without automatic retries", async () => {
