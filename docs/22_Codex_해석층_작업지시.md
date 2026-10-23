@@ -47,7 +47,7 @@ develop 대상 PR 한 건을 만들고 중지하라.
 
 ```text
 1. node scripts/interpretation/collect-passages.mjs --dry-run   # 어떤 locator가 Wikisource 본문에서 발견되는지 확인. page …: MISSING_TITLE 은 scaffold.ts 의 url 제목 오류, RATE_LIMITED 는 잠시 후 재실행
-2. 발견되지 않는 슬롯은 src/infrastructure/interpretation/scaffold.ts 의 locator 를 Wikisource 실제 소제목에 맞게 수정한다. 구절을 손으로 붙이지 않는다.
+2. 발견되지 않는 슬롯은 src/infrastructure/interpretation/scaffold.ts 의 locator 를 Wikisource 실제 소제목(또는 단락 첫 구절)에 맞게 수정한다. 전부 missing 이면 --dry-run --inspect 로 페이지 구조(소제목 목록·본문 앞부분)를 먼저 본다. 구절을 손으로 붙이지 않는다.
 3. node scripts/interpretation/collect-passages.mjs              # passages.json 채움. diff 로 수집 범위 확인 후 커밋
 4. (사용자 승인·키·플래그가 있을 때만) ENABLE_INTERPRETATION_SUMMARY=true node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/interpretation/summarize-units.mjs --confirm --max 10
 5. summaries.json 에서 entailment.status 를 확인한다. failed 는 그대로 두고(usable=false) 재생성만 허용한다.

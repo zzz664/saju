@@ -1123,3 +1123,9 @@
 
 - `npm test`: 73개 파일 / 1,457건 PASS. `npm run lint`(경고 0)·`npm run typecheck`·`npm run format:check`·`npm run check:docs` PASS.
 - 이 환경은 Wikisource 접근이 차단되어 실수집은 실행하지 않았다. 사용자 환경에서 `--dry-run` 재실행이 필요하다.
+
+### 후속 — 141건 전부 `missing` (페이지는 열림, locator 0건 매칭)
+
+- 원인 후보: 궁통보감 본문은 "正月甲木，…"이 소제목이 아니라 단락 첫 구절이고, 적천수 `甲木`도 天干論 단락 첫 글자다. 삼명통회 권5는 하위 페이지/ProofreadPage 전사일 가능성이 있어 원시 wikitext에 본문이 없을 수 있다. 조합 locator `論印綬·論食神`은 애초에 어떤 소제목과도 일치할 수 없었다. 이 환경은 Wikisource 차단으로 실제 본문을 확인하지 못했다.
+- 수정: API `prop=wikitext|text`, `variant=zh-hant`로 렌더링 본문도 받아 `htmlToText`로 정규화(소제목 `== ==`·단락 1줄). `extractFromPage`는 렌더링 본문 → wikitext 순, 각각 소제목(정확/접두 일치, `甲木`이 `三春甲木` 장 제목을 잡지 않도록 `includes` 제거) → locator로 시작하는 단락 순으로 찾는다. `·` locator는 부분을 모두 찾아 이어 붙인다. `--inspect`(페이지별 소제목 목록·본문 앞부분·전사 여부)·`--dump <dir>`(정규화 본문 저장, `tmp/` gitignore) 추가.
+- 검증: `tests/interpretation-scripts.test.ts` 6건(단락 폴백·조합 locator·HTML 정규화 추가) PASS, lint·typecheck PASS. 실수집은 사용자 환경에서 `--dry-run --inspect` 재실행으로 확인한다.

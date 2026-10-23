@@ -19,26 +19,109 @@ export function stripWikitext(source) {
     .trim();
 }
 
+const HEADING = /^(={2,6})\s*(.*?)\s*\1\s*$/;
+
 /**
- * Find the section whose heading text contains the locator, then return its body up to the next
- * heading of the same or higher level. Returns null when the heading is absent.
+ * Convert the rendered page HTML (action=parse prop=text) into the same line-oriented shape as
+ * wikitext: `== heading ==` lines and one paragraph per line. Rendered HTML resolves transcluded
+ * subpages and ProofreadPage `<pages>` blocks that the raw wikitext does not contain.
  */
-export function extractSection(wikitext, locator) {
-  const lines = wikitext.split(/\r?\n/);
-  const heading = /^(={2,6})\s*(.*?)\s*\1\s*$/;
+export function htmlToText(html) {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, "")
+    .replace(/<span class="mw-editsection">[\s\S]*?<\/span>/g, "")
+    .replace(/<h([2-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_, level, inner) => {
+      const bar = "=".repeat(Number(level));
+      return `\n${bar} ${inner.replace(/<[^>]+>/g, "").trim()} ${bar}\n`;
+    })
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|tr|dd|dt|blockquote|section|td|th)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec)))
+    .replace(/&amp;/g, "&")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/[ \t　]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Headings of a page as plain text, in order — used by `--inspect` to show what exists. */
+export function listHeadings(text) {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.match(HEADING))
+    .filter(Boolean)
+    .map((match) => `${"#".repeat(match[1].length - 1)} ${stripWikitext(match[2])}`);
+}
+
+function extractHeadingSection(lines, locator) {
   for (let index = 0; index < lines.length; index++) {
-    const match = lines[index].match(heading);
-    if (!match || !stripWikitext(match[2]).includes(locator)) continue;
+    const match = lines[index].match(HEADING);
+    // Exact or prefix match only: "甲木" must not pick the "三春甲木" chapter heading.
+    if (!match || !stripWikitext(match[2]).startsWith(locator)) continue;
     const level = match[1].length;
     const body = [];
     for (let cursor = index + 1; cursor < lines.length; cursor++) {
-      const next = lines[cursor].match(heading);
+      const next = lines[cursor].match(HEADING);
       if (next && next[1].length <= level) break;
       body.push(lines[cursor]);
     }
     const text = stripWikitext(body.join("\n"));
     return text.length ? text : null;
   }
+  return null;
+}
+
+/**
+ * Many classical texts on Wikisource have no per-month headings: "正月甲木，…" is the first clause
+ * of a paragraph. Fall back to the paragraph (consecutive non-empty lines) that starts with the
+ * locator; as a last resort a prose line (≥ 20 characters, so link lists are skipped) containing it.
+ */
+function extractParagraph(lines, locator) {
+  const plain = lines.map((line) => (HEADING.test(line) ? "" : stripWikitext(line)));
+  let index = plain.findIndex((line) => line.startsWith(locator));
+  if (index < 0) index = plain.findIndex((line) => line.length >= 20 && line.includes(locator));
+  if (index < 0) return null;
+  const body = [];
+  for (let cursor = index; cursor < lines.length && plain[cursor].length; cursor++)
+    body.push(plain[cursor]);
+  const text = body.join("\n").trim();
+  return text.length ? text : null;
+}
+
+/**
+ * Locate a passage. A `·`-joined locator ("論印綬·論食神") means both parts, concatenated; it is
+ * null unless every part is found. Each part is looked up first as a heading (body up to the next
+ * heading of the same or higher level), then as a paragraph that begins with the locator.
+ */
+export function extractSection(text, locator) {
+  const parts = locator
+    .split("·")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length > 1) {
+    const found = parts.map((part) => extractSection(text, part));
+    return found.every(Boolean) ? found.join("\n\n") : null;
+  }
+  const lines = text.split(/\r?\n/);
+  return extractHeadingSection(lines, locator) ?? extractParagraph(lines, locator);
+}
+
+/** First match across several renderings of the same page (rendered zh-hant text, then wikitext). */
+export function extractFromPage(page, locator) {
+  for (const candidate of [page.text ? htmlToText(page.text) : null, page.wikitext])
+    if (candidate) {
+      const section = extractSection(candidate, locator);
+      if (section) return section;
+    }
   return null;
 }
 
@@ -52,7 +135,10 @@ export function wikisourceApiUrl(title) {
   const params = new URLSearchParams({
     action: "parse",
     page: title,
-    prop: "wikitext",
+    prop: "wikitext|text",
+    variant: "zh-hant",
+    disableeditsection: "1",
+    disabletoc: "1",
     redirects: "1",
     format: "json",
     formatversion: "2",
@@ -104,21 +190,23 @@ export function createWikitextLoader({
         throw new WikisourcePageError("MISSING_TITLE", title);
       const wikitext = body?.parse?.wikitext;
       if (typeof wikitext !== "string") throw new WikisourcePageError("NO_WIKITEXT", title);
-      return wikitext;
+      const text = body?.parse?.text;
+      // { wikitext, text }: raw source and rendered HTML (zh-hant variant, transclusions resolved).
+      return { wikitext, text: typeof text === "string" ? text : null };
     }
   }
   return {
     async load(title) {
       if (!cache.has(title)) {
         try {
-          cache.set(title, { text: await request(title) });
+          cache.set(title, { page: await request(title) });
         } catch (error) {
           cache.set(title, { error });
         }
       }
       const entry = cache.get(title);
       if (entry.error) throw entry.error;
-      return entry.text;
+      return entry.page;
     },
     get requests() {
       return requests;
