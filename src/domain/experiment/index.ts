@@ -1,3 +1,4 @@
+import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 import type { NarrationRequest } from "@/domain/narration";
 
@@ -48,12 +49,7 @@ const messages = {
   CLOCK_INVALID: "Experiment clock was rejected.",
   STORE_UNAVAILABLE: "Experiment budget store is unavailable.",
 } as const;
-export class ExperimentError extends Error {
-  constructor(readonly code: keyof typeof messages) {
-    super(messages[code]);
-    this.name = "ExperimentError";
-  }
-}
+export class ExperimentError extends defineCodedError("ExperimentError", messages) {}
 export function experimentDay(now: number): string {
   if (!Number.isSafeInteger(now) || now < 0 || now > 8640000000000000)
     throw new ExperimentError("CLOCK_INVALID");

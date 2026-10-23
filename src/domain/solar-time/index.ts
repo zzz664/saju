@@ -1,3 +1,6 @@
+import { CalculationPolicySchema } from "@/domain/input/schemas";
+import { PINNED_CALENDAR_LIBRARY } from "@/domain/provenance";
+import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 import { ResolvedTimeSchema } from "@/domain/timezone";
 
@@ -16,8 +19,8 @@ export const EquationOfTimeSnapshotSchema = z
     minutes: z.number().min(-30).max(30),
     provenance: z
       .strictObject({
-        libraryName: z.literal("manseryeok"),
-        libraryVersion: z.literal("2.0.0"),
+        libraryName: z.literal(PINNED_CALENDAR_LIBRARY.name),
+        libraryVersion: z.literal(PINNED_CALENDAR_LIBRARY.version),
         model: z.literal("meeus-28.3"),
         convention: z.literal("apparent-minus-mean"),
         ruleId: z.literal("astro.equation-of-time"),
@@ -36,7 +39,7 @@ export interface EquationOfTimeAdapter {
 export const SolarTimeRequestSchema = z
   .strictObject({
     time: ResolvedTimeSchema,
-    mode: z.enum(["standard", "mean-solar", "true-solar"]),
+    mode: CalculationPolicySchema.unwrap().shape.solarTime,
     longitudeDeg: z.number().min(-180).max(180).nullable(),
   })
   .readonly();
@@ -105,12 +108,7 @@ const messages = {
   CALCULATION_FAILED: "Solar time calculation failed.",
   OUTPUT_INVALID: "Solar time adapter returned invalid output.",
 } as const;
-export class SolarTimeError extends Error {
-  constructor(readonly code: keyof typeof messages) {
-    super(messages[code]);
-    this.name = "SolarTimeError";
-  }
-}
+export class SolarTimeError extends defineCodedError("SolarTimeError", messages) {}
 
 /** Clock labels only: the physical UTC instant remains unchanged. */
 export function applySolarTimePolicy(

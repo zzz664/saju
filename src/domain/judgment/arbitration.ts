@@ -1,3 +1,5 @@
+import { CoverageStatusSchema } from "@/domain/contracts";
+import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 import {
   BASE_RULE_CATALOG,
@@ -6,7 +8,7 @@ import {
 } from "@/domain/judgment";
 import { JudgmentFindingSchema, RuleEvaluationSchema } from "@/domain/judgment/schemas";
 
-const Status = z.enum(["complete", "partial", "unavailable"]);
+const Status = CoverageStatusSchema;
 const Identifier = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$/);
 const CandidateSchema = z
   .strictObject({
@@ -195,12 +197,7 @@ const messages = {
   INPUT_REJECTED: "Arbitration input was rejected.",
   OUTPUT_INVALID: "Arbitration output was invalid.",
 } as const;
-export class ArbitrationError extends Error {
-  constructor(readonly code: keyof typeof messages) {
-    super(messages[code]);
-    this.name = "ArbitrationError";
-  }
-}
+export class ArbitrationError extends defineCodedError("ArbitrationError", messages) {}
 /** Pure server-side mechanics. The caller must supply validated, sourced judgments. */
 export function arbitrateJudgments(value: unknown): ArbitrationResult {
   const input = ArbitrationInputSchema.safeParse(value);

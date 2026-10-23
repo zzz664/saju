@@ -1,3 +1,5 @@
+import { CalculationPolicySchema } from "@/domain/input/schemas";
+import { PINNED_CALENDAR_LIBRARY } from "@/domain/provenance";
 import { z } from "zod";
 import { CalendarPillarsSchema } from "@/domain/calendar";
 
@@ -5,7 +7,7 @@ export const PolicyPillarsRequestSchema = z
   .strictObject({
     instant: z.iso.datetime({ precision: 0 }),
     policyClock: z.iso.datetime({ local: true, precision: 3 }).length(23),
-    dayBoundary: z.enum(["midnight", "zi-start"]),
+    dayBoundary: CalculationPolicySchema.unwrap().shape.dayBoundary,
   })
   .refine(
     (value) => {
@@ -21,8 +23,8 @@ export const PolicyPillarsRequestSchema = z
 
 export const PolicyPillarsProvenanceSchema = z
   .strictObject({
-    libraryName: z.literal("manseryeok"),
-    libraryVersion: z.literal("2.0.0"),
+    libraryName: z.literal(PINNED_CALENDAR_LIBRARY.name),
+    libraryVersion: z.literal(PINNED_CALENDAR_LIBRARY.version),
     ruleId: z.literal("calendar.policy-pillars"),
     ruleVersion: z.literal("1.0.0"),
     yearMonthBasis: z.literal("absolute-utc"),

@@ -1,3 +1,7 @@
+import { PINNED_CALENDAR_LIBRARY } from "@/domain/provenance";
+import { CoverageStatusSchema } from "@/domain/contracts";
+import { TenGodSchema } from "@/domain/contracts";
+import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 import { CalendarPillarsSchema } from "@/domain/calendar";
 
@@ -5,18 +9,7 @@ export const StemSchema = CalendarPillarsSchema.shape.day.unwrap().shape.heavenl
 export const BranchSchema = CalendarPillarsSchema.shape.day.unwrap().shape.earthlyBranch;
 export const ElementSchema = z.enum(["목", "화", "토", "금", "수"]);
 const PolaritySchema = z.enum(["양", "음"]);
-const TenGodSchema = z.enum([
-  "비견",
-  "겁재",
-  "식신",
-  "상관",
-  "편재",
-  "정재",
-  "편관",
-  "정관",
-  "편인",
-  "정인",
-]);
+
 type Stem = z.infer<typeof StemSchema>;
 type Branch = z.infer<typeof BranchSchema>;
 
@@ -48,8 +41,8 @@ export const SymbolCatalogSchema = z
       .readonly(),
     provenance: z
       .strictObject({
-        libraryName: z.literal("manseryeok"),
-        libraryVersion: z.literal("2.0.0"),
+        libraryName: z.literal(PINNED_CALENDAR_LIBRARY.name),
+        libraryVersion: z.literal(PINNED_CALENDAR_LIBRARY.version),
         ruleId: z.literal("symbols.public-sdk"),
         ruleVersion: z.literal("1.0.0"),
       })
@@ -158,7 +151,7 @@ const rule = (ruleId: string, reference: string) =>
     .readonly();
 export const DerivedNatalFactsSchema = z
   .strictObject({
-    status: z.enum(["complete", "partial", "unavailable"]),
+    status: CoverageStatusSchema,
     sourcePillars: KnownPillarsSchema,
     dayMaster: StemSchema.nullable(),
     positions: z
@@ -262,12 +255,7 @@ const messages = {
   CATALOG_LOAD_FAILED: "Symbol catalog could not be loaded.",
   OUTPUT_INVALID: "Natal facts source or output was invalid.",
 } as const;
-export class NatalFactsError extends Error {
-  constructor(readonly code: keyof typeof messages) {
-    super(messages[code]);
-    this.name = "NatalFactsError";
-  }
-}
+export class NatalFactsError extends defineCodedError("NatalFactsError", messages) {}
 
 /** Pure derivation from confirmed pillars and a validated provider-independent catalog. */
 export function deriveNatalFacts(value: unknown, rawCatalog: unknown): DerivedNatalFacts {

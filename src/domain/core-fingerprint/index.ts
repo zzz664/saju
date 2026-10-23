@@ -1,3 +1,6 @@
+import { CoverageStatusSchema } from "@/domain/contracts";
+import { HexDigestSchema } from "@/domain/contracts";
+import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 import { CoreExportSchema, type CoreExport } from "@/domain/core-export";
 
@@ -9,12 +12,7 @@ const messages = {
   DOCUMENT_REJECTED: "Fingerprint document was rejected.",
   HASH_FAILED: "Fingerprint hashing failed.",
 } as const;
-export class FingerprintError extends Error {
-  constructor(readonly code: keyof typeof messages) {
-    super(messages[code]);
-    this.name = "FingerprintError";
-  }
-}
+export class FingerprintError extends defineCodedError("FingerprintError", messages) {}
 
 /** sorted-json-v1: UTF-16 key order, original array order, JSON string/number encoding. */
 export function canonicalizeJson(value: unknown): string {
@@ -104,7 +102,7 @@ function versions(document: CoreExport): z.infer<typeof VersionManifestSchema> {
 }
 export const HashedCoreExportSchema = z
   .strictObject({
-    status: z.enum(["complete", "partial", "unavailable"]),
+    status: CoverageStatusSchema,
     document: CoreExportSchema,
     fingerprint: z
       .strictObject({
@@ -113,7 +111,7 @@ export const HashedCoreExportSchema = z
         policyVersion: z.literal(FINGERPRINT_POLICY.policyVersion),
         canonicalization: z.literal(FINGERPRINT_POLICY.canonicalization),
         versions: VersionManifestSchema,
-        hash: z.string().regex(/^[0-9a-f]{64}$/),
+        hash: HexDigestSchema,
       })
       .readonly(),
   })

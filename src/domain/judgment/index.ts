@@ -1,3 +1,4 @@
+import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 import { DerivedNatalFactsSchema, type DerivedNatalFacts } from "@/domain/natal-facts";
 import { BASE_RULE_CATALOG } from "@/domain/judgment/catalog";
@@ -254,12 +255,7 @@ const messages = {
   CATALOG_INVALID: "Judgment catalog is unsupported or unreviewed.",
   OUTPUT_INVALID: "Judgment output was invalid.",
 } as const;
-export class JudgmentError extends Error {
-  constructor(readonly code: keyof typeof messages) {
-    super(messages[code]);
-    this.name = "JudgmentError";
-  }
-}
+export class JudgmentError extends defineCodedError("JudgmentError", messages) {}
 export function evaluateBaseJudgments(
   value: unknown,
   rawCatalog: unknown = BASE_RULE_CATALOG,

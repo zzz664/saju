@@ -1,3 +1,7 @@
+import { CalculationReasonSchema as CommonCalculationReasonSchema } from "@/domain/contracts";
+import { escapeJsonForPrompt } from "@/domain/utilities";
+import { CoverageStatusSchema } from "@/domain/contracts";
+import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 import { CalculationPolicySchema, InputInformationSchema } from "@/domain/input";
 import { DerivedNatalFactsSchema } from "@/domain/natal-facts";
@@ -15,19 +19,8 @@ import {
   ExceptionSchema,
 } from "@/domain/judgment/schemas";
 
-const Status = z.enum(["complete", "partial", "unavailable"]);
-export const CalculationReasonSchema = z.enum([
-  "BIRTH_TIME_UNKNOWN",
-  "LONGITUDE_UNKNOWN",
-  "CALENDAR_RANGE_UNSUPPORTED",
-  "CALENDAR_INPUT_REJECTED",
-  "TIME_RANGE_UNSUPPORTED",
-  "TIMEZONE_INPUT_REJECTED",
-  "PILLAR_RANGE_UNSUPPORTED",
-  "NO_RESOLVED_CANDIDATES",
-  "AMBIGUOUS_LOCAL_TIME",
-  "NONEXISTENT_LOCAL_TIME",
-]);
+const Status = CoverageStatusSchema;
+export const CalculationReasonSchema = CommonCalculationReasonSchema;
 export const CoreExportSchema = z
   .strictObject({
     schemaVersion: z.literal("1.0.0"),
@@ -116,12 +109,7 @@ const messages = {
   JSON_REJECTED: "Core export JSON was rejected.",
   TOO_LARGE: "Core export JSON exceeds 1 MiB.",
 } as const;
-export class CoreExportError extends Error {
-  constructor(readonly code: keyof typeof messages) {
-    super(messages[code]);
-    this.name = "CoreExportError";
-  }
-}
+export class CoreExportError extends defineCodedError("CoreExportError", messages) {}
 function document(value: unknown): CoreExport {
   const parsed = CoreExportSchema.safeParse(value);
   if (!parsed.success) throw new CoreExportError("DOCUMENT_REJECTED");
@@ -235,9 +223,6 @@ export function buildManualPromptData(value: unknown): ManualPromptData {
 export function buildManualPrompt(value: unknown): string {
   const data = buildManualPromptData(value);
   // Escape markup boundaries without changing JSON values on copy/parse.
-  const json = JSON.stringify(data, null, 2).replace(
-    /[<>&\u2028\u2029]/g,
-    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
-  );
+  const json = escapeJsonForPrompt(data, 2);
   return MANUAL_INSTRUCTIONS + "<analysis_data>\n" + json + "\n</analysis_data>\n";
 }

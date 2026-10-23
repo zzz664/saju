@@ -1,3 +1,5 @@
+import { PINNED_CALENDAR_LIBRARY } from "@/domain/provenance";
+import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 
 export {
@@ -54,8 +56,8 @@ export const CalendarSnapshotSchema = z
     pillars: CalendarPillarsSchema.readonly(),
     provenance: z
       .strictObject({
-        libraryName: z.literal("manseryeok"),
-        libraryVersion: z.literal("2.0.0"),
+        libraryName: z.literal(PINNED_CALENDAR_LIBRARY.name),
+        libraryVersion: z.literal(PINNED_CALENDAR_LIBRARY.version),
         timeReference: z.literal("fixed-utc+09:00"),
         dayBoundary: z.literal("midnight"),
       })
@@ -77,12 +79,7 @@ const errorMessages = {
   OUTPUT_INVALID: "Calendar adapter returned invalid output.",
 } as const;
 
-export class CalendarAdapterError extends Error {
-  constructor(readonly code: keyof typeof errorMessages) {
-    super(errorMessages[code]);
-    this.name = "CalendarAdapterError";
-  }
-}
+export class CalendarAdapterError extends defineCodedError("CalendarAdapterError", errorMessages) {}
 
 const solarTermNames = [
   "소한",
@@ -115,8 +112,8 @@ const SolarTermYearSchema = z.number().int().min(1800).max(2300);
 export const SolarTermsRequestSchema = z.strictObject({ year: SolarTermYearSchema }).readonly();
 
 const solarProvenance = {
-  libraryName: z.literal("manseryeok"),
-  libraryVersion: z.literal("2.0.0"),
+  libraryName: z.literal(PINNED_CALENDAR_LIBRARY.name),
+  libraryVersion: z.literal(PINNED_CALENDAR_LIBRARY.version),
   precision: z.literal("minute"),
   ruleVersion: z.literal("1.0.0"),
 };
@@ -188,8 +185,8 @@ export const DaySnapshotSchema = z
     pillars: z.strictObject({ day: PillarSchema }).readonly(),
     provenance: z
       .strictObject({
-        libraryName: z.literal("manseryeok"),
-        libraryVersion: z.literal("2.0.0"),
+        libraryName: z.literal(PINNED_CALENDAR_LIBRARY.name),
+        libraryVersion: z.literal(PINNED_CALENDAR_LIBRARY.version),
         timeReference: z.literal("fixed-utc+09:00"),
         dayBoundary: z.literal("midnight"),
         ruleId: z.literal("calendar.day-pillar"),

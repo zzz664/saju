@@ -1,3 +1,5 @@
+import { escapeJsonForPrompt } from "@/domain/utilities";
+import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 import { buildManualPromptData, type ManualPromptData } from "@/domain/core-export";
 import { NARRATION_INSTRUCTIONS, NARRATION_PROMPT_VERSION } from "@/domain/narration/prompt";
@@ -39,12 +41,7 @@ const messages = {
   MODEL_MISMATCH: "Narration model was rejected.",
   USAGE_MISSING: "Narration usage is missing.",
 } as const;
-export class NarrationError extends Error {
-  constructor(readonly code: keyof typeof messages) {
-    super(messages[code]);
-    this.name = "NarrationError";
-  }
-}
+export class NarrationError extends defineCodedError("NarrationError", messages) {}
 export function createNarrationRequest(core: unknown, model = DEFAULT_OPENAI_MODEL) {
   const modelId = OpenAiModelIdSchema.parse(model);
   let data: ManualPromptData;
@@ -53,10 +50,7 @@ export function createNarrationRequest(core: unknown, model = DEFAULT_OPENAI_MOD
   } catch {
     throw new NarrationError("INPUT_REJECTED");
   }
-  const content = JSON.stringify(data).replace(
-    /[<>&\u2028\u2029]/g,
-    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
-  );
+  const content = escapeJsonForPrompt(data);
   return Object.freeze({
     model: modelId,
     store: false as const,

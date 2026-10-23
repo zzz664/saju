@@ -1,18 +1,9 @@
+import { PINNED_CALENDAR_LIBRARY } from "@/domain/provenance";
+import { CoverageStatusSchema } from "@/domain/contracts";
+import { TenGodSchema } from "@/domain/contracts";
 import { z } from "zod";
 import { StemSchema, BranchSchema, ElementSchema, KnownPillarsSchema } from "@/domain/natal-facts";
 
-export const TenGodSchema = z.enum([
-  "비견",
-  "겁재",
-  "식신",
-  "상관",
-  "편재",
-  "정재",
-  "편관",
-  "정관",
-  "편인",
-  "정인",
-]);
 export const ExceptionSchema = z.enum([
   "DAY_MASTER_UNKNOWN",
   "MONTH_PILLAR_UNKNOWN",
@@ -140,7 +131,7 @@ export const RuleEvaluationSchema = z
   .readonly();
 export const EvaluationBaseSchema = z
   .strictObject({
-    status: z.enum(["complete", "partial", "unavailable"]),
+    status: CoverageStatusSchema,
     sourcePillars: KnownPillarsSchema,
     results: z.array(RuleEvaluationSchema).length(20).readonly(),
     findings: z.array(JudgmentFindingSchema).max(20).readonly(),
@@ -149,10 +140,12 @@ export const EvaluationBaseSchema = z
         ruleSetVersion: z.literal("1.0.0"),
         sourceCatalogVersion: z.literal("1.0.0"),
         factsSchemaVersion: z.literal("1.0.0"),
-        libraryName: z.literal("manseryeok"),
-        libraryVersion: z.literal("2.0.0"),
+        libraryName: z.literal(PINNED_CALENDAR_LIBRARY.name),
+        libraryVersion: z.literal(PINNED_CALENDAR_LIBRARY.version),
         scope: z.literal("base-structural-observations"),
       })
       .readonly(),
   })
   .readonly();
+
+export { TenGodSchema } from "@/domain/contracts";

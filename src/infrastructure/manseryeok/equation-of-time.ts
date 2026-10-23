@@ -22,7 +22,7 @@ export const manseryeokEquationOfTimeAdapter: EquationOfTimeAdapter = Object.fre
       instant: request.data.instant,
       minutes,
       provenance: {
-        libraryName: "manseryeok",
+        libraryName: packageInfo.name,
         libraryVersion: packageInfo.version,
         model: "meeus-28.3",
         convention: "apparent-minus-mean",

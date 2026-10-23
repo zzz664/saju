@@ -1,3 +1,4 @@
+import { SolarTimeReasonSchema } from "@/domain/contracts";
 import { z } from "zod";
 import { AnalysisInputSchema, InputInformationSchema, getInputInformation } from "@/domain/input";
 import {
@@ -24,19 +25,7 @@ export const PreparedBirthTimeSchema = z
     z.strictObject({
       status: z.literal("unavailable"),
       information: InputInformationSchema,
-      reasons: z
-        .array(
-          z.enum([
-            "BIRTH_TIME_UNKNOWN",
-            "LONGITUDE_UNKNOWN",
-            "CALENDAR_RANGE_UNSUPPORTED",
-            "CALENDAR_INPUT_REJECTED",
-            "TIME_RANGE_UNSUPPORTED",
-            "TIMEZONE_INPUT_REJECTED",
-          ]),
-        )
-        .min(1)
-        .readonly(),
+      reasons: z.array(SolarTimeReasonSchema).min(1).readonly(),
     }),
   ])
   .readonly();

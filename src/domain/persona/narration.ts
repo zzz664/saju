@@ -1,3 +1,4 @@
+import { escapeJsonForPrompt } from "@/domain/utilities";
 import { z } from "zod";
 import { buildManualPromptData } from "@/domain/core-export";
 import {
@@ -45,10 +46,7 @@ export function personaNarrationJsonSchema() {
   return z.toJSONSchema(PersonaNarrationDraftSchema, { target: "draft-2020-12" });
 }
 function json(value: unknown) {
-  return JSON.stringify(value).replace(
-    /[<>&\u2028\u2029]/g,
-    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
-  );
+  return escapeJsonForPrompt(value);
 }
 function hashValue(value: unknown, hash: Sha256Adapter): string {
   let result: unknown;

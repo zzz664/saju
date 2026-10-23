@@ -953,3 +953,10 @@
 - A: Prettier 3.9.10 고정/lockfile, format/format:check, src·scripts·TS 테스트 포맷. 소스 import를 @/로 통일하고 domain→application/infrastructure/server 및 상대 import를 ESLint로 제한. 출력 계약·계산 규칙 변경 없음.
 - 검증: tsc --noEmit PASS, lint PASS, 관련 CLI/정책 CLI/내보내기/페르소나 카탈로그 4파일 35건 PASS. 첫 샌드박스 실행 7건은 Windows uv_os_get_passwd ENOMEM으로 실패했고 동일 명령을 승인된 정상 프로세스에서 재실행해 통과했다. 실패 무시·skip 없음.
 - AGENTS.md, next-env.d.ts, tests/fixtures/cli-input.json 사용자 수정은 보존/커밋 제외. .env 열람·변경 및 실제 API 호출 없음(LIVE_NOT_RUN).
+
+## 2026-10-24 코드리뷰 리팩터링 B — 공통 계약과 조립
+
+- domain/contracts·provenance·utilities에 상태/십성/해시/단계별 사유/고정 라이브러리·공용 Gregorian/JSON escape/오류 팩토리를 분리했다. 사유는 하위 단계 enum에서 합성하며 각 규칙의 독립 버전은 임의로 묶지 않는다.
+- server/core-dependencies를 CLI·분석 route·API 테스트가 공유한다. infrastructure/io/bounded-utf8로 CLI/서버 본문 읽기를 통합했고 바이트 상한·엄격 UTF-8·스트림 취소를 검증했다.
+- 음력 변환 예외/잘못된 반환값은 CalendarAdapterError로 분류한다. 정상 시간대 오류는 기존 TimeZoneAdapterError를 유지하며 원문/cause를 보관하지 않는다.
+- 검증: 관련 8파일 388건 중 오류 분류 변경에 대한 기존 기대 1건 실패→CalendarAdapterError 검증으로 갱신. 해당 파일+신규 스트림 테스트 재검증 15건 PASS(기타 376건 기존 실행 PASS). tsc PASS, lint PASS. 실제 API 0회.

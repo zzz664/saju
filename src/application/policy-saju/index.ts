@@ -1,3 +1,4 @@
+import { PolicyCalculationReasonSchema } from "@/domain/contracts";
 import { z } from "zod";
 import { CalendarAdapterError, CalendarPillarsSchema } from "@/domain/calendar";
 import {
@@ -27,16 +28,7 @@ export interface PolicySajuDependencies extends SolarTimeDependencies {
   readonly pillars: PolicyCalendarAdapter;
 }
 
-const ReasonSchema = z.enum([
-  "BIRTH_TIME_UNKNOWN",
-  "LONGITUDE_UNKNOWN",
-  "CALENDAR_RANGE_UNSUPPORTED",
-  "CALENDAR_INPUT_REJECTED",
-  "TIME_RANGE_UNSUPPORTED",
-  "TIMEZONE_INPUT_REJECTED",
-  "PILLAR_RANGE_UNSUPPORTED",
-  "NO_RESOLVED_CANDIDATES",
-]);
+const ReasonSchema = PolicyCalculationReasonSchema;
 const interval = {
   startMinute: z.number().int().min(0).max(1439),
   endMinuteExclusive: z.number().int().min(1).max(1440),

@@ -1,13 +1,7 @@
+import { createCoreDependencies } from "@/server/core-dependencies";
 import { calculateCoreExport } from "@/application/core-export";
 import { createSyntheticPersonaCatalog } from "@/infrastructure/persona/synthetic-catalog";
 import { nodeSha256Adapter } from "@/infrastructure/hashing";
-import {
-  manseryeokCalendarConversionAdapter,
-  manseryeokEquationOfTimeAdapter,
-  manseryeokPolicyCalendarAdapter,
-  manseryeokSymbolCatalogAdapter,
-} from "@/infrastructure/manseryeok";
-import { temporalTimeZoneAdapter } from "@/infrastructure/timezone";
 
 export function createApiTestCatalog() {
   const { registry, personas, selection } = createSyntheticPersonaCatalog();
@@ -59,13 +53,7 @@ export function createApiTestCatalog() {
                 dstDisambiguation: "reject",
               },
             },
-            {
-              timeZone: temporalTimeZoneAdapter,
-              calendar: manseryeokCalendarConversionAdapter,
-              equationOfTime: manseryeokEquationOfTimeAdapter,
-              pillars: manseryeokPolicyCalendarAdapter,
-              symbols: manseryeokSymbolCatalogAdapter,
-            },
+            createCoreDependencies(),
           ),
         );
       return cache.get(id)!;

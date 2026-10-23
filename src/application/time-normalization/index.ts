@@ -1,3 +1,4 @@
+import { TimeNormalizationReasonSchema } from "@/domain/contracts";
 import { z } from "zod";
 
 import {
@@ -35,18 +36,7 @@ export const TimeNormalizationResultSchema = z
     }),
     z.strictObject({
       status: z.literal("unavailable"),
-      reasons: z
-        .array(
-          z.enum([
-            "BIRTH_TIME_UNKNOWN",
-            "CALENDAR_RANGE_UNSUPPORTED",
-            "CALENDAR_INPUT_REJECTED",
-            "TIME_RANGE_UNSUPPORTED",
-            "TIMEZONE_INPUT_REJECTED",
-          ]),
-        )
-        .min(1)
-        .readonly(),
+      reasons: z.array(TimeNormalizationReasonSchema).min(1).readonly(),
       information: InputInformationSchema,
     }),
   ])
@@ -90,7 +80,7 @@ export function normalizeBirthTime(
     } catch (error) {
       if (error instanceof CalendarAdapterError && error.code === "INPUT_REJECTED")
         return unavailable("CALENDAR_INPUT_REJECTED");
-      throw new TimeZoneAdapterError("RESOLUTION_FAILED");
+      throw new CalendarAdapterError("CALCULATION_FAILED");
     }
     const dates = CalendarConversionSnapshotSchema.safeParse(raw);
     if (
@@ -100,7 +90,7 @@ export function normalizeBirthTime(
       dates.data.lunar.day !== day ||
       dates.data.lunar.isLeapMonth !== birthInput.isLeapMonth
     )
-      throw new TimeZoneAdapterError("OUTPUT_INVALID");
+      throw new CalendarAdapterError("OUTPUT_INVALID");
     const date = dates.data.solar;
     solarDate = `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
   }

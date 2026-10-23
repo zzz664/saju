@@ -1,3 +1,4 @@
+import { isGregorianDate } from "@/domain/utilities";
 import { z } from "zod";
 
 const DateLabelSchema = z
@@ -42,9 +43,7 @@ function hasValidDay(input: { calendarType: "solar" | "lunar"; birthDate: string
   // month length, leap-month existence and its supported year range later.
   if (input.calendarType === "lunar") return day <= 30;
 
-  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-  const monthLengths = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  return day <= (monthLengths[month - 1] ?? 0);
+  return isGregorianDate({ year, month, day });
 }
 
 export const BirthInputSchema = z

@@ -8,8 +8,8 @@ const LimitationSchema = z
   .strictObject({
     code: z.enum([
       "BIRTH_TIME_UNKNOWN",
-      "SOLAR_TIME_INPUT_MISSING",
       "LUCK_DIRECTION_BASIS_UNKNOWN",
+      "SOLAR_TIME_INPUT_MISSING",
     ]),
     inputPaths: z
       .array(

@@ -236,6 +236,6 @@ describe("birth civil-time normalization application", () => {
           },
         },
       ),
-    ).toThrow(TimeZoneAdapterError);
+    ).toThrow(CalendarAdapterError);
   });
 });

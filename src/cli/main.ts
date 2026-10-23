@@ -1,11 +1,5 @@
-import {
-  manseryeokCalendarAdapter,
-  manseryeokCalendarConversionAdapter,
-  manseryeokEquationOfTimeAdapter,
-  manseryeokPolicyCalendarAdapter,
-  manseryeokSymbolCatalogAdapter,
-} from "@/infrastructure/manseryeok";
-import { temporalTimeZoneAdapter } from "@/infrastructure/timezone";
+import { createCoreDependencies } from "@/server/core-dependencies";
+import { manseryeokCalendarAdapter } from "@/infrastructure/manseryeok";
 import { nodeSha256Adapter } from "@/infrastructure/hashing";
 import { CliInputError, readUtf8Input } from "@/cli/input";
 import { cliError, runCli, type CliResult } from "@/cli/run";
@@ -43,11 +37,7 @@ async function main(): Promise<void> {
   const text = needsInput ? await readUtf8Input(process.stdin) : "";
   writeResult(
     runCli(args, text, manseryeokCalendarAdapter, {
-      timeZone: temporalTimeZoneAdapter,
-      calendar: manseryeokCalendarConversionAdapter,
-      equationOfTime: manseryeokEquationOfTimeAdapter,
-      pillars: manseryeokPolicyCalendarAdapter,
-      symbols: manseryeokSymbolCatalogAdapter,
+      ...createCoreDependencies(),
       hash: nodeSha256Adapter,
     }),
   );

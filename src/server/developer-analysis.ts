@@ -1,3 +1,5 @@
+import { readBoundedUtf8, webBytes, BoundedInputError } from "@/infrastructure/io/bounded-utf8";
+
 import { AnalysisInputSchema } from "@/domain/input";
 import { calculateDeveloperAnalysis } from "@/application/developer-analysis";
 import type { NatalFactsDependencies } from "@/application/natal-facts";
@@ -18,32 +20,15 @@ async function readJson(request: Request): Promise<unknown> {
   const declared = request.headers.get("content-length");
   if (declared !== null && !/^\d+$/.test(declared)) throw new BodyError(400);
   if (declared !== null && Number(declared) > 65536) throw new BodyError(413);
-  const reader = request.body?.getReader();
-  if (!reader) throw new BodyError(400);
-  const chunks: Uint8Array[] = [];
-  let size = 0;
+  if (!request.body) throw new BodyError(400);
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > 65536) throw new BodyError(413);
-      chunks.push(value);
-    }
+    const text = await readBoundedUtf8(webBytes(request.body), 65536);
     if (request.signal.aborted) throw new BodyError(400);
-    const bytes = new Uint8Array(size);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    return JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(bytes).replace(/^\uFEFF/, ""),
-    );
+    return JSON.parse(text.replace(/^\uFEFF/, ""));
   } catch (cause) {
-    throw cause instanceof BodyError ? cause : new BodyError(400);
-  } finally {
-    reader.releaseLock();
+    throw new BodyError(
+      cause instanceof BoundedInputError && cause.code === "TOO_LARGE" ? 413 : 400,
+    );
   }
 }
 

@@ -1,3 +1,5 @@
+import { readBoundedUtf8, webBytes, BoundedInputError } from "@/infrastructure/io/bounded-utf8";
+
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { isLocalDevelopmentEnvironment, isLocalDeveloperRequest } from "@/server/developer-access";
@@ -90,29 +92,19 @@ async function bodyFor(request: Request): Promise<{ value: unknown } | { respons
   const declared = request.headers.get("content-length");
   if (declared !== null && (!/^\d+$/.test(declared) || Number(declared) > 4096))
     return { response: error(413, "INPUT_TOO_LARGE") };
-  const reader = request.body?.getReader();
-  if (!reader) return { response: error(400, "INVALID_JSON") };
-  let size = 0;
-  const chunks: Uint8Array[] = [];
+  if (!request.body) return { response: error(400, "INVALID_JSON") };
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > 4096) {
-        await reader.cancel();
-        return { response: error(413, "INPUT_TOO_LARGE") };
-      }
-      chunks.push(value);
-    }
-    const data = Buffer.concat(chunks);
-    return { value: JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(data)) };
-  } catch {
-    return { response: error(400, "INVALID_JSON") };
-  } finally {
-    reader.releaseLock();
+    return { value: JSON.parse(await readBoundedUtf8(webBytes(request.body), 4096)) };
+  } catch (cause) {
+    return {
+      response:
+        cause instanceof BoundedInputError && cause.code === "TOO_LARGE"
+          ? error(413, "INPUT_TOO_LARGE")
+          : error(400, "INVALID_JSON"),
+    };
   }
 }
+
 type Run = {
   owner: string;
   digest: string;

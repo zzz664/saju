@@ -1,3 +1,4 @@
+import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 
 const Text = z
@@ -113,12 +114,7 @@ const messages = {
   OUTPUT_REJECTED: "Persona narration output was rejected.",
   HASH_FAILED: "Persona narration hash failed.",
 } as const;
-export class PersonaError extends Error {
-  constructor(readonly code: keyof typeof messages) {
-    super(messages[code]);
-    this.name = "PersonaError";
-  }
-}
+export class PersonaError extends defineCodedError("PersonaError", messages) {}
 export interface ApprovedPersonaRegistry {
   load(selection: unknown): PersonaProfile;
 }

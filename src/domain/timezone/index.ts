@@ -1,3 +1,5 @@
+import { CalculationPolicySchema } from "@/domain/input/schemas";
+import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 import { TimezoneIdSchema } from "@/domain/input/schemas";
 
@@ -14,7 +16,7 @@ export const LocalTimeRequestSchema = z
         { message: "Local time normalization supports Gregorian years 1800–2300." },
       ),
     timezoneId: TimezoneIdSchema,
-    disambiguation: z.enum(["reject", "earlier", "later"]),
+    disambiguation: CalculationPolicySchema.unwrap().shape.dstDisambiguation,
   })
   .readonly();
 
@@ -99,9 +101,4 @@ const messages = {
   OUTPUT_INVALID: "Time zone adapter returned invalid output.",
 } as const;
 
-export class TimeZoneAdapterError extends Error {
-  constructor(readonly code: keyof typeof messages) {
-    super(messages[code]);
-    this.name = "TimeZoneAdapterError";
-  }
-}
+export class TimeZoneAdapterError extends defineCodedError("TimeZoneAdapterError", messages) {}
