@@ -23,9 +23,15 @@ import {
 } from "@/domain/features/schemas";
 import { CoverageStatusSchema } from "@/domain/contracts";
 import { defineCodedError, compareText } from "@/domain/utilities";
-import { getProfile, planFeature, MODULE_DEPENDENCIES } from "@/application/saju/features/registry";
+import {
+  getProfile,
+  planFeature,
+  MODULE_DEPENDENCIES,
+  BUILTIN_FEATURE_EXECUTORS,
+} from "@/application/saju/features/registry";
 import { observeStrengths } from "@/domain/features/strengths";
-import { strengthsExecutor } from "@/application/saju/features/profiles/strengths";
+import { observeTemperament } from "@/domain/features/temperament";
+import { observeCareer } from "@/domain/features/career";
 import type { FeatureDependencies, FeatureEngine } from "@/application/saju/features/ports";
 export * from "@/application/saju/features/ports";
 export { getProfile, planFeature, FEATURE_PROFILES } from "@/application/saju/features/registry";
@@ -188,7 +194,7 @@ export function executeFeature(value: unknown, deps: FeatureDependencies): Featu
         data = result;
         payload = { status: result.status, judgments: [], limitations: ["UPSTREAM_PARTIAL"] };
       } else if (moduleId === "M03" && topic) {
-        if (topic === "strengths") version = "1.1.0";
+        if (["strengths", "temperament", "career"].includes(topic)) version = "1.1.0";
         const structure = load("M01", subject).data as StructureDiagnosis | null;
         const relations = load("M02", subject).data as RelationAnalysis | null;
         if (!structure || !relations)
@@ -199,7 +205,14 @@ export function executeFeature(value: unknown, deps: FeatureDependencies): Featu
           };
         else {
           const result = evaluateTopic({ facts, structure, relations }, topic);
-          const observations = topic === "strengths" ? observeStrengths(facts, subject) : [];
+          const observations =
+            topic === "strengths"
+              ? observeStrengths(facts, subject)
+              : topic === "temperament"
+                ? observeTemperament(facts, subject)
+                : topic === "career"
+                  ? observeCareer(facts, subject)
+                  : [];
           data = result;
           payload = {
             status:
@@ -283,7 +296,7 @@ export function executeFeature(value: unknown, deps: FeatureDependencies): Featu
       const limitations: FeatureLimitation[] = [];
       let ids: readonly string[] = [],
         declared: z.infer<typeof CoverageStatusSchema> = "complete";
-      const port = deps.featureExecutors?.[id] ?? (id === "F03" ? strengthsExecutor : undefined);
+      const port = deps.featureExecutors?.[id] ?? BUILTIN_FEATURE_EXECUTORS[id];
       const implementation = children.length ? "aggregate" : port ? "registered" : "missing";
       if (core.status === "unavailable" || otherCore?.status === "unavailable")
         limitations.push("CORE_UNAVAILABLE");

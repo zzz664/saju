@@ -6,10 +6,10 @@ import { nodeSha256Adapter } from "@/infrastructure/hashing";
 
 describe("M09 initial acceptance", () => {
   it("routes an unimplemented feature without claiming completion", () => {
-    const request = { featureId: "F02", ...fingerprintInput };
+    const request = { featureId: "F05", ...fingerprintInput };
     expect(FeatureRequestSchema.safeParse(request).success).toBe(true);
     const result = executeFeature(request, { ...fingerprintDependencies, hash: nodeSha256Adapter });
-    expect(result.featureId).toBe("F02");
+    expect(result.featureId).toBe("F05");
     expect(result.status).toBe("partial");
     expect(result.limitations).toContain("EXECUTOR_NOT_IMPLEMENTED");
     expect(result.judgments).toEqual([]);
