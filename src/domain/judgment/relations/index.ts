@@ -1,4 +1,5 @@
 import { compareText, defineCodedError } from "@/domain/utilities";
+import { deepEqualCanonical } from "@/domain/json";
 import {
   DEFAULT_RELATION_RULE_SET,
   RELATION_RULES,
@@ -26,6 +27,18 @@ export class RelationError extends defineCodedError("RelationError", {
   RULE_SET_REJECTED: "Relation rule set was rejected.",
   OUTPUT_INVALID: "Relation output failed validation.",
 }) {}
+const verifiedRelations = new WeakSet<RelationAnalysis>();
+
+/** A structural parse is not a semantic check. Reuse trusted results or verify external JSON once. */
+export function parseRelationAnalysis(value: unknown): RelationAnalysis {
+  if (value && typeof value === "object" && verifiedRelations.has(value as RelationAnalysis))
+    return value as RelationAnalysis;
+  const parsed = RelationAnalysisSchema.safeParse(value);
+  if (!parsed.success) throw new RelationError("INPUT_REJECTED");
+  const expected = analyzeRelations(parsed.data.pillars, parsed.data.ruleSet);
+  if (!deepEqualCanonical(expected, parsed.data)) throw new RelationError("INPUT_REJECTED");
+  return expected;
+}
 
 function adopted(rule: RelationRule, policy: RelationRuleSet): boolean {
   switch (rule.policy) {
@@ -172,5 +185,6 @@ export function analyzeRelations(
     provenance: { rulesVersion: "1.0.0", sourceCatalogVersion: "1.0.0" },
   });
   if (!result.success) throw new RelationError("OUTPUT_INVALID");
+  verifiedRelations.add(result.data);
   return result.data;
 }

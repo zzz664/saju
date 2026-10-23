@@ -41,6 +41,8 @@ WBS-27의 [M01 원국 구조 진단](src/domain/judgment/structure/README.md)은
 월령·통근·투출과 조건부 강약/격국/용신 후보를 별도 반환하며 미해결 관법 차이·미상·미평가 범위를 보존한다.
 WBS-28의 [M02 천간·지지 관계](src/domain/judgment/relations/README.md)는 `diagnose-relations`로 검토한다.
 출처·정책에 따른 관계 존재와 미평가 강도/합화를 분리하고 미상·동시 관계와 복수 합 상대를 보존한다.
+WBS-29의 [M03 주제별 판단](src/domain/judgment/topics/README.md)은 `diagnose-topic <topic>`로 검토한다.
+6개 주제의 복합 조건·맥락 보류를 추적하며 기존 원국/M01/M02와 코어 해시는 유지한다.
 WBS-16의 [독립 골든 30건 검토표](docs/checklists/WBS-16-independent-golden-review.md)는 날짜·간지·DST·태양시·미상 경계를 통합 계산/JSON 경로에서 대조한다. 자동 검증 통과와 사용자 승인을 구분한다.
 WBS-20의 [개발자 검증 화면과 API](src/app/dev/validation/README.md)는
 로컬 개발 서버의 `/dev/validation`에서 입력·미상·원국·근거·JSON/프롬프트 복사를 확인한다.

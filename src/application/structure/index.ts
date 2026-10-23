@@ -28,9 +28,10 @@ export function calculateStructureDiagnosis(
 ): StructureCalculationResult {
   const core = calculateCoreExport(value, dependencies);
   const structure = core.facts === null ? null : diagnoseStructure(core.facts);
-  return StructureCalculationResultSchema.parse({
+  const result = StructureCalculationResultSchema.parse({
     status: structure?.status ?? "unavailable",
     core,
     structure,
   });
+  return Object.freeze({ ...result, core, structure });
 }
