@@ -121,56 +121,107 @@ export function monthsInPrefix(prefix) {
 
 /**
  * "五月甲木" also matches a paragraph that starts "五六月甲木，…" or "四、五、六月甲木，…":
- * 窮通寶鑑 groups months whose advice is shared. Returns null for non-month locators.
+ * 窮通寶鑑 groups months whose advice is shared. Inside the subject's own season section
+ * ("三夏丁火") the text is terser still: "六月之丁，…", "十一二月嚴寒冰凍，…" (no subject at all),
+ * "冬月之木，…" (the whole season). `monthsOf(line, scoped)` reads those forms only when `scoped`.
+ * Returns null for non-month locators.
  */
 export function monthLocator(locator) {
   const match = locator.match(/^(正|二|三|四|五|六|七|八|九|十一|十二|十)月(.+)$/);
   if (!match) return null;
   const month = MONTHS.indexOf(match[1]) + 1;
   const subject = match[2];
-  const prefixPattern = monthPrefixPattern(subject);
+  const stem = subject.slice(0, 1);
+  const element = subject.slice(1);
+  const strict = monthPrefixPattern(subject);
+  const scopedPattern = new RegExp(
+    `^((?:[正一二三四五六七八九十、，\\s月]{1,16}|[春夏秋冬])月)(?:之)?(?:${stem}(?:${element})?)?`,
+  );
   return {
     month,
     subject,
     season: SEASONS[Math.floor((month - 1) / 3)] + subject,
     /** Months a line's prefix names, or null when the line does not open a month paragraph. */
-    monthsOf(line) {
-      const found = line.match(prefixPattern);
-      return found ? monthsInPrefix(found[1]) : null;
+    monthsOf(line, scoped = false) {
+      const found = line.match(scoped ? scopedPattern : strict);
+      if (!found) return null;
+      const seasonAt = "春夏秋冬".indexOf(found[1][0]);
+      if (seasonAt >= 0) return [1, 2, 3].map((offset) => seasonAt * 3 + offset);
+      return monthsInPrefix(found[1]);
     },
-    test(line) {
-      return Boolean(this.monthsOf(line)?.includes(month));
+    test(line, scoped = false) {
+      return Boolean(this.monthsOf(line, scoped)?.includes(month));
+    },
+    /** Like `test`, but a season-wide opener ("冬月之木") does not count: the month must be named. */
+    exact(line, scoped = false) {
+      return this.test(line, scoped) && !/^[春夏秋冬]月/.test(line);
     },
   };
 }
 
-const plainLines = (lines) => lines.map((line) => (HEADING.test(line) ? "" : stripWikitext(line)));
+/** Example charts ("時日月年" then a row of four stems and four branches) are not prose: drop them. */
+const CHART_LINE = /^(時日月年|[甲乙丙丁戊己庚辛壬癸]{4}|[子丑寅卯辰巳午未申酉戌亥]{4})$/;
+const plainLines = (lines) =>
+  lines.map((line) => {
+    if (HEADING.test(line)) return "";
+    const plain = stripWikitext(line);
+    return CHART_LINE.test(plain) ? "" : plain;
+  });
 
-/**
- * Many classical texts on Wikisource have no per-month headings: "正月甲木，…" is the first clause
- * of a paragraph. Fall back to the paragraph that starts with the locator; as a last resort a prose
- * line (≥ 20 characters, so link lists are skipped) containing it.
- * A month block ("正月甲木，…" plus its "或…" elaborations) runs until the next month paragraph of
- * the same subject or a heading; a non-month paragraph ends at the first blank line.
- */
-function extractParagraph(lines, locator) {
-  const plain = plainLines(lines);
-  const grouped = monthLocator(locator);
-  let index = plain.findIndex((line) => line.startsWith(locator));
-  if (index < 0 && grouped) index = plain.findIndex((line) => grouped.test(line));
-  if (index < 0) index = plain.findIndex((line) => line.length >= 20 && line.includes(locator));
-  if (index < 0) return null;
+/** A month block runs from its opening paragraph to the next month paragraph or a heading. */
+function monthBlock(lines, plain, index, grouped, scoped) {
   const body = [];
   for (let cursor = index; cursor < lines.length; cursor++) {
     if (HEADING.test(lines[cursor])) break;
-    if (!plain[cursor].length && !grouped) break;
-    if (cursor > index && grouped?.monthsOf(plain[cursor])) break;
+    if (cursor > index && grouped.monthsOf(plain[cursor], scoped)) break;
     body.push(plain[cursor]);
   }
   const text = body
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+  return text.length ? text : null;
+}
+
+/**
+ * Many classical texts on Wikisource have no per-month headings: "正月甲木，…" is the first clause
+ * of a paragraph. For a month locator, look inside the subject's season section first (terse forms
+ * allowed), then page-wide with the full "N月+subject" form. Otherwise take the paragraph that starts
+ * with the locator; as a last resort a prose line (≥ 20 characters, so link lists are skipped)
+ * containing it. A non-month paragraph ends at the first blank line.
+ */
+function extractParagraph(lines, locator) {
+  const grouped = monthLocator(locator);
+  if (grouped) {
+    const season = headingBody(lines, grouped.season);
+    if (season) {
+      const plain = plainLines(season);
+      // Every paragraph naming the month ("正月甲木，…" and the shared "正二月甲木，…") is part of
+      // the slot, in order. Only when none names it does a season-wide opener ("春月之木") count.
+      const exact = plain.flatMap((line, at) => (grouped.exact(line, true) ? [at] : []));
+      const starts = exact.length
+        ? exact
+        : plain.flatMap((line, at) => (grouped.test(line, true) ? [at] : []));
+      if (starts.length) {
+        const blocks = starts
+          .map((at) => monthBlock(season, plain, at, grouped, true))
+          .filter(Boolean);
+        return blocks.length ? blocks.join("\n\n") : null;
+      }
+    }
+  }
+  const plain = plainLines(lines);
+  let index = plain.findIndex((line) => line.startsWith(locator));
+  if (index < 0 && grouped) index = plain.findIndex((line) => grouped.test(line));
+  if (index >= 0 && grouped) return monthBlock(lines, plain, index, grouped, false);
+  if (index < 0) index = plain.findIndex((line) => line.length >= 20 && line.includes(locator));
+  if (index < 0) return null;
+  const body = [];
+  for (let cursor = index; cursor < lines.length && plain[cursor].length; cursor++) {
+    if (HEADING.test(lines[cursor])) break;
+    body.push(plain[cursor]);
+  }
+  const text = body.join("\n").trim();
   return text.length ? text : null;
 }
 
@@ -186,7 +237,7 @@ function extractSeason(lines, grouped) {
   const keep = [];
   let skipping = false;
   for (const line of plain) {
-    const months = grouped.monthsOf(line);
+    const months = grouped.monthsOf(line, true);
     if (months) skipping = !months.includes(grouped.month);
     if (!skipping) keep.push(line);
   }

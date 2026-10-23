@@ -13,8 +13,9 @@ export function monthLocator(locator: string): {
   month: number;
   subject: string;
   season: string;
-  monthsOf(line: string): number[] | null;
-  test(line: string): boolean;
+  monthsOf(line: string, scoped?: boolean): number[] | null;
+  test(line: string, scoped?: boolean): boolean;
+  exact(line: string, scoped?: boolean): boolean;
 } | null;
 export function candidateLines(text: string, locator: string, limit?: number): string[];
 export function pageTextOf(page: WikisourcePage): string;

@@ -79,8 +79,22 @@ describe("classical interpretation lookup catalog", () => {
       "十二月癸水",
     );
     const catalog = loadInterpretationCatalog();
+    // Passages are collected for every slot (Wikisource, no LLM); no summary exists yet, so every
+    // unit is still `scaffold` and nothing is usable until summarize-units.mjs runs.
     expect(catalog.units.every((unit) => unit.reviewStatus === "scaffold")).toBe(true);
-    expect(catalog.sources.every((source) => source.passage === null)).toBe(true);
+    expect(catalog.sources.every((source) => source.passage !== null)).toBe(true);
+    expect(
+      catalog.sources.every(
+        (source) => source.passage !== null && source.passageDigest === digest(source.passage),
+      ),
+    ).toBe(true);
+    expect(catalog.sources.every((source) => !/時日月年/.test(source.passage ?? ""))).toBe(true);
+    // Season-only chapters and the 建祿 stand-in carry the locator that actually matched.
+    expect(catalog.sources.find((s) => s.sourceId === "src.qtbj.gi-o")?.locator).toBe("三夏己土");
+    expect(catalog.sources.find((s) => s.sourceId === "src.smth.peer")?.locator).toBe("論建祿");
+    expect(catalog.sources.find((s) => s.sourceId === "src.qtbj.gap-in")?.passage).toMatch(
+      /^正月甲木/,
+    );
     expect(InterpretationCatalogSchema.safeParse(catalog).success).toBe(true);
   });
   it("matches confirmed day master, month and observed ten-god families only", () => {

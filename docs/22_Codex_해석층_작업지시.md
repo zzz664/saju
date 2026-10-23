@@ -45,6 +45,8 @@ develop 대상 PR 한 건을 만들고 중지하라.
 
 ## D. 해석 카탈로그를 채우는 절차 (사용자 환경에서, Codex가 대신 Live를 켜지 않는다)
 
+> 2026-10-24 기준 1~3단계는 완료되어 `passages.json`에 141건이 들어 있다. 다시 수집할 일은 scaffold의 locator/url을 바꿀 때만 있다(해당 항목을 `passages.json`에서 지우고 재실행; 수집기는 이미 있는 항목을 건너뛴다).
+
 ```text
 1. node scripts/interpretation/collect-passages.mjs --dry-run   # 어떤 locator가 Wikisource 본문에서 발견되는지 확인. page …: MISSING_TITLE 은 scaffold.ts 의 url 제목 오류, RATE_LIMITED 는 잠시 후 재실행
 2. 발견되지 않는 슬롯은 src/infrastructure/interpretation/scaffold.ts 의 locator 를 Wikisource 실제 소제목(또는 단락 첫 구절)에 맞게 수정한다. 전부 missing 이면 --dry-run --inspect 로 페이지 구조(소제목 목록·본문 앞부분)를 먼저 본다. 구절을 손으로 붙이지 않는다.

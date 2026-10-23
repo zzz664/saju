@@ -1141,3 +1141,9 @@
 - 실측: 論印綬·論食神·論正財는 `三命通會/卷六`에서 발견(`moved`). 論比肩은 卷三~卷七 어디에도 소제목이 없다. 궁통보감 잔여 19건은 `near` 후보에 월 단락이 전혀 보이지 않아, 己土처럼 계절 단위("三夏己土，…")로만 쓴 장이거나 월 표기가 다른 경우다.
 - 수정: (1) 월 단락이 없으면 계절 소제목 절(三春/三夏/三秋/三冬+일간)에서 다른 달 블록을 뺀 나머지를 쓰고 `passages.json`에 `locator`를 기록(`adjusted`). (2) 월 블록이 뒤따르는 "或…" 보충 단락을 포함하도록 빈 줄에서 끊지 않고 다음 달 단락·소제목에서 끊는다. (3) locator `|` 대안(`論比肩|論劫財|論比劫`), 맞은 대안을 기록. (4) scaffold: 십성군별 권 지정(印綬·食神·正財 卷六, 正官 卷五), 조합 locator는 가족 locator에서 파생, 조합 url은 첫 가족의 권. (5) `PassagesFileSchema.locator` 선택 필드와 합성 반영. (6) `--inspect` 소제목 전체 출력(40개 상한 제거).
 - 검증: `tests/interpretation-scripts.test.ts` 8건·`tests/interpretation.test.ts` 5건 PASS, lint·typecheck PASS. 실수집은 사용자 환경에서 재실행한다.
+
+### 후속 4 — 네트워크 허용 후 직접 수집 완료 (141/141)
+
+- 사용자가 세션 네트워크를 전체 허용으로 바꿔 이 세션에서 Wikisource를 직접 읽었다(Node `fetch`가 프록시를 무시해 `NODE_USE_ENV_PROXY=1` 필요). 본문을 보고 확정한 것: 궁통보감은 계절 절 안에서 "六月之丁"(원소 생략)·"十一二月嚴寒冰凍"(주어 생략)·"冬月之木"(계절 전체)·"正二月甲木"(공유 단락)을 쓰고 명식 예시표(`時日月年`+간지 두 줄)가 끼어 있다. 삼명통회에는 論比肩 장이 없고 卷六 `論建祿`이 월지 비견을 다룬다.
+- 수정: 월 locator는 계절 절 안에서 축약형까지 읽고, 그 달을 이름으로 부른 단락 전부를 순서대로 이어 붙인다(이름 부른 단락이 없을 때만 계절형 단락). 예시표 줄 제거. peer locator `論比肩|論建祿`. 수집 결과 `collected 141 / missing 0 / adjusted 13`(계절 절 9 + 建祿 4). `passages.json` 141건 커밋: 길이 최소 65·중앙값 215·최대 4,000(상한 3건), `url` 보정 0건, `locator` 기록 13건.
+- 검증: `tests/interpretation-scripts.test.ts` 9건·`tests/interpretation.test.ts` 5건(수집 완료 상태·digest·locator 기록 검사로 갱신) PASS, lint·typecheck·format·check:docs PASS. 요약 생성(`summarize-units.mjs`)은 사용자 승인·키가 있을 때만 실행하므로 미실행(LIVE_NOT_RUN).
