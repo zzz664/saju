@@ -6,6 +6,7 @@ export const INPUT_COMMANDS = Object.freeze([
   "derive-facts",
   "judge-facts",
   "arbitrate-facts",
+  "diagnose-structure",
   "export-json",
   "manual-prompt",
   "hash-json",
