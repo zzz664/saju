@@ -845,3 +845,18 @@
 - 회귀: 관련 6파일 `npm.cmd test -- tests/live-narration.test.ts tests/api-test.test.ts tests/persona.test.ts tests/persona-evaluation.test.ts tests/experiment-guard.test.ts tests/narration.test.ts` **156/156 PASS**. 합쇼체 응답의 해요체 실패/합쇼체 통과, API completed/usage 유지, 실패 상세, 무자동재호출, 새 프롬프트 포함을 가짜 HTTP로 확인했다. 최초 실행에서 프롬프트 버전 고정 기대값 1건 실패 후 새 버전으로 기대값을 갱신해 재검증했다. 과거 평가 산출물의 1.0.0 기록은 변경하지 않는다.
 - `tsc --noEmit`, `npm.cmd run lint`: **PASS**. 추가 실 API 요청 **0회**. 서버/장부/키/환경변수 및 사용자 fixture는 수정하지 않는다. 수정 프롬프트의 Live 재검증은 사용자 화면에서 별도 실행할 때만 가능하다.
 - 최종 `npm.cmd run test:e2e:api-test`: **exit 0**, 개발 E2E **9/9**, production 차단 **1/1**, 격리 production 빌드·typegen·tsc **PASS**. API completed와 문체 실패 표시/상세를 브라우저 가짜 응답으로 검증했다. E2E 서버는 키 없음/Live false다. 사용자 파일 두 건은 작업 시작 전과 같은 SHA256 상태로 보존했다. 같은 PR #24를 업데이트하고 대기한다.
+
+## WBS-66 PR #24 — 사용자 요청 OPENAI_MODEL 공통화
+
+- GitHub PR #24 OPEN 확인 후 같은 브랜치에서 수정. 사용자가 `.env`의 OPENAI_MODEL을 공통 참조하도록 명시 요청했으므로 기존 gpt-4o-mini 고정 정책을 기본값+서버 설정으로 변경했다. AGENTS/05/14/21 및 환경 예시의 정책을 함께 갱신하며 새 WBS/PR은 만들지 않는다.
+- 완료 조건/정상 검증: 서버 모델 설정이 요청·설정 화면·Mock/Live 메타·캐시·응답 모델 검증·오프라인 평가에 일치해야 한다. 미설정/빈 값은 기본값, 비기본값과 날짜 snapshot 정상, 모델 변경 시 analysisKey는 유지하고 narrationKey는 변경한다.
+- 오류/경계: 잘못된 식별자 503 MODEL_CONFIG_INVALID, 클라이언트 model 위조 422, 다른 응답 모델 MODEL_MISMATCH, 정규식 특수문자/스냅샷 오인식 방지, 기존 인증/동의/예산/무자동호출 유지. 실제 공급자 호환성 확인용 호출은 금지한다.
+- 구현 파일: `src/domain/narration/model.ts`(유일한 기본 모델값·공통 ID schema·응답 alias/snapshot 검사), `src/server/openai-model.ts`(서버 환경 해석), `src/domain/narration/index.ts`, `src/domain/persona/narration.ts`, `src/application/narration/{index,experiment,persona,evaluation}.ts`, `src/application/dev-api-test/index.ts`, `src/server/{api-test,api-test-live}.ts`, `src/infrastructure/openai/{narration,live-budget}.ts`, `test-form.tsx`. 순수 계층은 model 주입만 받고 process.env를 읽지 않는다.
+- 기존 장부와 일 한도는 모델 간 공유한다. 새 예약에 modelId를 기록하고, modelId 없는 과거 장부도 읽는다. 추론 metadata는 응답 본문에서 제외하고 assistant output_text만 기존 JSON/근거/문체 검사에 전달한다. 새 모델로 자동 대체하지 않는다.
+- `package.json`과 `tests/evaluation/run-persona-evaluation.ts`: 명시 Mock CLI도 Node의 .env/.env.local 로딩 및 같은 설정 해석기를 사용한다. model만 소비하며 키는 읽거나 출력하지 않고 live provider도 선택하지 않는다. 과거 평가 기록은 원래 모델/버전 그대로 유지한다.
+- 테스트/문서: `tests/model-config.test.ts`, `tests/live-narration.test.ts`, `tests/persona-evaluation.test.ts`, `tests/e2e/api-test.spec.ts`, `playwright.config.ts`, `AGENTS.md`, `docs/{05,14,21}`, `docs/examples/.env.example`, `src/app/dev/api-test/README.md`, `src/domain/persona/README.md`, 본 worklog.
+- TDD 최초 모델 설정 모듈 부재로 FAIL 확인. 구현 중 기존 모델 고정 차단 기대값 1건 FAIL은 요청된 동작 변경에 맞춰 서버 설정/위조 차단 검사로 대체했다. 최종 관련 7파일 `npm.cmd test -- tests/model-config.test.ts tests/live-narration.test.ts tests/api-test.test.ts tests/persona.test.ts tests/narration.test.ts tests/experiment-guard.test.ts tests/persona-evaluation.test.ts`: **167/167 PASS**. `tsc --noEmit`, `npm.cmd run lint`: **PASS**.
+- `npm.cmd run test:e2e:api-test`: **개발 9/9, production 1/1, 격리 production build/typegen/tsc PASS (exit 0)**. 테스트 서버에 비기본 모델 gpt-4.1-mini를 주입해 실제 로컬 설정/Mock 실행/화면 반영을 검증했다. 키 빈 값, Live false 고정. 이후 추가한 영속 장부 modelId/Mock CLI 설정은 최종 관련 단위검사와 전체 격리 검증에서 확인한다.
+- 사용자 .env/키/비밀값, `next-env.d.ts`, 개인 CLI fixture는 변경/커밋하지 않는다. 실제 모델 선택·접근 권한·Responses/구조화 출력 호환성·추론 토큰 상한의 적합성은 사용자가 확인한다. 추가 실 API 요청 **0회**, 이번 설정 변경의 실제 Live 회귀는 **LIVE_NOT_RUN**.
+- 최종 격리 검증: 개인 .env/fixture 제외, 커밋 fixture를 사용하는 임시 사본에서 `npm test -- --maxWorkers=1`: **42개 파일 1068/1068 PASS (91.21초)**. 이어 임시 .env=기본 모델, .env.local=비기본 모델을 만들어 실제 `npm run eval:persona`: **Mock 180/180 완료, 실패/문체 플래그 0**, 생성한 임시 보고서 modelId가 .env.local 값인지 확인했다. 원본 과거 평가 산출물은 수정하지 않았다. 임시 node_modules junction을 먼저 해제하고 검증한 임시 디렉터리만 정리했다.
+- 최종 사용자 두 수정 파일 SHA256 동일, 코드의 gpt-4o-mini 리터럴은 공통 DEFAULT_OPENAI_MODEL 한 곳에만 남음. 같은 PR #24에 커밋·푸시 후 대기한다.

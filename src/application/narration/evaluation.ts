@@ -8,6 +8,7 @@ import { ExperimentError } from "../../domain/experiment/index";
 import { FeatureNarrationSpecSchema, PersonaProfileSchema, PersonaSelectionSchema, PersonaError, type ApprovedPersonaRegistry } from "../../domain/persona/index";
 import { PersonaNarrationDraftSchema, preparePersonaNarration } from "../../domain/persona/narration";
 import { COMMON_SYSTEM_PROMPT_VERSION, PERSONA_PROMPT_VERSION } from "../../domain/persona/prompt";
+import { DEFAULT_OPENAI_MODEL, OpenAiModelIdSchema } from "../../domain/narration/model";
 
 const Id = z.string().min(1).max(64).regex(/^[a-zA-Z0-9-]+$/);
 const Label = z.string().min(1).max(120).regex(/^[^\u0000-\u001f\u007f]*$/);
@@ -32,7 +33,7 @@ const PersonaMetricsSchema = z.strictObject({ personaId: PersonaSelectionSchema.
   caseSamples: Count, distinctCaseOpenings: Count, repeatedCaseOpenings: Count });
 export const PersonaEvaluationReportSchema = z.strictObject({
   schemaVersion: z.literal("1.0.0"), evaluationPolicyVersion: z.literal("1.0.0"), suiteId: Id, suiteVersion: z.string(), repetitions: z.union([z.literal(2), z.literal(3)]),
-  providerKind: z.literal("mock"), modelId: z.literal("gpt-4o-mini"),
+  providerKind: z.literal("mock"), modelId: OpenAiModelIdSchema,
   versions: z.strictObject({ commonPromptVersion: z.string(), promptVersion: z.string(), outputSchemaVersion: z.literal("1.0.0"), stylePolicyVersion: z.literal("1.0.0") }),
   profiles: z.array(PersonaProfileSchema), spec: FeatureNarrationSpecSchema,
   cases: z.array(z.strictObject({ id: Id, title: Label, category: Id, analysisKey: Hash, reference: ManualPromptDataSchema,
@@ -117,7 +118,7 @@ export async function evaluatePersonaMatrix(value: unknown, options: ExperimentR
   });
   const completed = rows.filter(row => row.status === "completed").length;
   return PersonaEvaluationReportSchema.parse({ schemaVersion: "1.0.0", evaluationPolicyVersion: "1.0.0", suiteId: suite.suiteId, suiteVersion: suite.suiteVersion,
-    repetitions: settings.repetitions, providerKind: "mock", modelId: "gpt-4o-mini",
+    repetitions: settings.repetitions, providerKind: "mock", modelId: OpenAiModelIdSchema.parse(options.model ?? DEFAULT_OPENAI_MODEL),
     versions: { commonPromptVersion: COMMON_SYSTEM_PROMPT_VERSION, promptVersion: PERSONA_PROMPT_VERSION, outputSchemaVersion: "1.0.0", stylePolicyVersion: "1.0.0" },
     profiles, spec, cases: prepared.map(item => ({ id: item.source.id, title: item.source.title, category: item.source.category,
       analysisKey: item.fingerprint.hash, reference: item.contexts[0].data, versions: item.fingerprint.versions })),

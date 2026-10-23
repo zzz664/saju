@@ -17,5 +17,5 @@ export default defineConfig({
   webServer: { command: `"${process.execPath}" "${next}" ${production ? "start" : "dev"} --hostname 127.0.0.1 --port ${port}`,
     cwd: workspace, url: `http://127.0.0.1:${port}`, reuseExistingServer: false, timeout: 90000, stdout: "pipe",
     env: { NODE_ENV: production ? "production" : "development", NEXT_TELEMETRY_DISABLED: "1",
-      ...(apiTest ? { API_TEST_LOCAL_ONLY: "true", DEV_TEST_SESSION_SECRET: "synthetic-unlock-secret-for-e2e-only-0001", OPENAI_API_KEY: "", ENABLE_LIVE_API_TESTS: "false", LIVE_API_TEST_MAX_TOKENS_PER_DAY: "200000" } : {}) } },
+      ...(apiTest ? { API_TEST_LOCAL_ONLY: "true", DEV_TEST_SESSION_SECRET: "synthetic-unlock-secret-for-e2e-only-0001", OPENAI_MODEL: "gpt-4.1-mini", OPENAI_API_KEY: "", ENABLE_LIVE_API_TESTS: "false", LIVE_API_TEST_MAX_TOKENS_PER_DAY: "200000" } : {}) } },
 });

@@ -8,7 +8,7 @@
 2. `develop`에 **실제로 병합된** 마지막 WBS/PR을 확인한다. 문서의 TODO는 실제 개발 완료 여부를 보증하지 않는다.
 3. **1WBS = 기능 브랜치 1개 = develop PR 1개.** 리뷰·머지 전 다음 WBS 개발 금지. 머지 후 로컬 브랜치 `git branch -d` 안전 삭제.
 4. npm만 사용한다. CI는 초기 선택 사항. Mock 테스트(`npm test`) 필수, 실제 외부 API는 자동 테스트·CI에서 실행하지 않는다.
-5. 서비스명/상품명/캐릭터명 미정. 만세력 `yhj1024/manseryeok`, `gpt-4o-mini`, 모바일 퍼스트, 메신저형 P06 유지.
+5. 서비스명/상품명/캐릭터명 미정. 만세력 `yhj1024/manseryeok`, LLM 기본값 `gpt-4o-mini`/서버 `OPENAI_MODEL` 공통 설정, 모바일 퍼스트, 메신저형 P06 유지.
 
 ## B. 단일 실행 순서
 

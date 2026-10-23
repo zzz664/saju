@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_NARRATION_BYTES, NarrationError, type NarrationProvider } from "../../domain/narration/index";
+import { OpenAiModelIdSchema, matchesOpenAiModel } from "../../domain/narration/model";
 
 const Usage = z.object({ input_tokens: z.number().int().min(0).max(1_000_000_000), output_tokens: z.number().int().min(0).max(1_000_000_000) });
 const Envelope = z.object({ id: z.string().regex(/^resp_[a-zA-Z0-9_-]{1,200}$/), model: z.string(), status: z.string(),
@@ -10,7 +11,7 @@ export type LiveObservation = { responseId?: string; providerRequestId?: string;
 /** Server-only REST transport. Fixed endpoint, no retries, redirects, raw errors or logs. */
 export function createOpenAiNarrationProvider(options: { apiKey: string; observe: (value: LiveObservation) => void; transport?: typeof fetch; timeoutMs?: number }): NarrationProvider {
   return { kind: "openai", async generate(request, { signal } = {}) {
-    if (request.model !== "gpt-4o-mini" || request.store !== false || request.stream !== false || !request.max_output_tokens)
+    if (!OpenAiModelIdSchema.safeParse(request.model).success || request.store !== false || request.stream !== false || !request.max_output_tokens)
       throw new NarrationError("INPUT_REJECTED");
     const timeout = AbortSignal.timeout(options.timeoutMs ?? 60_000);
     const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
@@ -41,13 +42,14 @@ export function createOpenAiNarrationProvider(options: { apiKey: string; observe
       const envelope = parsed.data;
       options.observe({ ...metadata, responseId: envelope.id, providerStatus: envelope.status,
         ...(envelope.usage ? { inputTokens: envelope.usage.input_tokens, outputTokens: envelope.usage.output_tokens } : {}) });
-      if (!/^gpt-4o-mini(?:-\d{4}-\d{2}-\d{2})?$/.test(envelope.model)) throw new NarrationError("MODEL_MISMATCH");
+      if (!matchesOpenAiModel(request.model, envelope.model)) throw new NarrationError("MODEL_MISMATCH");
       if (envelope.status === "incomplete") throw new NarrationError("INCOMPLETE");
       if (envelope.status !== "completed") throw new NarrationError("PROVIDER_FAILED");
-      const content = envelope.output.flatMap(item => item.content ?? []);
+      const messages = envelope.output.filter(item => item.type !== "reasoning");
+      const content = messages.flatMap(item => item.content ?? []);
       if (content.some(item => item.type === "refusal")) throw new NarrationError("REFUSED");
       if (!envelope.usage) throw new NarrationError("USAGE_MISSING");
-      if (envelope.usage.output_tokens > request.max_output_tokens || envelope.output.some(item => item.type !== "message" || item.role !== "assistant" || item.status !== "completed")
+      if (envelope.usage.output_tokens > request.max_output_tokens || messages.some(item => item.type !== "message" || item.role !== "assistant" || item.status !== "completed")
         || content.some(item => item.type !== "output_text" || typeof item.text !== "string")) throw new NarrationError("OUTPUT_REJECTED");
       const outputText = content.map(item => item.text).join("");
       if (!outputText || Buffer.byteLength(outputText) > MAX_NARRATION_BYTES) throw new NarrationError("OUTPUT_REJECTED");

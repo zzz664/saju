@@ -67,7 +67,7 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
     expect((await handler(req("runs/" + run.testRunId, undefined, cookie))).status).toBe(200);
   });
   it.each([
-    [{ ENABLE_LIVE_API_TESTS: "false" }, "LIVE_FLAG_DISABLED"], [{ OPENAI_API_KEY: "" }, "KEY_MISSING"], [{ OPENAI_MODEL: "another-model" }, "MODEL_NOT_ALLOWED"],
+    [{ ENABLE_LIVE_API_TESTS: "false" }, "LIVE_FLAG_DISABLED"], [{ OPENAI_API_KEY: "" }, "KEY_MISSING"],
   ])("blocks gated Live without any transport call: %j", async (env, reason) => {
     const { handler, transport } = setup(env), { cookie, config } = await unlock(handler);
     expect(config.liveReason).toBe(reason);
@@ -82,6 +82,44 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
     for (const patch of [{ acknowledgedCost: false }, { fixtureId: "real-user" }, { personaId: "unapproved" }, { scenario: "report_stream" }, { featureId: "F01" }, { role: "admin" }])
       expect((await handler(req("runs", { ...input(), ...patch }, cookie, config.csrfToken))).status).toBeGreaterThanOrEqual(400);
     expect(transport).not.toHaveBeenCalled();
+  });
+  it("propagates OPENAI_MODEL through config, Mock/Live requests, metadata and response validation", async () => {
+    const model = "gpt-4.1-mini";
+    const { handler, transport, budget } = setup({ OPENAI_MODEL: model }, async (_url, options) => {
+      const sent = JSON.parse(String(options?.body)); return Response.json({ ...await envelope(sent), model: model + "-2025-04-14" });
+    }); const { cookie, config } = await unlock(handler);
+    expect(config).toMatchObject({ modelId: model, liveAvailable: true });
+    const mockRun = await (await handler(req("runs", { ...input(), mode: "mock" }, cookie, config.csrfToken))).json();
+    const liveRun = await (await handler(req("runs", input(), cookie, config.csrfToken))).json();
+    expect(liveRun).toMatchObject({ evidence: "LIVE_PASS", modelId: model, result: { meta: { modelId: model } } });
+    expect(mockRun).toMatchObject({ evidence: "MOCK_PASS", modelId: model, result: { meta: { modelId: model } } });
+    expect(mockRun.result.cache).toEqual(liveRun.result.cache);
+    expect(JSON.parse(String(transport.mock.calls[0][1]!.body)).model).toBe(model);
+    expect(budget.inspect(now)).toEqual({ calls: 1, tokens: 160 });
+    expect(JSON.parse(readFileSync(budget.file, "utf8")).entries[0].modelId).toBe(model);
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+  it("rejects malformed server models and client model overrides without any provider call", async () => {
+    const malformed = setup({ OPENAI_MODEL: "../invalid" });
+    const rejected = await malformed.handler(req("unlock", { secret })); expect(rejected.status).toBe(503);
+    expect(await rejected.json()).toMatchObject({ error: { code: "MODEL_CONFIG_INVALID" } }); expect(malformed.transport).not.toHaveBeenCalled();
+    const configured = setup({ OPENAI_MODEL: "gpt-4.1-mini" }), { cookie, config } = await unlock(configured.handler);
+    expect((await configured.handler(req("runs", { ...input(), model: "other" }, cookie, config.csrfToken))).status).toBe(422);
+    expect(configured.transport).not.toHaveBeenCalled();
+  });
+  it("does not allow a configured model to accept another model's response", async () => {
+    const { handler } = setup({ OPENAI_MODEL: "gpt-4.1-mini" }), { cookie, config } = await unlock(handler);
+    const run = await (await handler(req("runs", input(), cookie, config.csrfToken))).json();
+    expect(run).toMatchObject({ evidence: "LIVE_FAILED", errorCode: "MODEL_MISMATCH", modelId: "gpt-4.1-mini" });
+  });
+  it("ignores reasoning metadata and validates only assistant output_text for a selected model", async () => {
+    const model = "gpt-5-mini";
+    const { handler } = setup({ OPENAI_MODEL: model }, async (_url, options) => {
+      const response = await envelope(JSON.parse(String(options?.body)));
+      return Response.json({ ...response, model, output: [{ type: "reasoning", summary: [{ type: "summary_text", text: "not prose" }] }, ...response.output] });
+    }); const { cookie, config } = await unlock(handler);
+    const run = await (await handler(req("runs", input(), cookie, config.csrfToken))).json();
+    expect(run).toMatchObject({ evidence: "LIVE_PASS", modelId: model }); expect(JSON.stringify(run)).not.toContain("not prose");
   });
   it.each([{ CI: "true" }, { NODE_ENV: "production" }, { API_TEST_LOCAL_ONLY: "false" }, { VERCEL_ENV: "preview" }])("returns 404 and makes zero provider calls in %j", async env => {
     const { handler, transport } = setup(env); expect((await handler(req("runs", input()))).status).toBe(404); expect(transport).not.toHaveBeenCalled();

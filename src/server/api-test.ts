@@ -13,6 +13,7 @@ import { runLivePersona } from "./api-test-live";
 import type { FileLiveBudget } from "../infrastructure/openai/live-budget";
 import type { LiveObservation } from "../infrastructure/openai/narration";
 import { PersonaError } from "../domain/persona/index";
+import { readOpenAiModel } from "./openai-model";
 
 const COOKIE = "saju_api_test";
 const SessionSchema = z.strictObject({ id: z.uuid(), csrf: z.string().regex(/^[a-f0-9]{64}$/), expires: z.number().int().positive() });
@@ -79,6 +80,7 @@ export function createApiTestHandler(options: { environment: () => Env; now?: ()
     const secret = env.DEV_TEST_SESSION_SECRET;
     if (!secret || secret.length < 32 || secret.length > 256) return error(503, "UNLOCK_NOT_CONFIGURED");
     let limits; try { limits = apiTestLimits(env); } catch { return error(503, "LIMITS_INVALID"); }
+    let modelId: string; try { modelId = readOpenAiModel(env); } catch { return error(503, "MODEL_CONFIG_INVALID"); }
     const path = new URL(request.url).pathname.replace(/^\/api\/dev\/api-test\//, "");
     if (path === "unlock" && request.method === "POST") {
       if (time - unlockWindow >= 60000) { unlockWindow = time; unlockAttempts = 0; }
@@ -93,12 +95,12 @@ export function createApiTestHandler(options: { environment: () => Env; now?: ()
     const session = sessionFor(request, secret, time); if (!session) return error(401, "DEVELOPER_LOCKED");
     const access = { principalId: "local-developer", sessionId: session.id };
     const keyStatus = env.OPENAI_API_KEY && env.OPENAI_API_KEY.trim().length >= 20 && !/replace|placeholder|example/i.test(env.OPENAI_API_KEY) ? "ready" as const : "missing" as const;
-    let liveReason = env.OPENAI_MODEL && env.OPENAI_MODEL !== "gpt-4o-mini" ? "MODEL_NOT_ALLOWED" : env.ENABLE_LIVE_API_TESTS !== "true" ? "LIVE_FLAG_DISABLED" : keyStatus === "missing" ? "KEY_MISSING" : !options.live ? "LIVE_PROVIDER_UNAVAILABLE" : "READY";
+    let liveReason = env.ENABLE_LIVE_API_TESTS !== "true" ? "LIVE_FLAG_DISABLED" : keyStatus === "missing" ? "KEY_MISSING" : !options.live ? "LIVE_PROVIDER_UNAVAILABLE" : "READY";
     let liveUsed: { calls: number; tokens: number } | undefined;
     if (options.live) { try { liveUsed = options.live.budget.inspect(time); } catch { liveReason = "STORE_UNAVAILABLE"; } }
     if (path === "config" && request.method === "GET") {
       const used = store.inspect(time, access).daily;
-      const config: ApiTestConfig = { defaultMode: "mock", modelId: "gpt-4o-mini", keyStatus, liveAvailable: liveReason === "READY", liveStatus: liveReason === "READY" ? "LIVE_NOT_RUN" : "LIVE_BLOCKED", liveReason, csrfToken: session.csrf, limits,
+      const config: ApiTestConfig = { defaultMode: "mock", modelId, keyStatus, liveAvailable: liveReason === "READY", liveStatus: liveReason === "READY" ? "LIVE_NOT_RUN" : "LIVE_BLOCKED", liveReason, csrfToken: session.csrf, limits,
         ...(liveUsed ? { liveUsed, liveRemaining: { calls: Math.max(0, limits.calls - liveUsed.calls), tokens: Math.max(0, limits.tokens - liveUsed.tokens) } } : {}),
         used: { calls: used.calls, tokens: used.tokens }, remaining: { calls: Math.max(0, limits.calls - used.calls), tokens: Math.max(0, limits.tokens - used.tokens) },
         fixtures: options.catalog.fixtures, personas: options.catalog.personas };
@@ -120,18 +122,18 @@ export function createApiTestHandler(options: { environment: () => Env; now?: ()
     if (previous) return previous.digest !== digest ? error(409, "IDEMPOTENCY_CONFLICT") : previous.value.status === "running" ? error(409, "RUN_IN_PROGRESS") : json(ApiTestRunSchema.parse(previous.value), previous.httpStatus);
     if (runs.size >= 1000) return error(503, "RUN_STORE_FULL");
     const id = randomUUID(), run: Run = { owner: session.id, digest, id, httpStatus: 200,
-      value: { testRunId: id, mode: input.mode, scenario: "narration", featureId: "core-base", modelId: "gpt-4o-mini", personaId: input.personaId,
+      value: { testRunId: id, mode: input.mode, scenario: "narration", featureId: "core-base", modelId, personaId: input.personaId,
         personaVersion: "1.0.0", promptVersion: PERSONA_PROMPT_VERSION, commonPromptVersion: COMMON_SYSTEM_PROMPT_VERSION, schemaVersion: "1.0.0",
         status: "running", startedAt: new Date(time).toISOString(), inputTokens: null, outputTokens: null } };
     runs.set(id, run); requests.set(requestKey, run);
     const observation: LiveObservation = {};
     try {
-      const result = input.mode === "live" ? await runLivePersona({ catalog: options.catalog, fixtureId: input.fixtureId, personaId: input.personaId, limits,
+      const result = input.mode === "live" ? await runLivePersona({ catalog: options.catalog, fixtureId: input.fixtureId, personaId: input.personaId, limits, model: modelId,
         key: createHash("sha256").update(requestKey).digest("hex"), apiKey: env.OPENAI_API_KEY!, budget: options.live!.budget, transport: options.live!.transport,
         now, signal: request.signal, observe: value => Object.assign(observation, value),
-        allowed: () => { const current = options.environment(); return apiTestLocalEnvironment(current) && current.ENABLE_LIVE_API_TESTS === "true"
-          && current.OPENAI_API_KEY === env.OPENAI_API_KEY && (!current.OPENAI_MODEL || current.OPENAI_MODEL === "gpt-4o-mini"); },
-      }) : await createPersonaExperiment({ ...options.catalog, selection: { personaId: input.personaId, personaVersion: "1.0.0" }, provider: options.provider,
+        allowed: () => { try { const current = options.environment(); return apiTestLocalEnvironment(current) && current.ENABLE_LIVE_API_TESTS === "true"
+          && current.OPENAI_API_KEY === env.OPENAI_API_KEY && readOpenAiModel(current) === modelId; } catch { return false; } },
+      }) : await createPersonaExperiment({ ...options.catalog, model: modelId, selection: { personaId: input.personaId, personaVersion: "1.0.0" }, provider: options.provider,
         store, policy: apiTestPolicy(limits, time), now, environment: () => apiTestLocalEnvironment(options.environment()) ? "development" : undefined,
         resolveAccess: async () => access }).run(options.catalog.core(input.fixtureId), { signal: request.signal });
       run.value = { ...run.value, status: result.styleEvaluation.passed ? "passed" : "failed", evidence: input.mode === "live" ? result.styleEvaluation.passed ? "LIVE_PASS" : "LIVE_FAILED" : result.styleEvaluation.passed ? "MOCK_PASS" : "MOCK_FAILED",

@@ -4,6 +4,7 @@ import { canonicalizeJson, fingerprintCoreExport, type Sha256Adapter } from "../
 import { MAX_NARRATION_BYTES, type NarrationRequest } from "../narration/index";
 import { FeatureNarrationSpecSchema, PersonaError, type ApprovedPersonaRegistry, type PersonaProfile } from "./index";
 import { COMMON_SYSTEM_PROMPT, COMMON_SYSTEM_PROMPT_VERSION, PERSONA_JSON_CONTRACT, PERSONA_PROMPT_VERSION } from "./prompt";
+import { DEFAULT_OPENAI_MODEL, OpenAiModelIdSchema } from "../narration/model";
 
 export const PersonaNarrationDraftSchema = z.strictObject({
   schemaVersion: z.literal("1.0.0"), featureId: z.literal("core-base"),
@@ -22,7 +23,8 @@ function hashValue(value: unknown, hash: Sha256Adapter): string {
   if (typeof result !== "string" || result.length !== 64 || !/^[a-f0-9]{64}$/.test(result)) throw new PersonaError("HASH_FAILED");
   return result;
 }
-export function preparePersonaNarration(core: unknown, options: { registry: ApprovedPersonaRegistry; selection: unknown; spec: unknown; hash: Sha256Adapter }) {
+export function preparePersonaNarration(core: unknown, options: { registry: ApprovedPersonaRegistry; selection: unknown; spec: unknown; hash: Sha256Adapter; model?: string }) {
+  const modelId = OpenAiModelIdSchema.parse(options.model ?? DEFAULT_OPENAI_MODEL);
   const profile = options.registry.load(options.selection);
   const parsed = FeatureNarrationSpecSchema.safeParse(options.spec);
   if (!parsed.success) throw new PersonaError("SPEC_REJECTED");
@@ -34,12 +36,12 @@ export function preparePersonaNarration(core: unknown, options: { registry: Appr
   try { analysisKey = fingerprintCoreExport(core, options.hash).fingerprint.hash; } catch { throw new PersonaError("HASH_FAILED"); }
   const descriptor = { policyId: "narration.persona-cache", policyVersion: "1.0.0", analysisKey,
     featureId: spec.featureId, personaId: profile.personaId, personaVersion: profile.personaVersion,
-    promptVersion: PERSONA_PROMPT_VERSION, commonPromptVersion: COMMON_SYSTEM_PROMPT_VERSION, modelId: "gpt-4o-mini",
+    promptVersion: PERSONA_PROMPT_VERSION, commonPromptVersion: COMMON_SYSTEM_PROMPT_VERSION, modelId,
     narrativeSpecId: spec.specId, narrativeSpecVersion: spec.specVersion, outputSchemaVersion: "1.0.0",
     personaDigest: hashValue(profile, options.hash), specDigest: hashValue(spec, options.hash),
     promptDigest: hashValue({ common: COMMON_SYSTEM_PROMPT, output: PERSONA_JSON_CONTRACT }, options.hash),
   };
-  const request: NarrationRequest = Object.freeze({ model: "gpt-4o-mini", store: false, stream: false, instructions: COMMON_SYSTEM_PROMPT,
+  const request: NarrationRequest = Object.freeze({ model: modelId, store: false, stream: false, instructions: COMMON_SYSTEM_PROMPT,
     input: Object.freeze([
       Object.freeze({ role: "developer" as const, content: PERSONA_JSON_CONTRACT + "\n" + json({ instructionType: "server-approved-style-only", persona: profile, spec }) }),
       Object.freeze({ role: "user" as const, content: json({ featureId: spec.featureId, ...data }) }),

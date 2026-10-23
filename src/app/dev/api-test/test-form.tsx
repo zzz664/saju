@@ -10,7 +10,7 @@ async function fetchConfiguration(): Promise<ApiTestConfig | null> {
   if (!response.ok) throw new Error("Configuration unavailable.");
   return ApiTestConfigSchema.parse(await response.json());
 }
-const reasons: Record<string, string> = { LIVE_FLAG_DISABLED: "서버에서 Live 테스트가 꺼져 있습니다.", KEY_MISSING: "서버 API 키가 설정되지 않았습니다.", LIVE_PROVIDER_UNAVAILABLE: "서버 Provider가 준비되지 않았습니다.", STORE_UNAVAILABLE: "영속 예산 장부를 확인해 주세요.", MODEL_NOT_ALLOWED: "서버 모델 설정을 확인해 주세요." };
+const reasons: Record<string, string> = { LIVE_FLAG_DISABLED: "서버에서 Live 테스트가 꺼져 있습니다.", KEY_MISSING: "서버 API 키가 설정되지 않았습니다.", LIVE_PROVIDER_UNAVAILABLE: "서버 Provider가 준비되지 않았습니다.", STORE_UNAVAILABLE: "영속 예산 장부를 확인해 주세요." };
 export default function ApiTestForm() {
   const [config, setConfig] = useState<ApiTestConfig | null>(null), [secret, setSecret] = useState("");
   const [mode, setMode] = useState<"mock" | "live">("mock"), [ack, setAck] = useState(false);

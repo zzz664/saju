@@ -7,6 +7,7 @@ export interface ExperimentRunnerOptions {
   readonly policy: unknown; readonly provider: NarrationProvider; readonly store: ExperimentBudgetStore;
   readonly environment?: () => string | undefined; readonly now?: () => number;
   readonly resolveAccess?: () => Promise<unknown>;
+  readonly model?: string;
 }
 type Execution<T> = (core: unknown, provider: NarrationProvider, options: { readonly signal?: AbortSignal }) => Promise<T>;
 export function createExperimentRunner<T>(options: ExperimentRunnerOptions & { readonly execute: Execution<T> }): { run(core: unknown, options?: { readonly signal?: AbortSignal }): Promise<T> };
@@ -53,7 +54,7 @@ export function createExperimentRunner(options: ExperimentRunnerOptions & { read
       finally { lease.release(); }
     } };
     // Execution is a trusted server strategy, never a request body callback or prompt.
-    try { return await (options.execute ?? narrateCore)(core, guarded, { signal }); }
+    try { return await (options.execute ?? narrateCore)(core, guarded, { signal, model: options.model }); }
     catch (cause) { if (denial) throw denial; throw cause; }
   } });
 }

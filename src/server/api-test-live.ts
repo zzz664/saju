@@ -11,6 +11,7 @@ export async function runLivePersona(options: {
   catalog: ReturnType<typeof createApiTestCatalog>; fixtureId: string; personaId: string; limits: ApiTestLimits;
   key: string; apiKey: string; now: () => number; allowed: () => boolean; budget: FileLiveBudget;
   transport?: typeof fetch; observe: (value: LiveObservation) => void; signal: AbortSignal;
+  model: string;
 }) {
   const observation: LiveObservation = {};
   const provider = createOpenAiNarrationProvider({ apiKey: options.apiKey, transport: options.transport,
@@ -21,11 +22,11 @@ export async function runLivePersona(options: {
     const time = options.now(), policy = apiTestPolicy(options.limits, time);
     const limited = { ...request, max_output_tokens: options.limits.outputTokens };
     const allocation = quoteExperimentRequest(limited, policy);
-    const lease = options.budget.reserve({ now: time, key: options.key, tokens: allocation.tokens,
+    const lease = options.budget.reserve({ now: time, key: options.key, tokens: allocation.tokens, modelId: options.model,
       callsLimit: options.limits.calls, tokensLimit: options.limits.tokens });
     try { return await provider.generate(limited, control); }
     finally { lease.finish(observation); }
   } };
   return narratePersona(options.catalog.core(options.fixtureId), guarded, { ...options.catalog,
-    selection: { personaId: options.personaId, personaVersion: "1.0.0" } }, { signal: options.signal });
+    model: options.model, selection: { personaId: options.personaId, personaVersion: "1.0.0" } }, { signal: options.signal });
 }

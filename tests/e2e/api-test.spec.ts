@@ -24,6 +24,8 @@ test("Mock button reuses R01, shows prose and exports only evidence metadata", a
   const response = page.waitForResponse(response => response.url().endsWith("/runs") && response.request().method() === "POST");
   await page.getByRole("button", { name: "테스트 실행" }).click();
   const run = await (await response).json(); expect(run.evidence).toBe("MOCK_PASS"); expect(run.result.meta.providerKind).toBe("mock");
+  expect(run.modelId).toBe("gpt-4.1-mini"); expect(run.result.meta.modelId).toBe("gpt-4.1-mini");
+  await expect(page.getByText("gpt-4.1-mini", { exact: true })).toBeVisible();
   const fetched = await page.request.get("/api/dev/api-test/runs/" + run.testRunId);
   expect(fetched.status()).toBe(200); expect((await fetched.json()).testRunId).toBe(run.testRunId);
   await expect(page.getByRole("heading", { name: "MOCK_PASS" })).toBeVisible();

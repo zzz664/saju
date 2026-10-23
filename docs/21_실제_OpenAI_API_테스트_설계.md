@@ -24,7 +24,7 @@ URL: `/dev/api-test` (기존 P17 개발자 검증 화면의 하위 라우트). �
 │ [개발 전용/운영 사용자 비노출]    │
 │                                │
 │ API 상태   준비됨 / 키 없음      │
-│ 모델       gpt-4o-mini (고정)   │
+│ 모델       서버 OPENAI_MODEL   │
 │ 테스트 모드  (● Mock) (○ Live)  │
 │ [테스트 데이터: 가상 사례 ▼]     │
 │ [테스트 단계: 서술/말풍선/질문]  │
@@ -68,7 +68,7 @@ URL: `/dev/api-test` (기존 P17 개발자 검증 화면의 하위 라우트). �
 ```dotenv
 # 실제 값을 git/PR/문서에 절대 기록하지 않는다.
 OPENAI_API_KEY=                      # 서버 전용, .env.local 또는 Secret Manager
-OPENAI_MODEL=gpt-4o-mini            # v2.5 기준 고정
+OPENAI_MODEL=gpt-4o-mini            # 공통 기본값. 서버 설정으로 변경 가능
 ENABLE_LIVE_API_TESTS=false        # true는 승인된 개발 환경에서만
 LIVE_API_TEST_MAX_REQUESTS_PER_DAY=15
 LIVE_API_TEST_MAX_TOKENS_PER_DAY=30000
@@ -198,6 +198,14 @@ WBS-65 착수 시 기존 R01은 내부 개발자용 `core-base`만 구현되어 
 - OpenAI API 보안/개발 운영: https://platform.openai.com/docs/guides/production-best-practices
 
 ## 12. WBS-66 구현 경계와 검증 상태
+
+### 사용자 승인: OPENAI_MODEL 공통 설정
+
+서버가 `.env`/`.env.local`의 `OPENAI_MODEL`을 읽고 실제 요청, 응답 모델 검증, 캐시 키, 설정 화면, Mock/Live 실행 메타와 영속 예약 기록에 동일한 값을 전달한다. 환경변수 변경 후 전용 서버를 재시작한다. `.env.local` 또는 OS 환경변수에 같은 이름이 있으면 해당 우선순위를 확인한다. 미설정/빈 값은 공통 기본값 `gpt-4o-mini`, 잘못된 식별자는 `MODEL_CONFIG_INVALID`로 호출 전에 차단한다. 브라우저 요청에서 model을 지정하는 것은 허용하지 않는다.
+
+모델명 설정은 API 가용성·계정 권한·Structured Outputs 지원을 보장하지 않는다. Responses API와 해당 JSON Schema 출력에 호환되는 모델을 선택한다. 요청 모델의 정확한 ID 또는 해당 alias의 날짜 snapshot 응답을 검증하며, 다른 모델로 자동 대체하지 않는다. 추론 메타 항목은 본문에서 제외하고 assistant output_text만 기존 검증기에 전달한다. 출력 토큰 상한은 유지되므로 모델에 따라 incomplete가 발생할 수 있다. 모델을 바꿔도 같은 일 예산 장부와 권한·동의·무자동호출 규칙을 적용한다.
+
+순수 도메인/애플리케이션 함수는 환경변수를 직접 읽지 않고 model 인자를 주입받는다. 오프라인 Mock 평가 CLI도 `.env`/`.env.local`을 로드해 같은 설정을 사용하되 실제 Provider는 선택하지 않는다. 기존 기록은 원래 모델명 그대로 유지하며, 모델이 없는 과거 장부도 읽을 수 있다.
 
 로컬 `/dev/api-test`의 명시 실행은 동일 `core-base` 판단·승인형 합성 페르소나·공통 R01 프롬프트/검증기를 사용한다. 서버 전용 REST `OpenAIProvider`는 Responses API에 `store:false`, `stream:false`, Strict JSON Schema, 출력 상한을 전달한다. 기존 오프라인 실험 실행기는 Mock 전용 차단을 유지한다. 외부 호출은 모든 서버 게이트와 비용 동의 및 파일 예약을 통과한 요청에서만 수행한다.
 

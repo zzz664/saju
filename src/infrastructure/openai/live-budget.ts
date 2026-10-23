@@ -4,9 +4,11 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { experimentDay, ExperimentError } from "../../domain/experiment/index";
 import type { LiveObservation } from "./narration";
+import { OpenAiModelIdSchema } from "../../domain/narration/model";
 
 const Entry = z.strictObject({ key: z.string().regex(/^[a-f0-9]{64}$/), day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   tokens: z.number().int().nonnegative().max(2_000_000_000), pending: z.boolean(),
+  modelId: OpenAiModelIdSchema.optional(),
   inputTokens: z.number().int().nonnegative().max(1_000_000_000).optional(), outputTokens: z.number().int().nonnegative().max(1_000_000_000).optional(),
   responseId: z.string().regex(/^resp_[a-zA-Z0-9_-]{1,200}$/).optional(), providerRequestId: z.string().regex(/^[a-zA-Z0-9_-]{1,200}$/).optional(),
   providerStatus: z.enum(["completed", "failed", "incomplete", "cancelled", "queued", "in_progress"]).optional() });
@@ -37,7 +39,7 @@ export class FileLiveBudget {
       return { calls: entries.length, tokens: entries.reduce((sum, item) => sum + item.tokens, 0) };
     } catch (cause) { if (cause instanceof ExperimentError) throw cause; throw new ExperimentError("STORE_UNAVAILABLE"); }
   }
-  reserve(input: { now: number; key: string; tokens: number; callsLimit: number; tokensLimit: number }) {
+  reserve(input: { now: number; key: string; tokens: number; callsLimit: number; tokensLimit: number; modelId?: string }) {
     let descriptor: number;
     try { mkdirSync(this.directory, { recursive: true, mode: 0o700 }); descriptor = openSync(this.lock, "wx", 0o600); }
     catch (cause) { throw new ExperimentError((cause as NodeJS.ErrnoException).code === "EEXIST" ? "CONCURRENCY_LIMIT" : "STORE_UNAVAILABLE"); }
@@ -51,7 +53,7 @@ export class FileLiveBudget {
       const used = this.inspect(input.now);
       if (used.calls >= input.callsLimit || input.tokens > input.tokensLimit - used.tokens) throw new ExperimentError("BUDGET_EXCEEDED");
       if (state.entries.length >= 10000) throw new ExperimentError("STORE_UNAVAILABLE");
-      state.entries.push(Entry.parse({ key: input.key, day, tokens: input.tokens, pending: true }));
+      state.entries.push(Entry.parse({ key: input.key, day, tokens: input.tokens, pending: true, modelId: input.modelId }));
       state.lastNow = input.now; this.save(state);
     } catch (cause) {
       // No provider has been entered; release only this lock. A pending record still blocks the next reservation.

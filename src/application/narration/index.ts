@@ -32,13 +32,13 @@ export async function receiveNarrationText(request: NarrationRequest, provider: 
 }
 
 /** Internal evaluation only. No UI, persistence, retries, budget gate or live adapter. */
-export async function narrateCore(value: unknown, provider: NarrationProvider, options: { readonly signal?: AbortSignal } = {}) {
+export async function narrateCore(value: unknown, provider: NarrationProvider, options: { readonly signal?: AbortSignal; readonly model?: string } = {}) {
   const { signal } = options;
   if (signal?.aborted) throw new NarrationError("CANCELLED");
   if (provider.kind !== "mock") throw new NarrationError("LIVE_DISABLED");
-  const request = createNarrationRequest(value);
+  const request = createNarrationRequest(value, options.model);
   const data = ManualPromptDataSchema.parse(JSON.parse(request.input[0].content));
   const draft = validateNarrationOutput(await receiveNarrationText(request, provider, signal), data);
   return Object.freeze({ mode: "developer-json" as const, sourceStatus: data.status, sections: draft.sections,
-    limitations: data.limitations, meta: Object.freeze({ ...NARRATION_META, providerKind: "mock" as const }) });
+    limitations: data.limitations, meta: Object.freeze({ ...NARRATION_META, model: request.model, providerKind: "mock" as const }) });
 }

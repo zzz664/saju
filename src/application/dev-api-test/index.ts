@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ExperimentPolicySchema } from "../../domain/experiment/index";
+import { OpenAiModelIdSchema } from "../../domain/narration/model";
 
 export const ApiTestRequestSchema = z.strictObject({
   mode: z.enum(["mock", "live"]), scenario: z.enum(["narration", "report_stream", "follow_up"]),
@@ -22,13 +23,13 @@ export function apiTestPolicy(limits: ApiTestLimits, now: number) {
 }
 const Quota = z.strictObject({ calls: z.number().int().nonnegative(), tokens: z.number().int().nonnegative() });
 const Choice = z.strictObject({ id: z.string().min(1).max(64), label: z.string().min(1).max(100) });
-export const ApiTestConfigSchema = z.strictObject({ defaultMode: z.literal("mock"), modelId: z.literal("gpt-4o-mini"), keyStatus: z.enum(["ready", "missing"]),
+export const ApiTestConfigSchema = z.strictObject({ defaultMode: z.literal("mock"), modelId: OpenAiModelIdSchema, keyStatus: z.enum(["ready", "missing"]),
   liveAvailable: z.boolean(), liveStatus: z.enum(["LIVE_BLOCKED", "LIVE_NOT_RUN"]), liveReason: z.string().min(1).max(64), csrfToken: z.string().regex(/^[a-f0-9]{64}$/),
   liveUsed: Quota.optional(), liveRemaining: Quota.optional(),
   limits: ApiTestLimitsSchema, used: Quota, remaining: Quota, fixtures: z.array(Choice).max(10), personas: z.array(Choice).max(10) });
 export type ApiTestConfig = z.infer<typeof ApiTestConfigSchema>;
 export const ApiTestRunSchema = z.strictObject({ testRunId: z.uuid(), mode: z.enum(["mock", "live"]), scenario: z.literal("narration"), featureId: z.literal("core-base"),
-  modelId: z.literal("gpt-4o-mini"), personaId: z.string().min(1).max(64), status: z.enum(["blocked", "running", "passed", "failed", "interrupted"]),
+  modelId: OpenAiModelIdSchema, personaId: z.string().min(1).max(64), status: z.enum(["blocked", "running", "passed", "failed", "interrupted"]),
   personaVersion: z.string().min(1).max(32), promptVersion: z.string().min(1).max(32), commonPromptVersion: z.string().min(1).max(32), schemaVersion: z.literal("1.0.0"),
   startedAt: z.iso.datetime(), finishedAt: z.iso.datetime().optional(), durationMs: z.number().nonnegative().optional(),
   inputTokens: z.number().int().nonnegative().nullable(), outputTokens: z.number().int().nonnegative().nullable(),
@@ -40,7 +41,7 @@ export const ApiTestRunSchema = z.strictObject({ testRunId: z.uuid(), mode: z.en
   // The shared R01 service validates its full draft. This view adds transport bounds
   // without importing the server's prompt composer into the client bundle.
   result: z.object({ sections: z.array(z.object({ paragraphs: z.array(z.string().max(3000)).max(4) }).passthrough()).max(8),
-    styleEvaluation: z.object({ passed: z.boolean() }).passthrough(), meta: z.object({ providerKind: z.enum(["mock", "openai"]), modelId: z.literal("gpt-4o-mini") }).passthrough() }).passthrough().optional(),
+    styleEvaluation: z.object({ passed: z.boolean() }).passthrough(), meta: z.object({ providerKind: z.enum(["mock", "openai"]), modelId: OpenAiModelIdSchema }).passthrough() }).passthrough().optional(),
 });
 export type ApiTestRun = z.infer<typeof ApiTestRunSchema>;
 
