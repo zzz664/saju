@@ -1027,3 +1027,15 @@
 - 전체 테스트/전체 format:check/build/E2E는 미실행(관련 검사만 수행, UI/웹 route 변경 없음). 기존 CRLF 체크아웃 보존. 실제 API 0회/LIVE_NOT_RUN, .env/.local 실제 예산 파일 열람·변경 없음. DB/PG/시크릿/CI 변경 없음. 후보/보류와 전문가 미승인·M01/M02 미평가 한계를 완료 검증과 구분한다.
 - 변경 파일: README.md, docs/evaluations/WBS-29-topics.md, docs/worklog.md, src/domain/judgment/topics/{schemas.ts,catalog.ts,context.ts,index.ts,README.md}, src/domain/judgment/{structure,relations}/index.ts, src/application/{topics,structure,relations}/index.ts, src/cli/{commands.ts,main.ts,run.ts,README.md}, tests/helpers/topic-context.ts, tests/{topics.test.ts,topics-policy.test.ts,topics-service.test.ts}.
 - AGENTS.md/next-env.d.ts/개인 cli-input.json 사용자 수정은 보존·커밋 제외한다. develop PR 한 건 생성 후 중지한다. PR은 [기능 브랜치 PR 조회](https://github.com/zzz664/saju/pulls?q=head%3Afeature%2FWBS-29-topic-judgments)와 최종 보고의 직접 URL로 확인한다.
+
+## 2026-10-24 WBS-30 — M09 기능 조합·공통 API 계약
+
+- 직전/선행 WBS-29 PR #31 MERGED(develop, `66f1f4c4f289db6bc4cd95d637614e3eee4f0c26`) 및 직접 선행 WBS-13 PR #14(`df6c7c6e4d3243f21d907d6c87639892f9104187`)의 origin/develop 포함을 확인했다. develop checkout/pull --ff-only 후 이전 기능 브랜치를 git branch -d로 안전 삭제하고 `feature/WBS-30-feature-orchestration` 한 개를 만들었다. 실행순서 31의 WBS-30만 수행했다.
+- AGENTS/WBS/02/05/10과 관련 API 계약을 읽고 docs/evaluations/WBS-30-features.md에 완료 조건·정상/오류/경계 검사를 먼저 정의했다. 신규 테스트의 모듈 부재 RED를 확인한 뒤 구현했다.
+- 공통 FeatureRequest/FeatureResult/NarrationInput Zod DTO, F01~F11 프로파일/전이 의존성 레지스트리와 FeatureEngine 서비스 포트를 추가했다. F08~F10 대상/날짜·시간대, F10 monthly/daily/today, F11 상대 입력·독립 정책을 구분한다. 현재 시각을 추정하지 않는다.
+- 코어 요청당 1회(F11 A/B 각 1회), 모듈/사람/주제별 재사용과 F01의 F02~F07 조합을 구현했다. 기존 M01~M03을 재사용하고 필요한 M04~M08·기능 실행기 미구현은 partial/unavailable로 보존한다. 후속 명리 규칙/11개 풀이를 구현 완료로 표시하지 않는다.
+- 기능 실행기는 알려진 근거 ID만 선택한다. M01 관법 충돌과 M03 미확정 후보는 확정 서술에서 제외하며 검증된 불변 결과만 서술 투영에 사용한다. 기존 코어/해시는 유지하고 실제 버전·대상·상대·선택 근거를 반영한 결정적 비식별 캐시 키를 생성한다. `feature-json` CLI를 추가했으며 새 공개 HTTP/제품 P06 경로는 연결하지 않았다.
+- 검증: 신규 4파일 53건 포함 **관련 25파일 637건 PASS**, 변수 정리 후 계약 16건 재검증 PASS. tsc --noEmit, lint(경고 0), 변경 TS/모듈·CLI 문서 LF 포맷, 문서 58파일/92링크/0오류 PASS. 타입 2개 매개변수와 미사용 테스트 변수/포맷 문제를 수정해 재검증했다. 실제 CLI는 기존 Windows 샌드박스 프로세스 제한을 피하는 정상 환경에서 실행했다. 상세 범위/제약은 평가 문서에 기록했다.
+- 전체 테스트/전체 format:check/build/E2E 미실행(관련 검사만 실행, UI/웹 route 변경 없음). 기존 CRLF 체크아웃 보존. 실제 API 0회/LIVE_NOT_RUN. .env/.local 실제 예산 파일 열람·변경, DB/PG/시크릿/CI 변경 없음. Mock complete는 조합 검증이며 후속 기능 완료가 아니다.
+- 변경 파일: README.md, docs/evaluations/WBS-30-features.md, docs/worklog.md, src/domain/features/schemas.ts, src/schemas/features.ts, src/application/saju/features/{index.ts,ports.ts,registry.ts,README.md}, src/cli/{commands.ts,run.ts,README.md}, tests/helpers/feature-input.ts, tests/{features.test.ts,features-contract.test.ts,features-orchestration.test.ts,features-cli.test.ts}.
+- AGENTS.md/next-env.d.ts/개인 cli-input.json 사용자 변경은 그대로 보존·커밋 제외한다. develop 대상 PR 한 건 생성 후 즉시 중지한다. PR은 [기능 브랜치 PR 조회](https://github.com/zzz664/saju/pulls?q=head%3Afeature%2FWBS-30-feature-orchestration)와 최종 보고의 직접 URL로 확인한다.

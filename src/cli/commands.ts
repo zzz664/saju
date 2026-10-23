@@ -9,6 +9,7 @@ export const INPUT_COMMANDS = Object.freeze([
   "diagnose-structure",
   "diagnose-relations",
   "diagnose-topic",
+  "feature-json",
   "export-json",
   "manual-prompt",
   "hash-json",

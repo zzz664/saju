@@ -10,6 +10,7 @@ import { calculateCoreExport } from "@/application/core-export";
 import { calculateStructureDiagnosis } from "@/application/structure";
 import { calculateRelations } from "@/application/relations";
 import { calculateTopic } from "@/application/topics";
+import { executeFeature } from "@/application/saju/features";
 import { TopicSchema } from "@/domain/judgment/topics/schemas";
 import { calculateHashedCoreExport } from "@/application/core-fingerprint";
 import type { Sha256Adapter } from "@/domain/core-fingerprint";
@@ -20,7 +21,7 @@ import type { CalendarAdapter } from "@/domain/calendar";
 import { AnalysisInputSchema, getInputInformation } from "@/domain/input";
 
 export type CliResult = { exitCode: 0 | 1 | 2; stdout: string; stderr: string };
-export const HELP = `Usage: npm run --silent saju -- <${INPUT_COMMANDS.join("|")}> < input.json\nInput: one UTF-8 AnalysisInput JSON document, at most 64 KiB.\nnormalize-time resolves IANA civil time and applies the requested solar policy.\ncalculate-policy applies day/hour policies or returns partial unknown-time possibilities.\nderive-facts adds ten gods, hidden stems and separate element counts from confirmed pillars.\njudge-facts evaluates twenty reviewed structural rules with classical sources and evidence.\narbitrate-facts preserves judgments and adds conflict decisions and uncertainty traces.\ndiagnose-structure emits separate M01 candidates and unresolved limits (exit 2).\ndiagnose-relations emits M02 relation occurrences with unassessed effects (exit 2).\ndiagnose-topic <temperament|strengths|career|wealth|romance|social> evaluates one M03 candidate pack (exit 2).\nexport-json emits a validated core document without raw birth data or candidate clocks.\nmanual-prompt emits copyable Korean instructions and confirmed accepted findings only.\nhash-json adds a deterministic versioned SHA-256 checksum to the core document.\nexport-schema emits the structural JSON Schema without stdin.\ncalculate is the compatibility fixed-clock command; prefer calculate-policy.\n`;
+export const HELP = `Usage: npm run --silent saju -- <${INPUT_COMMANDS.join("|")}> < input.json\nInput: one UTF-8 AnalysisInput document (FeatureRequest for feature-json), at most 64 KiB.\nnormalize-time resolves IANA civil time and applies the requested solar policy.\ncalculate-policy applies day/hour policies or returns partial unknown-time possibilities.\nderive-facts adds ten gods, hidden stems and separate element counts from confirmed pillars.\njudge-facts evaluates twenty reviewed structural rules with classical sources and evidence.\narbitrate-facts preserves judgments and adds conflict decisions and uncertainty traces.\ndiagnose-structure emits separate M01 candidates and unresolved limits (exit 2).\ndiagnose-relations emits M02 relation occurrences with unassessed effects (exit 2).\ndiagnose-topic <temperament|strengths|career|wealth|romance|social> evaluates one M03 candidate pack (exit 2).\nfeature-json composes the shared F01-F11 FeatureRequest/FeatureResult contract; pending executors remain incomplete.\nexport-json emits a validated core document without raw birth data or candidate clocks.\nmanual-prompt emits copyable Korean instructions and confirmed accepted findings only.\nhash-json adds a deterministic versioned SHA-256 checksum to the core document.\nexport-schema emits the structural JSON Schema without stdin.\ncalculate is the compatibility fixed-clock command; prefer calculate-policy.\n`;
 
 export function cliError(exitCode: 1 | 2, code: string, message: string): CliResult {
   return { exitCode, stdout: "", stderr: JSON.stringify({ error: { code, message } }) + "\n" };
@@ -65,6 +66,21 @@ export function runCli(
   }
 
   try {
+    if (args[0] === "feature-json") {
+      if (!timeDependencies?.pillars || !timeDependencies.symbols || !timeDependencies.hash)
+        return cliError(1, "CALCULATION_FAILED", "Feature composition is unavailable.");
+      const result = executeFeature(raw, {
+        ...timeDependencies,
+        pillars: timeDependencies.pillars,
+        symbols: timeDependencies.symbols,
+        hash: timeDependencies.hash,
+      });
+      return {
+        exitCode: result.status === "complete" ? 0 : 2,
+        stdout: JSON.stringify(result) + "\n",
+        stderr: "",
+      };
+    }
     if (topicCommand) {
       if (!timeDependencies?.pillars || !timeDependencies.symbols)
         return cliError(1, "CALCULATION_FAILED", "Topic analysis is unavailable.");

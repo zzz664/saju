@@ -28,7 +28,7 @@ Get-Content -Raw -Encoding utf8 tests/fixtures/cli-input.json | npm.cmd run --si
 $LASTEXITCODE
 ```
 
-인자는 `validate`, `calculate`, `normalize-time`, `calculate-policy`, `derive-facts`, `judge-facts`, `arbitrate-facts`, `diagnose-structure`, `diagnose-relations`, `diagnose-topic <topic>`, `export-json`, `manual-prompt`, `hash-json`, `export-schema`, `--help` 중 하나다. 표준입력은 기존 `AnalysisInput` JSON
+인자는 `validate`, `calculate`, `normalize-time`, `calculate-policy`, `derive-facts`, `judge-facts`, `arbitrate-facts`, `diagnose-structure`, `diagnose-relations`, `diagnose-topic <topic>`, `feature-json`, `export-json`, `manual-prompt`, `hash-json`, `export-schema`, `--help` 중 하나다. `feature-json`의 표준입력은 FeatureRequest, 나머지 입력 명령은 기존 `AnalysisInput` JSON
 문서 한 개이며 인자에 생년월일을 넣지 않는다. `--silent`는 npm의 스크립트 안내만 숨겨
 stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다. stdout은 요청된 개발용
 결과이고, 입력 원문을 그대로 반사하거나 일반 로그에 기록하지 않는다.
@@ -72,6 +72,17 @@ stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다
 topic은 `temperament`, `strengths`, `career`, `wealth`, `romance`, `social` 중 하나를 필수로 지정한다.
 선택한 주제 팩만 평가하고 후보·보류 상태를 보존한다. 미지원 주제나 잘못된 인자는 stdin을
 기다리지 않고 USAGE로 종료한다. 실제 성격/능력/직업/재물/관계 결과를 확정하지 않는다.
+
+`feature-json`은 [M09 기능 조합](../application/saju/features/README.md) 검토 명령이다.
+기존 입력에 featureId를 더하고 F08~F10의 target 또는 F11의 상대 출생정보/별도 정책을 지정한다.
+현재 미구현 모듈/실행기는 partial/unavailable(종료 2)로 표시하며 F01~F11 풀이 완료가 아니다.
+complete에만 종료 0을 사용하며 오류는 기존과 같이 stderr로 구분한다.
+
+```powershell
+$taskFeatureInput = Get-Content -Raw -Encoding utf8 tests/fixtures/core-reference-input.json | ConvertFrom-Json -AsHashtable
+$taskFeatureInput['featureId'] = 'F03'
+$taskFeatureInput | ConvertTo-Json -Depth 10 | npm.cmd run --silent saju -- feature-json
+```
 
 기존 `calculate` 연결 조건은 다음을 모두 만족해야 한다.
 
