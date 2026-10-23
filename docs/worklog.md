@@ -1,5 +1,24 @@
 # 작업 기록
 
+## 2026-10-23 — WBS-22: OpenAI 혜택·동의·환경 분리 체크
+
+### 선행 확인과 완료 조건
+
+- 직전 PR #16(WBS-20)의 실제 GitHub 상태 MERGED, 대상 develop, 병합 시각 2026-10-23 14:07:49 KST와 merge commit `0787cddf5d9f876f6932bbfeb1afdbddc448f494`를 확인했다. origin/develop 원격 hash 일치, fetch 후 ancestor 확인. 직접 선행 WBS-18(PR #1)도 develop MERGED 및 ancestor를 확인했다. 실행순서 18의 WBS-22 한 건만 진행했다.
+- `git checkout develop`, `git pull --ff-only origin develop` 성공 후 `git branch -d feature/WBS-20-developer-analysis-ui-api` 안전 삭제 성공. 최신 develop에서 `feature/WBS-22-openai-consent-environment-checklist` 하나를 생성했다. AGENTS/WBS/02/05/06/08 및 관련 07·환경 예제를 읽었다.
+- 구현 전 정한 완료 조건: 조직 설정 수동 확인 체크리스트와 증빙/판정 양식. 혜택 자격·동의·환경 분리의 실제 적용은 별도 확인으로 남기며 무료 토큰 수나 실호출 승인을 추정하지 않는다. 코드/키/계정 설정·SDK/예산 구현은 변경하지 않는다.
+- 먼저 정의한 검증: 정상은 개발 전용 프로젝트·혜택 조건·합성 자료·동의/예산 증빙을 갖춘 판정 흐름, 오류는 계정 접근/혜택/동의 미확인·환경 혼용·고객 자료 전송 거절, 경계는 혜택 소진/초기화 미확인·동의 철회·모델 종료·store:false의 보관 정책 구분. 문서 시나리오를 검토하고 로컬 링크/변경 범위와 기존 최소 npm 테스트를 확인한다. 실제 API 호출로 이 사례를 검증하지 않는다.
+
+### 결과와 제약
+
+- 조직/혜택 7개, 동의/전송/보관 6개, 환경 분리 6개 항목과 비식별 기록 양식, 정상/오류/경계 시나리오를 작성했다. NOT_CHECKED/PASS/FAIL/NOT_APPLICABLE을 구분하고 미확인 혜택 인정량은 0으로 두며 자동 유료 전환을 허용하지 않는다. Mock/CI·수동 개발·스테이징·운영 프로젝트/키와 자료/공유 범위의 요구사항을 구분했다. 이는 적용 완료 증빙이 아닌 수동 점검 기준이다.
+- OpenAI Docs 스킬을 적용해 공식 [Data controls](https://developers.openai.com/api/docs/guides/your-data), [Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices), [GPT-4o mini](https://developers.openai.com/api/docs/models/gpt-4o-mini), [Deprecations](https://developers.openai.com/api/docs/deprecations)를 검색한 뒤 실제 페이지를 읽었다. API 학습 공유와 보관 정책의 차이, 환경 분리 및 지정 모델의 지원 종료 재확인 근거를 체크리스트에 링크했다. 확인일 기준 공식 종료 안내에 gpt-4o-mini-2024-07-18의 2027-01-14 종료가 기재돼 있으며 지정 모델을 임의 교체하지 않았다.
+- 공개 문서나 로그인 전 설정 페이지 열람으로는 사용자 조직의 혜택·공유 동의·프로젝트/키 분리를 확인하지 못했다. 19개 실제 확인 항목과 조직 점검은 전부 NOT_CHECKED, 실호출 승인은 미승인이다. 계정 확인 완료/실연동 성공으로 표시하지 않는다. 체크리스트라는 WBS 산출물과 외부 조직 점검을 구분해 후속 관리자가 확인할 수 있도록 했다.
+- `npm.cmd test -- tests/bootstrap.test.tsx`: 종료 0, 기존 기본 검증 1파일/2건 통과. 문서만 변경해 새 구현을 그대로 반복하는 테스트는 만들지 않았다. 문서의 정상/오류/경계 처리 기준을 수동 검토했으며 이것을 API 실행 테스트로 표시하지 않는다. 타입/린트/빌드·전체 회귀는 실행 코드/설정/의존성 변경이 없어 반복하지 않았다.
+- 변경 문서 4개의 로컬 Markdown 링크 대상 14개가 모두 존재함을 확인했고 `git diff --cached --check`도 통과했다. 최초 링크 검사 명령은 PowerShell stdin의 한글 경로 인코딩으로 실패했으며 파일명 검색 방식으로 수정한 검사가 종료 0으로 통과했다. 기존 사용자 수정 AGENTS.md/작업지시 문서/next-env.d.ts/cli-input.json의 SHA-256은 이전 작업 종료 시와 동일하며 커밋에서 제외한다. 개인 입력 예제 값은 읽거나 테스트/로그로 사용하지 않았다.
+- 변경 파일: `docs/checklists/WBS-22-openai-account-review.md`(절차/시나리오/기록), `docs/08_OpenAI_실험_비용_및_보안.md`(점검 진입·현재 상태), `README.md`(진입 링크), `docs/worklog.md`(선행·검증·제약). 이 4개 문서만 커밋한다.
+- 실제 조직 설정 점검/변경·키 발급/교체·API 호출·비용 발생·SDK/캐시·예산 게이트·P06/SSE/DB/PG/CI/배포는 수행하지 않았다. WBS.csv의 TODO와 미확인 항목을 임의로 완료 처리하지 않는다. 실호출/설정 변경이 필요하면 환경·자료·기간·비용 범위를 정한 별도 승인이 필요하며 이번 작업에서 그 승인을 요청하거나 실행하지 않았다. develop 대상 PR 한 건 생성 뒤 즉시 중지한다.
+
 ## 2026-10-23 — WBS-20: 개발자 검증 UI 및 서버 API
 
 ### 선행 확인과 구현 전 완료 조건
