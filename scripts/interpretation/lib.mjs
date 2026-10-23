@@ -63,11 +63,12 @@ export function listHeadings(text) {
     .map((match) => `${"#".repeat(match[1].length - 1)} ${stripWikitext(match[2])}`);
 }
 
-function extractHeadingSection(lines, locator) {
+/** Raw body lines under the first heading that equals or starts with `heading`, else null. */
+function headingBody(lines, heading) {
   for (let index = 0; index < lines.length; index++) {
     const match = lines[index].match(HEADING);
     // Exact or prefix match only: "甲木" must not pick the "三春甲木" chapter heading.
-    if (!match || !stripWikitext(match[2]).startsWith(locator)) continue;
+    if (!match || !stripWikitext(match[2]).startsWith(heading)) continue;
     const level = match[1].length;
     const body = [];
     for (let cursor = index + 1; cursor < lines.length; cursor++) {
@@ -75,39 +76,23 @@ function extractHeadingSection(lines, locator) {
       if (next && next[1].length <= level) break;
       body.push(lines[cursor]);
     }
-    const text = stripWikitext(body.join("\n"));
-    return text.length ? text : null;
+    return body;
   }
   return null;
 }
 
-/**
- * Many classical texts on Wikisource have no per-month headings: "正月甲木，…" is the first clause
- * of a paragraph. Fall back to the paragraph (consecutive non-empty lines) that starts with the
- * locator; as a last resort a prose line (≥ 20 characters, so link lists are skipped) containing it.
- */
-function extractParagraph(lines, locator) {
-  const plain = lines.map((line) => (HEADING.test(line) ? "" : stripWikitext(line)));
-  const grouped = monthLocator(locator);
-  let index = plain.findIndex((line) => line.startsWith(locator));
-  if (index < 0 && grouped) index = plain.findIndex((line) => grouped.test(line));
-  if (index < 0) index = plain.findIndex((line) => line.length >= 20 && line.includes(locator));
-  if (index < 0) return null;
-  // The paragraph ends at a blank line, a heading, or the next month paragraph of the same subject.
-  const nextMonth = grouped
-    ? new RegExp(`^[正一二三四五六七八九十、，\\s月]{1,16}月${grouped.subject}`)
-    : null;
-  const body = [];
-  for (let cursor = index; cursor < lines.length && plain[cursor].length; cursor++) {
-    if (cursor > index && nextMonth?.test(plain[cursor])) break;
-    body.push(plain[cursor]);
-  }
-  const text = body.join("\n").trim();
+function extractHeadingSection(lines, locator) {
+  const body = headingBody(lines, locator);
+  if (!body) return null;
+  const text = stripWikitext(body.join("\n"));
   return text.length ? text : null;
 }
 
 const MONTHS = ["正", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"];
 const MONTH_NUMERAL = /^[正一二三四五六七八九十]$/;
+const SEASONS = ["三春", "三夏", "三秋", "三冬"];
+const monthPrefixPattern = (subject) =>
+  new RegExp(`^([正一二三四五六七八九十、，\\s月]{1,16}月)${subject}`);
 
 /**
  * Month numbers named in a prefix such as "五六月", "十一、十二月" or "正、二月". In a glued run a
@@ -143,23 +128,79 @@ export function monthLocator(locator) {
   if (!match) return null;
   const month = MONTHS.indexOf(match[1]) + 1;
   const subject = match[2];
-  const prefixPattern = new RegExp(`^([正一二三四五六七八九十、，\\s月]{1,16}月)${subject}`);
+  const prefixPattern = monthPrefixPattern(subject);
   return {
     month,
     subject,
-    test(line) {
+    season: SEASONS[Math.floor((month - 1) / 3)] + subject,
+    /** Months a line's prefix names, or null when the line does not open a month paragraph. */
+    monthsOf(line) {
       const found = line.match(prefixPattern);
-      return Boolean(found) && monthsInPrefix(found[1]).includes(month);
+      return found ? monthsInPrefix(found[1]) : null;
+    },
+    test(line) {
+      return Boolean(this.monthsOf(line)?.includes(month));
     },
   };
+}
+
+const plainLines = (lines) => lines.map((line) => (HEADING.test(line) ? "" : stripWikitext(line)));
+
+/**
+ * Many classical texts on Wikisource have no per-month headings: "正月甲木，…" is the first clause
+ * of a paragraph. Fall back to the paragraph that starts with the locator; as a last resort a prose
+ * line (≥ 20 characters, so link lists are skipped) containing it.
+ * A month block ("正月甲木，…" plus its "或…" elaborations) runs until the next month paragraph of
+ * the same subject or a heading; a non-month paragraph ends at the first blank line.
+ */
+function extractParagraph(lines, locator) {
+  const plain = plainLines(lines);
+  const grouped = monthLocator(locator);
+  let index = plain.findIndex((line) => line.startsWith(locator));
+  if (index < 0 && grouped) index = plain.findIndex((line) => grouped.test(line));
+  if (index < 0) index = plain.findIndex((line) => line.length >= 20 && line.includes(locator));
+  if (index < 0) return null;
+  const body = [];
+  for (let cursor = index; cursor < lines.length; cursor++) {
+    if (HEADING.test(lines[cursor])) break;
+    if (!plain[cursor].length && !grouped) break;
+    if (cursor > index && grouped?.monthsOf(plain[cursor])) break;
+    body.push(plain[cursor]);
+  }
+  const text = body
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return text.length ? text : null;
+}
+
+/**
+ * 窮通寶鑑 writes some chapters per season only ("三夏己土，…" with no month paragraphs). When a
+ * month has no paragraph of its own, use its season section minus the blocks that belong to other
+ * months of the same subject. Returns null when the season heading is absent or nothing remains.
+ */
+function extractSeason(lines, grouped) {
+  const body = headingBody(lines, grouped.season);
+  if (!body) return null;
+  const plain = plainLines(body);
+  const keep = [];
+  let skipping = false;
+  for (const line of plain) {
+    const months = grouped.monthsOf(line);
+    if (months) skipping = !months.includes(grouped.month);
+    if (!skipping) keep.push(line);
+  }
+  const text = keep
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return text.length ? text : null;
 }
 
 /** Lines that name the locator's subject near their start — shown for slots that stay missing. */
 export function candidateLines(text, locator, limit = 6) {
   const subject = monthLocator(locator)?.subject ?? locator;
-  return text
-    .split(/\r?\n/)
-    .map((line) => (HEADING.test(line) ? "" : stripWikitext(line)))
+  return plainLines(text.split(/\r?\n/))
     .filter((line) => {
       const at = line.indexOf(subject);
       return at >= 0 && at <= 20;
@@ -169,21 +210,47 @@ export function candidateLines(text, locator, limit = 6) {
 }
 
 /**
- * Locate a passage. A `·`-joined locator ("論印綬·論食神") means both parts, concatenated; it is
- * null unless every part is found. Each part is looked up first as a heading (body up to the next
- * heading of the same or higher level), then as a paragraph that begins with the locator.
+ * Locate one locator part. `|` separates alternatives tried in order ("論比肩|論劫財"). Each
+ * alternative is looked up as a heading, then as a paragraph, then (month locators) as the season
+ * section. Returns { passage, locator, via } so the collector can record what actually matched.
  */
-export function extractSection(text, locator) {
+function locatePart(lines, part) {
+  for (const alternative of part
+    .split("|")
+    .map((alt) => alt.trim())
+    .filter(Boolean)) {
+    const heading = extractHeadingSection(lines, alternative);
+    if (heading) return { passage: heading, locator: alternative, via: "heading" };
+    const paragraph = extractParagraph(lines, alternative);
+    if (paragraph) return { passage: paragraph, locator: alternative, via: "paragraph" };
+    const grouped = monthLocator(alternative);
+    const season = grouped ? extractSeason(lines, grouped) : null;
+    if (season) return { passage: season, locator: grouped.season, via: "season" };
+  }
+  return null;
+}
+
+/**
+ * Locate a passage. A `·`-joined locator ("論印綬·論食神") means both parts, concatenated; it is
+ * null unless every part is found. Each part may list `|` alternatives.
+ */
+export function locate(text, locator) {
+  const lines = text.split(/\r?\n/);
   const parts = locator
     .split("·")
     .map((part) => part.trim())
     .filter(Boolean);
-  if (parts.length > 1) {
-    const found = parts.map((part) => extractSection(text, part));
-    return found.every(Boolean) ? found.join("\n\n") : null;
-  }
-  const lines = text.split(/\r?\n/);
-  return extractHeadingSection(lines, locator) ?? extractParagraph(lines, locator);
+  const found = parts.map((part) => locatePart(lines, part));
+  if (!found.every(Boolean)) return null;
+  return {
+    passage: found.map((hit) => hit.passage).join("\n\n"),
+    locator: found.map((hit) => hit.locator).join("·"),
+    via: found.map((hit) => hit.via).join("·"),
+  };
+}
+
+export function extractSection(text, locator) {
+  return locate(text, locator)?.passage ?? null;
 }
 
 /** Normalized rendered text when present, else the raw wikitext. */
@@ -191,14 +258,18 @@ export function pageTextOf(page) {
   return page.text ? htmlToText(page.text) : page.wikitext;
 }
 
-/** First match across several renderings of the same page (rendered zh-hant text, then wikitext). */
-export function extractFromPage(page, locator) {
+/** First match across renderings of the same page (rendered zh-hant text, then wikitext). */
+export function locateInPage(page, locator) {
   for (const candidate of [page.text ? htmlToText(page.text) : null, page.wikitext])
     if (candidate) {
-      const section = extractSection(candidate, locator);
-      if (section) return section;
+      const hit = locate(candidate, locator);
+      if (hit) return hit;
     }
   return null;
+}
+
+export function extractFromPage(page, locator) {
+  return locateInPage(page, locator)?.passage ?? null;
 }
 
 /** Bound a passage so prompts and the catalog schema stay within their limits. */

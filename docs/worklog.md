@@ -1135,3 +1135,9 @@
 - 실측: 궁통보감·적천수·삼명통회 권5 모두 열림. missing 30 = 궁통보감 월 20건(五月甲木, 十二月乙木, 丁火 5, 戊土 4, 己土 9)·삼명통회 10건(論印綬·論食神·論正財·論比肩과 조합 6). 권5의 소제목은 論正官·論偏官 계열만 있어 나머지 십성 논은 다른 권에 있다.
 - 수정: (1) 월 locator는 "五六月甲木"·"十一、十二月戊土"·"四五六月己土"처럼 묶어 쓴 단락에도 맞도록 `monthLocator`/`monthsInPrefix` 추가. (2) 렌더링 본문의 `</p>`를 빈 줄로 바꾸고, 단락은 빈 줄·소제목·같은 일간의 다음 달 단락에서 끊는다(이전엔 다음 소제목까지 이어져 한 달 구절에 다른 달 본문이 섞일 수 있었다). (3) `三命通會/卷N`에서 locator가 없으면 이웃 권(六·四·七·三)을 차례로 찾고, `·` 조합은 부분마다 따로 찾는다. 다른 권에서 찾으면 `passages.json`에 `url`을 기록하고 `moved`로 알리며 카탈로그 합성이 그 url을 쓴다(`PassagesFileSchema.url` 선택 필드). (4) `--inspect`가 missing locator마다 `near` 후보 줄을 출력.
 - 검증: `tests/interpretation-scripts.test.ts` 7건·`tests/interpretation.test.ts` 5건 PASS, lint·typecheck·check:docs PASS. 실수집은 사용자 환경에서 재실행한다.
+
+### 후속 3 — 2차 실측(118 수집 / 23 missing / 5 moved) 반영
+
+- 실측: 論印綬·論食神·論正財는 `三命通會/卷六`에서 발견(`moved`). 論比肩은 卷三~卷七 어디에도 소제목이 없다. 궁통보감 잔여 19건은 `near` 후보에 월 단락이 전혀 보이지 않아, 己土처럼 계절 단위("三夏己土，…")로만 쓴 장이거나 월 표기가 다른 경우다.
+- 수정: (1) 월 단락이 없으면 계절 소제목 절(三春/三夏/三秋/三冬+일간)에서 다른 달 블록을 뺀 나머지를 쓰고 `passages.json`에 `locator`를 기록(`adjusted`). (2) 월 블록이 뒤따르는 "或…" 보충 단락을 포함하도록 빈 줄에서 끊지 않고 다음 달 단락·소제목에서 끊는다. (3) locator `|` 대안(`論比肩|論劫財|論比劫`), 맞은 대안을 기록. (4) scaffold: 십성군별 권 지정(印綬·食神·正財 卷六, 正官 卷五), 조합 locator는 가족 locator에서 파생, 조합 url은 첫 가족의 권. (5) `PassagesFileSchema.locator` 선택 필드와 합성 반영. (6) `--inspect` 소제목 전체 출력(40개 상한 제거).
+- 검증: `tests/interpretation-scripts.test.ts` 8건·`tests/interpretation.test.ts` 5건 PASS, lint·typecheck PASS. 실수집은 사용자 환경에서 재실행한다.

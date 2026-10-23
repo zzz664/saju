@@ -18,9 +18,9 @@ import {
   createWikitextLoader,
   pageTextOf,
   digestText,
-  extractFromPage,
   htmlToText,
   listHeadings,
+  locateInPage,
   titleFromUrl,
   WikisourcePageError,
 } from "./lib.mjs";
@@ -67,6 +67,7 @@ async function main() {
     skipped: 0,
     missing: [],
     relocated: [],
+    adjusted: [],
     pageErrors: new Map(),
     unavailable: 0,
   };
@@ -101,17 +102,17 @@ async function main() {
     const found = [];
     const foundTitles = new Set();
     for (const part of parts) {
-      let section = extractFromPage(page, part);
+      let hit = locateInPage(page, part);
       let foundIn = title;
       for (const sibling of siblingTitles(title)) {
-        if (section) break;
+        if (hit) break;
         const other = await loadPage(sibling);
         if (!other) continue;
-        section = extractFromPage(other, part);
-        if (section) foundIn = sibling;
+        hit = locateInPage(other, part);
+        if (hit) foundIn = sibling;
       }
-      if (!section) break;
-      found.push(section);
+      if (!hit) break;
+      found.push(hit);
       foundTitles.add(foundIn);
     }
     if (found.length !== parts.length) {
@@ -120,7 +121,7 @@ async function main() {
       missingByTitle.get(title).push(locator);
       continue;
     }
-    const passage = boundPassage(found.join("\n\n"));
+    const passage = boundPassage(found.map((hit) => hit.passage).join("\n\n"));
     const record = {
       passage,
       retrievedAt: new Date().toISOString(),
@@ -132,6 +133,14 @@ async function main() {
       record.url = WIKI + encodeURIComponent(actual);
       report.relocated.push(
         `${sourceId}: ${title} → ${actual} (scaffold.ts url을 이 제목으로 고친다)`,
+      );
+    }
+    // Matched a `|` alternative or fell back to the season section: record the locator that applies.
+    const actualLocator = found.map((hit) => hit.locator).join("·");
+    if (actualLocator !== locator) {
+      record.locator = actualLocator;
+      report.adjusted.push(
+        `${sourceId}: ${locator} → ${actualLocator} (${found.map((hit) => hit.via).join("·")})`,
       );
     }
     file.passages[sourceId] = record;
@@ -148,6 +157,7 @@ async function main() {
         skipped: report.skipped,
         missing: report.missing.length,
         relocated: report.relocated.length,
+        adjusted: report.adjusted.length,
         pagesFailed: report.pageErrors.size,
         slotsWithoutPage: report.unavailable,
       },
@@ -157,6 +167,7 @@ async function main() {
   );
   for (const line of report.missing) console.log("missing  " + line);
   for (const line of report.relocated) console.log("moved    " + line);
+  for (const line of report.adjusted) console.log("adjusted " + line);
   if (inspect)
     for (const [title, locators] of missingByTitle) {
       const page = pages.get(title);
@@ -213,8 +224,7 @@ function describePages(pages, dir) {
       `inspect  ${title}: wikitext ${page.wikitext.length}자, rendered ${rendered.length}자, headings ${headings.length}` +
         (transcluded ? ", 하위 페이지/ProofreadPage 전사 포함(렌더링 본문 사용)" : ""),
     );
-    for (const heading of headings.slice(0, 40)) console.log(`         ${heading}`);
-    if (headings.length > 40) console.log(`         … ${headings.length - 40}개 더`);
+    for (const heading of headings) console.log(`         ${heading}`);
     const sample = (rendered || page.wikitext).replace(/\s+/g, " ").slice(0, 240);
     console.log(`         본문 앞부분: ${sample}`);
     if (dir) {

@@ -78,54 +78,61 @@ const BRANCH_ROMAN: Record<string, string> = {
   술: "sul",
   해: "hae",
 };
-const FAMILY_LOCATOR: Record<TenGodFamily, { locator: string; topics: readonly Topic[] }> = {
-  resource: { locator: "論印綬", topics: ["temperament", "strengths", "career"] },
-  output: { locator: "論食神", topics: ["temperament", "strengths", "career", "wealth", "social"] },
-  authority: { locator: "論正官", topics: ["career", "social", "strengths"] },
-  wealth: { locator: "論正財", topics: ["wealth", "career"] },
-  peer: { locator: "論比肩", topics: ["social", "temperament"] },
+/**
+ * 三命通會 volume (卷) that carries each 十神 chapter, confirmed by the collector's `--inspect`
+ * output: 論正官·論偏官 are in 卷五, 論印綬·論食神·論正財 in 卷六. The collector still probes the
+ * neighbouring volumes when a locator is absent and records the page it actually used.
+ */
+const FAMILY_LOCATOR: Record<
+  TenGodFamily,
+  { locator: string; volume: string; topics: readonly Topic[] }
+> = {
+  resource: { locator: "論印綬", volume: "卷六", topics: ["temperament", "strengths", "career"] },
+  output: {
+    locator: "論食神",
+    volume: "卷六",
+    topics: ["temperament", "strengths", "career", "wealth", "social"],
+  },
+  authority: { locator: "論正官", volume: "卷五", topics: ["career", "social", "strengths"] },
+  wealth: { locator: "論正財", volume: "卷六", topics: ["wealth", "career"] },
+  // `|` lists alternatives the collector tries in order; the matched one is recorded with the passage.
+  peer: { locator: "論比肩|論劫財|論比劫", volume: "卷六", topics: ["social", "temperament"] },
 };
+const SMTH = (volume: string) => WIKISOURCE + encodeURIComponent(`三命通會/${volume}`);
 const FAMILY_PAIRS: readonly {
   key: string;
   families: readonly [TenGodFamily, TenGodFamily];
   topics: readonly Topic[];
-  locator: string;
 }[] = [
   {
     key: "resource-output",
     families: ["resource", "output"],
     topics: ["temperament", "strengths"],
-    locator: "論印綬·論食神",
   },
   {
     key: "authority-resource",
     families: ["authority", "resource"],
     topics: ["strengths", "career"],
-    locator: "論正官·論印綬",
   },
   {
     key: "output-wealth",
     families: ["output", "wealth"],
     topics: ["career", "wealth"],
-    locator: "論食神·論正財",
   },
   {
     key: "wealth-peer",
     families: ["wealth", "peer"],
     topics: ["wealth"],
-    locator: "論正財·論比肩",
   },
   {
     key: "peer-output",
     families: ["peer", "output"],
     topics: ["social"],
-    locator: "論比肩·論食神",
   },
   {
     key: "peer-authority",
     families: ["peer", "authority"],
     topics: ["social", "temperament"],
-    locator: "論比肩·論正官",
   },
 ];
 const COMMON_CAVEATS = [
@@ -190,7 +197,7 @@ export function buildScaffold(): readonly ScaffoldEntry[] {
         sourceId: `src.smth.${family}`,
         work: "삼명통회",
         locator: entry.locator,
-        url: WIKISOURCE + encodeURIComponent("三命通會/卷五"),
+        url: SMTH(entry.volume),
         license: "public-domain",
         language: "zh-Hant",
       },
@@ -208,8 +215,9 @@ export function buildScaffold(): readonly ScaffoldEntry[] {
       source: {
         sourceId: `src.smth.pair.${pair.key}`,
         work: "삼명통회",
-        locator: pair.locator,
-        url: WIKISOURCE + encodeURIComponent("三命通會/卷五"),
+        locator: pair.families.map((family) => FAMILY_LOCATOR[family].locator).join("·"),
+        // A pair may span two volumes; the url names the first family's volume, parts resolve per page.
+        url: SMTH(FAMILY_LOCATOR[pair.families[0]].volume),
         license: "public-domain",
         language: "zh-Hant",
       },

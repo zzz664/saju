@@ -20,6 +20,8 @@ export const PassagesFileSchema = z.strictObject({
       passageDigest: HexDigestSchema,
       /** Set by the collector when the passage was found on a sibling page, not the scaffold url. */
       url: z.url().startsWith("https://zh.wikisource.org/").optional(),
+      /** Set by the collector when a `|` alternative or the season section matched instead. */
+      locator: z.string().min(1).optional(),
     }),
   ),
 });
@@ -53,6 +55,7 @@ export function composeInterpretationCatalog(
       return {
         ...entry.source,
         url: collected?.url ?? entry.source.url,
+        locator: collected?.locator ?? entry.source.locator,
         passage: collected?.passage ?? null,
         retrievedAt: collected?.retrievedAt ?? null,
         passageDigest: collected?.passageDigest ?? null,

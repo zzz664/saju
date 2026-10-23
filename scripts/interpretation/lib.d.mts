@@ -5,10 +5,17 @@ export function htmlToText(html: string): string;
 export function listHeadings(text: string): string[];
 export type WikisourcePage = { wikitext: string; text: string | null };
 export function extractFromPage(page: WikisourcePage, locator: string): string | null;
+export type LocateHit = { passage: string; locator: string; via: string };
+export function locate(text: string, locator: string): LocateHit | null;
+export function locateInPage(page: WikisourcePage, locator: string): LocateHit | null;
 export function monthsInPrefix(prefix: string): number[];
-export function monthLocator(
-  locator: string,
-): { month: number; subject: string; test(line: string): boolean } | null;
+export function monthLocator(locator: string): {
+  month: number;
+  subject: string;
+  season: string;
+  monthsOf(line: string): number[] | null;
+  test(line: string): boolean;
+} | null;
 export function candidateLines(text: string, locator: string, limit?: number): string[];
 export function pageTextOf(page: WikisourcePage): string;
 export function boundPassage(text: string, maxCharacters?: number): string;

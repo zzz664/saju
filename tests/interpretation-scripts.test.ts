@@ -12,6 +12,7 @@ import {
   extractSection,
   htmlToText,
   listHeadings,
+  locate,
   outputTextOf,
   parseEntailmentVerdict,
   stripWikitext,
@@ -54,7 +55,9 @@ describe("interpretation collector helpers (offline)", () => {
     );
     expect(extractSection(prose, "二月甲木")).toBe("二月甲木，陽氣漸升。\n目錄：正月甲木");
     expect(extractSection(prose, "甲木")).toBe("甲木參天，脫胎要火。\n乙木雖柔，刲羊解牛。");
-    expect(extractSection(prose, "三月甲木")).toBeNull();
+    // No 三月 paragraph: the season section minus the other months' blocks stands in.
+    expect(extractSection(prose, "三月甲木")).toBe("三春甲木總論。");
+    expect(extractSection(prose, "七月甲木")).toBeNull();
     // A `·` locator needs every part; parts are concatenated in order.
     const smth = "== 論印綬 ==\n印者。\n== 論食神 ==\n食者。\n== 論正財 ==\n財者。";
     expect(extractSection(smth, "論印綬·論食神")).toBe("印者。\n\n食者。");
@@ -83,8 +86,61 @@ describe("interpretation collector helpers (offline)", () => {
     expect(extractSection(text, "五月己土")).toBe("四五六月己土，雜氣財官。");
     expect(extractSection(text, "七月己土")).toBeNull();
     expect(monthLocator("論印綬")).toBeNull();
+    expect(monthLocator("七月己土")?.season).toBe("三秋己土");
     expect(candidateLines(text, "七月己土")).toEqual(["四五六月己土，雜氣財官。"]);
     expect(candidateLines(text, "論印綬")).toEqual([]);
+  });
+  it("keeps a month block with its 或… elaborations and falls back to the season section", () => {
+    const text = `== 三春乙木 ==
+三春乙木，為芝蘭蒿草之物。
+
+正月乙木，必須用丙。
+
+或支成木局，有癸透乃作貴命。
+
+二月乙木，陽氣漸升。
+== 三夏己土 ==
+三夏己土，雜氣財官，禾稼在田。
+
+或丙透癸藏，科甲。
+== 三冬乙木 ==
+三冬乙木，花木寒凍。
+
+十月乙木，木不受氣。
+
+或一派壬水。
+
+十一月乙木，花木寒凍。
+== 論劫財 ==
+劫財者。`;
+    // Month block: from "正月乙木" through its "或…" paragraph, up to the next month paragraph.
+    expect(extractSection(text, "正月乙木")).toBe(
+      "正月乙木，必須用丙。\n\n或支成木局，有癸透乃作貴命。",
+    );
+    expect(extractSection(text, "二月乙木")).toBe("二月乙木，陽氣漸升。");
+    // No month paragraph at all: the season section is used and reported as such.
+    expect(locate(text, "五月己土")).toEqual({
+      passage: "三夏己土，雜氣財官，禾稼在田。\n\n或丙透癸藏，科甲。",
+      locator: "三夏己土",
+      via: "season",
+    });
+    // Season fallback drops the blocks that belong to other months of the same subject.
+    expect(locate(text, "十二月乙木")).toEqual({
+      passage: "三冬乙木，花木寒凍。",
+      locator: "三冬乙木",
+      via: "season",
+    });
+    expect(locate(text, "三月乙木")?.passage).toBe("三春乙木，為芝蘭蒿草之物。");
+    expect(locate(text, "七月己土")).toBeNull();
+    // `|` alternatives: the first that exists wins and is reported.
+    expect(locate(text, "論比肩|論劫財|論比劫")).toEqual({
+      passage: "劫財者。",
+      locator: "論劫財",
+      via: "heading",
+    });
+    expect(locate(text, "論比肩|論比劫")).toBeNull();
+    expect(locate(text, "論劫財·正月乙木")?.locator).toBe("論劫財·正月乙木");
+    expect(locate(text, "論劫財·正月乙木")?.via).toBe("heading·paragraph");
   });
   it("normalizes rendered html and prefers it over raw wikitext", () => {
     const html = `<div class="mw-parser-output"><table><tr><td>上一卷</td></tr></table>
@@ -96,7 +152,7 @@ describe("interpretation collector helpers (offline)", () => {
     expect(listHeadings(htmlToText(html))).toEqual(["# 論印綬", "# 論食神"]);
     // Separate <p> blocks become separate paragraphs, so a month passage stops at the next one.
     const months = htmlToText("<p>正月甲木，初春。</p><p>又一段。</p><p>二月甲木，陽升。</p>");
-    expect(extractSection(months, "正月甲木")).toBe("正月甲木，初春。");
+    expect(extractSection(months, "正月甲木")).toBe("正月甲木，初春。\n\n又一段。");
     expect(extractSection(months, "二月甲木")).toBe("二月甲木，陽升。");
     expect(extractFromPage({ wikitext: "<pages index=x />", text: html }, "論印綬")).toBe(
       "印者 生我之物。\n二句。",
