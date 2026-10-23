@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "node scripts/developer-e2e.mjs",
+    "eval:persona": "node --import tsx tests/evaluation/run-persona-evaluation.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint . --max-warnings=0"
   },

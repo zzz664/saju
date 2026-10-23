@@ -91,11 +91,13 @@ styleEvaluation은 상투어, 중복 문단, 확정·과장 표현, 이모지, �
 |세 계층·공통 원문·개인 입력 제외|자동 테스트 통과|
 |해요체/합쇼체/반말의 동일 근거·서로 다른 문체/서술 키|합성 mock 대조 통과|
 |미상/계산 불가·근거/제목/길이/날짜·오류/거절·예산 차단|자동 테스트 통과|
-|자연스러움/가독성 평균 4점·30케이스 반복·2명 평가|미실시, WBS-25의 별도 평가 범위|
+|30케이스 × 합성 문체 2종 × 3회 반복|WBS-25 Mock 180/180 계약 대조, [평가 기록](../../../docs/evaluations/WBS-25-persona-quality.md)|
+|자연스러움/가독성 평균 4점·2명 사람 평가|미실시, 목표 점수는 Mock으로 채우지 않음|
 |실 OpenAI/고객 캐릭터/제품명·R02/R03 SSE/DB 완료|미구현·미검증, 실연동 BLOCKED|
 
 ```sh
 npm test -- tests/persona.test.ts tests/narration.test.ts tests/experiment-guard.test.ts
+npm run eval:persona
 node node_modules/typescript/bin/tsc --noEmit
 npm run lint
 ```

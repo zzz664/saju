@@ -1,5 +1,36 @@
 # 작업 기록
 
+## 2026-10-23 — WBS-25: R01 Mock 반복 품질 평가·샘플/사람 평가 기준
+
+### 선행 확인과 구현 전 완료 조건
+
+- 직전 PR #21(WBS-16)의 GitHub MERGED, 대상 develop, 병합 시각 2026-10-23 16:58:17 KST, merge commit `2606c19f806beab01cf79a56cd474531c0a4eb14`를 확인했다. 원격 develop 해시 일치 및 fetch 후 ancestor 확인. 직접 선행 WBS-24(PR #19, `b03d3803b8d16e21d0e9d5afc79d580cdc401600`), WBS-47(PR #20, `537b73d489870fe4e79dcedfc5fdcfe0ab15e9d4`)도 GitHub develop MERGED 및 ancestor 확인했다.
+- develop checkout/ff-only pull 후 `git branch -d feature/WBS-16-independent-golden-qa` 안전 삭제 성공. 최신 develop에서 `feature/WBS-25-persona-quality-evaluation` 한 개를 생성했다. 실행순서 23의 WBS-25만 진행했다. AGENTS/WBS/02/05/06/08과 관련 03/11/12·기존 R01/예산/Mock·독립 골든 계약을 읽었다. 직전 30건 승인은 역법 기대값 승인으로 유지하고 문장 품질 승인으로 전용하지 않았다.
+- 먼저 평가 문서에 완료 조건/정상·오류·경계를 정의하고 테스트를 작성했다. 고정 합성 사례 30개 × 합성 해요체/합쇼체 2종 × 3회 = 180회, JSON/근거·원문 인용·제한/상태·분석 키/버전·입력 불변을 검증하며 반복 문장과 휴리스틱은 별도 지표다. 자연스러움/가독성 5점 척도·평균 4점 목표와 사람 2명 권장 기준을 명시하고 미평가 점수를 만들지 않는다.
+- 오류/경계는 2~3회 반복 범위, 중복/위조 데이터·주입 필드·미승인 버전·공급자 거절/불완전/오류·JSON/근거 이탈·유효 ID를 재사용한 주장 변경·실 공급자/production/예산 차단, 부분/불가 입력, 동일/상이한 반복 출력을 검사한다. 최초 테스트 실행은 evaluation 모듈 부재로 종료 1을 확인했다.
+
+### 구현과 검증 결과
+
+- 고정 manifest는 승인된 WBS-16 입력 20개(윤달/윤일/일진·절기·DST·태양시)와 미상 4개, 불가 6개(경도·fold/gap reject·실재하지 않는 윤달·지원 범위)다. 입력에서 코어를 한 번씩 계산하며 사용자 편집 cli-input.json은 사용하지 않는다. 결과 상태는 complete 20 / partial 4 / unavailable 6이다. 코어·원래 명리 규칙과 persona Mock 문구는 변경하지 않았다.
+- evaluatePersonaMatrix는 평가 입력/설정·승인 목록/모든 코어·스펙을 호출 전 검증하고 기존 createPersonaExperiment의 접근·기한·가격 예약·동시성 경로를 재사용한다. 실 공급자를 호출 전에 거절하고, 최대 30사례/3프로필/3회로 제한한다. 매 시도를 결과 분모에 포함하고 실패는 고정 코드와 null 샘플로 기록하며 재시도하지 않는다. 예외 원문을 내보내지 않는다.
+- 출력 스키마와 허용 근거 ID는 기존 R01에서 검증한다. 추가로 Mock의 인용 assertion이 해당 근거 원문과 일치하는지 확인한다. 유효 ID에 새로운 주장을 붙인 오류는 ASSERTION_MISMATCH다. 인용 밖 문장의 모든 의미/안전/환각을 판정하는 검사는 아니다. 기존 휴리스틱 지적은 구조 실패와 구분한다.
+- 결과에는 평가/프롬프트/문체 정책·실제 코어 버전, 승인형 합성 프로필/spec, 사례별 원래 확정 판단/제한, 분석/서술 키·출력 digest, 180회 결과·반복 동일성·집계를 남긴다. raw 출생 입력과 공급자 요청 원문·키는 포함하지 않는다. 새 HTTP/P06 경로에 연결하지 않는다.
+- `npm.cmd run eval:persona`: 최종 종료 0, **180/180 계약 대조**, 실패 0, 기존 문체 휴리스틱 지적 0. 두 문체 모두 분석 키·근거가 같고 문장/서술 키가 다르다. 60개 사례·문체 조합의 세 반복은 모두 동일했다. 문체별 전체 출력은 각 90회 중 9종, 도입은 2종(첫 발생 제외 중복 88회); 반복을 빼고 30사례당 하나만 보면 도입 2종·중복 28건이다. 높은 템플릿 반복성을 그대로 기록했다.
+- 결과 JSON과 사람이 읽는 샘플 Markdown을 고정 경로에 생성한다. 같은 사례·문체에서 같은 반복은 하나로 묶고 다른 출력은 모두 표시한다. 원래 관찰과 입력/계산/중재 제한을 같이 읽도록 했다. 재생성 파일에는 사람 점수를 쓰지 않고 별도 평가 기록을 안내한다. 계약 실패/휴리스틱 지적 시 도구 종료 1, stdout은 집계만 출력한다.
+- 첫 도구 실행은 샌드박스에서 tsx가 Windows 사용자 정보를 조회하다 `uv_os_get_passwd / ENOMEM`으로 실패했다. 자동 승인된 샌드박스 밖에서 **동일한 로컬 Mock 명령**을 실행해 성공했다. production·`--live` 미지원 인수는 종료 1/고정 오류이며 산출물 바이트 불변도 subprocess로 확인했다. 실제 API/키를 읽거나 호출하지 않았다.
+- `npm.cmd test -- tests/persona-evaluation.test.ts tests/persona.test.ts tests/narration.test.ts tests/experiment-guard.test.ts`: 관련 4파일/105개 통과(신규 16 + 기존 89). 이후 서로 다른 반복 출력을 모두 검토 문서에 남기는 검사와 제한 표시를 보강하고 `npm.cmd test -- tests/persona-evaluation.test.ts` 최종 **17개 통과** 및 평가 도구를 재실행했다. 실패를 숨기거나 기존 테스트를 skip하지 않았다.
+- `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`: 최종 모두 종료 0, 경고 0. 문서 로컬 링크 22개·180개 고유 실행 조합·결과 원본 입력 키 부재·사용자 수정 4파일 SHA-256 동일 확인. Node 24.12.0 / ICU 77.1 / tzdb 2025b. 라우트/Next 설정·의존성 변경이 없어 빌드/Next 타입 생성·무관한 전체 회귀는 반복하지 않았다. package.json에는 평가 script만 추가했고 lockfile 의존성은 동일하다.
+- OpenAI Docs 스킬로 공식 [Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices)를 검색 후 실제 페이지를 읽어 과업별 목표·정상/경계/적대 사례와 사람 평가 병행 원칙을 참고했다. API 기반 평가 플랫폼이나 자동 LLM 채점기를 도입하지 않았으며 지정 gpt-4o-mini를 다른 모델로 치환하지 않았다.
+
+### 변경 파일과 한계
+
+- `src/application/narration/evaluation.ts`: 제한된 Mock 평가 실행기, Zod 결과 계약·인용/불변성·집계·읽기용 샘플 렌더러.
+- `tests/persona-evaluation.test.ts`, `tests/evaluation/persona-fixtures.ts`, `tests/evaluation/run-persona-evaluation.ts`, `tests/fixtures/persona-evaluation-cases.json`: 고정 사례/합성 승인 목록·기존 예산 조합, 평가 CLI와 정상/오류/경계 테스트.
+- `docs/evaluations/WBS-25-persona-quality.md`, `WBS-25-persona-quality-results.json`, `WBS-25-persona-quality-samples.md`: 수용 기준·사람 채점 기준, 실제 180회 결과와 읽기용 60개 사례·문체 샘플.
+- `package.json`, `README.md`, `src/domain/persona/README.md`, `docs/worklog.md`: 재현 명령·평가 범위와 결과. 총 12개 작업 파일만 포함한다.
+- **사람 자연스러움/가독성·의미 평가 0/60, 점수 null**, 평가자 미지정이다. Mock은 원문 인용/합성 높임말만 바꾸므로 실제 모델의 표현력·성격 반영·생성 변동성·주입 내성을 입증하지 않는다. 휴리스틱 0건을 사람 품질 합격으로 바꾸지 않는다. 평균 4점 목표 달성·의미 변경 0건(사람 포함)은 미검증이다.
+- 실 OpenAI API·계정 동의/혜택·과금 평가는 별도 승인 전 미실시다. F02/F05/F09 등 미구현 11개 기능의 문체 일관성·R02/R03 SSE/P06·DB 완료·OAuth·PG·CI/배포·후속 WBS는 수행하지 않는다. 결과는 내부 Mock 평가 기록이며 고객 풀이 품질/운영 승인과 다르다. WBS.csv 상태와 기존 사용자 수정 4개 파일은 변경하지 않는다. develop 대상 PR 한 건 생성 후 즉시 중지한다.
+
 ## 2026-10-23 — WBS-16: 독립 골든 30건 통합 대조·승인 검토 자료
 
 ### 사용자 승인 반영 — 2026-10-23 16:55 KST
