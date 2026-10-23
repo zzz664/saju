@@ -44,4 +44,6 @@ export type PolicyPillarsRequest = z.infer<typeof PolicyPillarsRequestSchema>;
 export type PolicyPillarsSnapshot = z.infer<typeof PolicyPillarsSnapshotSchema>;
 export interface PolicyCalendarAdapter {
   readonly calculate: (request: PolicyPillarsRequest) => PolicyPillarsSnapshot;
+  /** Optional request-local reuse certified by the adapter's own clock/term semantics. */
+  readonly scopeForCandidates?: () => PolicyCalendarAdapter;
 }

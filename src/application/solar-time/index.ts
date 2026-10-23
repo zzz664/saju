@@ -1,13 +1,18 @@
 import { SolarTimeReasonSchema } from "@/domain/contracts";
 import { z } from "zod";
-import { AnalysisInputSchema, InputInformationSchema, getInputInformation } from "@/domain/input";
+import {
+  AnalysisInputSchema,
+  InputInformationSchema,
+  getInputInformation,
+  type AnalysisInput,
+} from "@/domain/input";
 import {
   applySolarTimePolicy,
   SolarTimeSnapshotSchema,
   type EquationOfTimeAdapter,
 } from "@/domain/solar-time";
 import {
-  normalizeBirthTime,
+  normalizeParsedBirthTime,
   TimeNormalizationResultSchema,
   type TimeNormalizationDependencies,
 } from "@/application/time-normalization";
@@ -37,6 +42,14 @@ export function prepareBirthTime(
   dependencies: SolarTimeDependencies,
 ): PreparedBirthTime {
   const input = AnalysisInputSchema.parse(value);
+  return PreparedBirthTimeSchema.parse(prepareParsedBirthTime(input, dependencies));
+}
+
+/** Internal typed pipeline: no hypothetical minute needs to reparse AnalysisInput. */
+export function prepareParsedBirthTime(
+  input: AnalysisInput,
+  dependencies: SolarTimeDependencies,
+): PreparedBirthTime {
   if (input.birthInput.birthTime.status === "unknown")
     return PreparedBirthTimeSchema.parse({
       status: "unavailable",
@@ -50,9 +63,9 @@ export function prepareBirthTime(
       information: getInputInformation(input),
     });
   }
-  const result = normalizeBirthTime(input, dependencies);
-  if (result.status !== "normalized") return PreparedBirthTimeSchema.parse(result);
-  return PreparedBirthTimeSchema.parse({
+  const result = normalizeParsedBirthTime(input, dependencies);
+  if (result.status !== "normalized") return result;
+  return Object.freeze({
     ...result,
     solarTime: applySolarTimePolicy(
       {

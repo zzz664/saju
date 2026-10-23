@@ -8,6 +8,7 @@ import {
   type PolicyPillarsRequest,
 } from "@/domain/policy-calendar";
 import { SdkPillarsProjectionSchema } from "@/infrastructure/manseryeok/schemas";
+import { candidatePolicyCalendarScope } from "@/infrastructure/manseryeok/candidate-scope";
 
 function clockFields(ms: number): BirthInfo {
   const date = new Date(ms);
@@ -24,6 +25,11 @@ function clockFields(ms: number): BirthInfo {
 
 /** Project two explicit clocks through public SDK calls; never reuse shifted solar time for terms. */
 export const manseryeokPolicyCalendarAdapter: PolicyCalendarAdapter = Object.freeze({
+  scopeForCandidates() {
+    return this.calculate === manseryeokPolicyCalendarAdapter.calculate
+      ? candidatePolicyCalendarScope(this)
+      : { calculate: this.calculate };
+  },
   calculate(value: PolicyPillarsRequest) {
     const request = PolicyPillarsRequestSchema.safeParse(value);
     if (!request.success) throw new CalendarAdapterError("INPUT_REJECTED");

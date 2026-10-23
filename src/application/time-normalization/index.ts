@@ -7,7 +7,12 @@ import {
   CalendarConversionSnapshotSchema,
   type CalendarConversionAdapter,
 } from "@/domain/calendar";
-import { AnalysisInputSchema, InputInformationSchema, getInputInformation } from "@/domain/input";
+import {
+  AnalysisInputSchema,
+  InputInformationSchema,
+  getInputInformation,
+  type AnalysisInput,
+} from "@/domain/input";
 import {
   LocalTimeRequestSchema,
   ResolvedTimeSchema,
@@ -50,6 +55,14 @@ export function normalizeBirthTime(
   dependencies: TimeNormalizationDependencies,
 ): TimeNormalizationResult {
   const input = AnalysisInputSchema.parse(value);
+  return TimeNormalizationResultSchema.parse(normalizeParsedBirthTime(input, dependencies));
+}
+
+/** Internal typed pipeline: input was parsed at the public application boundary. */
+export function normalizeParsedBirthTime(
+  input: AnalysisInput,
+  dependencies: TimeNormalizationDependencies,
+): TimeNormalizationResult {
   const { birthInput, calculationPolicy } = input;
   const information = getInputInformation(input);
   const unavailable = (
@@ -117,9 +130,7 @@ export function normalizeBirthTime(
     result.data.request.disambiguation !== request.data.disambiguation
   )
     throw new TimeZoneAdapterError("OUTPUT_INVALID");
-  return TimeNormalizationResultSchema.parse({
-    status: result.data.status === "resolved" ? "normalized" : "rejected",
-    time: result.data,
-    information,
-  });
+  return result.data.status === "resolved"
+    ? Object.freeze({ status: "normalized", time: result.data, information })
+    : Object.freeze({ status: "rejected", time: result.data, information });
 }

@@ -1,5 +1,6 @@
 import { deepEqualCanonical } from "@/domain/json";
 import { PolicyCalculationReasonSchema } from "@/domain/contracts";
+
 import { z } from "zod";
 import { CalendarAdapterError, CalendarPillarsSchema } from "@/domain/calendar";
 import {
@@ -20,7 +21,7 @@ import {
 import { ResolvedTimeSchema } from "@/domain/timezone";
 import { SolarTimeSnapshotSchema } from "@/domain/solar-time";
 import {
-  prepareBirthTime,
+  prepareParsedBirthTime,
   PreparedBirthTimeSchema,
   type SolarTimeDependencies,
 } from "@/application/solar-time";
@@ -172,7 +173,7 @@ function known(
   input: AnalysisInput,
   dependencies: PolicySajuDependencies,
 ): PolicyCalculationResult {
-  const prepared = prepareBirthTime(input, dependencies);
+  const prepared = prepareParsedBirthTime(input, dependencies);
   if (prepared.status !== "normalized") return PolicyCalculationResultSchema.parse(prepared);
   const request = PolicyPillarsRequestSchema.safeParse({
     instant: prepared.solarTime.instant,
@@ -193,7 +194,7 @@ function known(
   const snapshot = PolicyPillarsSnapshotSchema.safeParse(raw);
   if (!snapshot.success || !deepEqualCanonical(snapshot.data.request, request.data))
     throw new CalendarAdapterError("OUTPUT_INVALID");
-  return PolicyCalculationResultSchema.parse({
+  return Object.freeze({
     status: "calculated",
     snapshot: snapshot.data,
     time: prepared.time,
@@ -219,6 +220,8 @@ export function calculatePolicySaju(
     | undefined;
   const candidateDependencies: PolicySajuDependencies = {
     ...dependencies,
+    timeZone: dependencies.timeZone.scopeForCandidates?.() ?? dependencies.timeZone,
+    pillars: dependencies.pillars.scopeForCandidates?.() ?? dependencies.pillars,
     calendar: {
       convert(request) {
         if (!conversion) {
@@ -239,10 +242,7 @@ export function calculatePolicySaju(
   for (let minute = 0; minute < 1440; minute++) {
     const time = `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
     const result = known(
-      AnalysisInputSchema.parse({
-        ...input,
-        birthInput: { ...input.birthInput, birthTime: { status: "known", time } },
-      }),
+      { ...input, birthInput: { ...input.birthInput, birthTime: { status: "known", time } } },
       candidateDependencies,
     );
     if (result.status === "partial") throw new CalendarAdapterError("OUTPUT_INVALID");
@@ -259,14 +259,11 @@ export function calculatePolicySaju(
           : { status: "unavailable" as const, reasons: result.reasons };
     const key = JSON.stringify(payload);
     if (key === previousKey)
-      candidates[candidates.length - 1] = CandidateSchema.parse({
+      candidates[candidates.length - 1] = {
         ...candidates[candidates.length - 1],
         endMinuteExclusive: minute + 1,
-      });
-    else
-      candidates.push(
-        CandidateSchema.parse({ ...payload, startMinute: minute, endMinuteExclusive: minute + 1 }),
-      );
+      };
+    else candidates.push({ ...payload, startMinute: minute, endMinuteExclusive: minute + 1 });
     previousKey = key;
   }
   if (!first) {

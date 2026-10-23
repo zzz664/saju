@@ -93,6 +93,8 @@ export type TimeZoneResult = z.infer<typeof TimeZoneResultSchema>;
 
 export interface TimeZoneAdapter {
   readonly resolve: (request: LocalTimeRequest) => TimeZoneResult;
+  /** Optional request-local resolver; must preserve every civil minute, fold and gap. */
+  readonly scopeForCandidates?: () => TimeZoneAdapter;
 }
 
 const messages = {

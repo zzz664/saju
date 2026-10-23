@@ -9,6 +9,7 @@
     "npm": ">=11 <12"
   },
   "scripts": {
+    "benchmark:core": "node --import tsx scripts/benchmark-candidates.ts",
     "format": "prettier --write src scripts tests --log-level warn",
     "format:check": "prettier --check src scripts tests --log-level warn",
     "saju": "node --import tsx src/cli/main.ts",

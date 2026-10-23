@@ -3,6 +3,7 @@ import * as nodeModule from "node:module";
 import { versions } from "node:process";
 import { dirname, resolve } from "node:path";
 import { Temporal } from "@js-temporal/polyfill";
+import { candidateTimeZoneScope } from "@/infrastructure/timezone/candidate-scope";
 
 import {
   LocalTimeRequestSchema,
@@ -32,6 +33,12 @@ const provenance = {
 };
 
 export const temporalTimeZoneAdapter: TimeZoneAdapter = Object.freeze({
+  scopeForCandidates() {
+    // A wrapper that overrides resolve must opt in itself; never bypass it.
+    return this.resolve === temporalTimeZoneAdapter.resolve
+      ? candidateTimeZoneScope(this)
+      : { resolve: this.resolve };
+  },
   resolve(value: LocalTimeRequest) {
     const parsed = LocalTimeRequestSchema.safeParse(value);
     if (!parsed.success) throw new TimeZoneAdapterError("INPUT_REJECTED");
