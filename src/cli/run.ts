@@ -7,6 +7,7 @@ import { calculatePolicySaju } from "@/application/policy-saju";
 import { calculateNatalFacts } from "@/application/natal-facts";
 import { calculateJudgments, calculateArbitratedJudgments } from "@/application/judgment";
 import { calculateCoreExport } from "@/application/core-export";
+import { calculateStructureDiagnosis } from "@/application/structure";
 import { calculateHashedCoreExport } from "@/application/core-fingerprint";
 import type { Sha256Adapter } from "@/domain/core-fingerprint";
 import { serializeCoreExport, buildManualPrompt, coreExportJsonSchema } from "@/domain/core-export";
@@ -16,7 +17,7 @@ import type { CalendarAdapter } from "@/domain/calendar";
 import { AnalysisInputSchema, getInputInformation } from "@/domain/input";
 
 export type CliResult = { exitCode: 0 | 1 | 2; stdout: string; stderr: string };
-export const HELP = `Usage: npm run --silent saju -- <${INPUT_COMMANDS.join("|")}> < input.json\nInput: one UTF-8 AnalysisInput JSON document, at most 64 KiB.\nnormalize-time resolves IANA civil time and applies the requested solar policy.\ncalculate-policy applies day/hour policies or returns partial unknown-time possibilities.\nderive-facts adds ten gods, hidden stems and separate element counts from confirmed pillars.\njudge-facts evaluates twenty reviewed structural rules with classical sources and evidence.\narbitrate-facts preserves judgments and adds conflict decisions and uncertainty traces.\nexport-json emits a validated core document without raw birth data or candidate clocks.\nmanual-prompt emits copyable Korean instructions and confirmed accepted findings only.\nhash-json adds a deterministic versioned SHA-256 checksum to the core document.\nexport-schema emits the structural JSON Schema without stdin.\ncalculate is the compatibility fixed-clock command; prefer calculate-policy.\n`;
+export const HELP = `Usage: npm run --silent saju -- <${INPUT_COMMANDS.join("|")}> < input.json\nInput: one UTF-8 AnalysisInput JSON document, at most 64 KiB.\nnormalize-time resolves IANA civil time and applies the requested solar policy.\ncalculate-policy applies day/hour policies or returns partial unknown-time possibilities.\nderive-facts adds ten gods, hidden stems and separate element counts from confirmed pillars.\njudge-facts evaluates twenty reviewed structural rules with classical sources and evidence.\narbitrate-facts preserves judgments and adds conflict decisions and uncertainty traces.\ndiagnose-structure emits separate M01 candidates and unresolved limits (exit 2).\nexport-json emits a validated core document without raw birth data or candidate clocks.\nmanual-prompt emits copyable Korean instructions and confirmed accepted findings only.\nhash-json adds a deterministic versioned SHA-256 checksum to the core document.\nexport-schema emits the structural JSON Schema without stdin.\ncalculate is the compatibility fixed-clock command; prefer calculate-policy.\n`;
 
 export function cliError(exitCode: 1 | 2, code: string, message: string): CliResult {
   return { exitCode, stdout: "", stderr: JSON.stringify({ error: { code, message } }) + "\n" };
@@ -55,6 +56,17 @@ export function runCli(
   }
 
   try {
+    if (args[0] === "diagnose-structure") {
+      if (!timeDependencies?.pillars || !timeDependencies.symbols)
+        return cliError(1, "CALCULATION_FAILED", "Structure diagnosis is unavailable.");
+      const result = calculateStructureDiagnosis(raw, {
+        ...timeDependencies,
+        pillars: timeDependencies.pillars,
+        symbols: timeDependencies.symbols,
+      });
+      // M01 v1 deliberately preserves candidate-only / unassessed limits.
+      return { exitCode: 2, stdout: JSON.stringify(result) + "\n", stderr: "" };
+    }
     if (args[0] === "hash-json") {
       if (!timeDependencies?.pillars || !timeDependencies.symbols || !timeDependencies.hash)
         return cliError(1, "CALCULATION_FAILED", "Core fingerprint calculation is unavailable.");

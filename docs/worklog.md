@@ -990,3 +990,15 @@
 - 검증: 관련 11파일 187건 및 신규 공급자 경계 2건 PASS. 타입·린트(경고 0)·포맷 PASS. 문서 50파일/79링크/0오류. 격리 QA 개발 E2E 22/22, 운영 E2E 4/4, 프로덕션 빌드·typegen·tsc PASS. 예상 외 외부 fetch 시도 0건(Next 버전 확인 1건은 기존 오프라인 stub). 실제 OpenAI 호출 0회/LIVE_NOT_RUN.
 - A→B→C→D→E를 검증 후 각각 커밋하고 F를 마지막으로 커밋한다. 전체 npm test를 일괄 실행하지 않고 단계별 관련 테스트만 실행했다. 전체 범위·유지한 호환 API·성능 수치는 docs/evaluations/core-review-refactor.md에 기록했다.
 - AGENTS.md, next-env.d.ts, 개인 cli-input.json은 사용자 변경 그대로 커밋에서 제외. .env 및 실제 .local 예산 파일을 읽거나 수정하지 않았다. CI·미래 WBS·DB·PG·라이브 API 실행 없음.
+
+## 2026-10-24 WBS-27 — M01 원국 구조 진단
+
+- 직전 PR #28 MERGED(develop, `aeb34aa`)와 origin/develop 포함, 직접 선행 WBS-12 PR #13(`84b0194`) 및 실행순서 선행 WBS-26 PR #26(`d0f7379`)의 MERGED/조상 관계를 확인했다. develop checkout/pull --ff-only 후 이전 `refactor/core-review-a-f`를 `git branch -d`로 안전 삭제하고 `feature/WBS-27-natal-structure` 한 개를 만들었다. WBS 실행순서 28의 WBS-27만 수행했다.
+- AGENTS/WBS/02/05 및 상세설계 10을 읽고 완료 조건·정상/음성/경계/오류 검사를 `docs/evaluations/WBS-27-structure.md`에 먼저 정의했다. 최초 신규 테스트는 모듈 부재로 RED를 확인했다.
+- 순수 M01에서 월령 분류, 동일 글자/동일 오행 통근, 위치별 장간 투출, 월령·뿌리·천간/장간 인비·설극을 함께 보는 강약 후보를 추가했다. 월령 격국/용신과 조후 후보의 목적을 구분하고 규칙/출처/관법/버전/입력 근거/예외와 미해결 관법 충돌을 보존한다. 개수/점수 기반 강약·보편적 용신 확정 없음.
+- 기존 확정 facts와 계산을 재사용하는 application/structure 및 검토용 `diagnose-structure` CLI를 추가했다. core JSON/해시·페르소나/LLM 계약은 유지한다. M01 v1은 후보/미평가 한계를 보존하여 partial(불가 시 unavailable), CLI 종료 2로 반환한다. 사용자 UI·API·M02/미래 WBS는 구현하지 않았다.
+- 제약: 두 관법은 명시한 운영화 정책이며 전문가 승인이 아니다. 합충/합화·장간 강도/격국 성패는 미평가. 조후 v1은 갑·인월 병/계 후보만 채택하고 다른 119조합은 규칙 미채택으로 명시한다. 원전 전사/색인 확인 범위도 카탈로그에 기록했다.
+- 검증: 신규 3파일 83건 포함, 관련 도메인/중재/내보내기/해시/독립 골든/CLI **14파일 389건 PASS**. npx tsc --noEmit, lint(경고 0), 문서 링크 52파일/83링크/0오류, 변경 파일 LF 포맷, diff --check PASS. 중간 CLI 파싱 순서 오류 2건을 수정했고 샌드박스 ENOMEM 1건은 정상 환경에서 재실행해 통과했다. 전체 테스트는 자동 실행하지 않았다.
+- 기본 format:check는 기존 CRLF 체크아웃과 LF 설정 차이로 실패했다. 이번 문서 포맷은 수정했고 기존 파일은 보존했다. index LF/working CRLF 확인 및 전체 `format:check -- --end-of-line auto` PASS. 기본 검사 실패를 숨기거나 설정을 변경하지 않았다. UI/웹 route 변경 없음으로 build/E2E 미실행, 실제 API 호출 0회/LIVE_NOT_RUN.
+- 변경 파일: README.md, docs/evaluations/WBS-27-structure.md, docs/worklog.md, src/application/structure/index.ts, src/domain/judgment/structure/{schemas.ts,catalog.ts,index.ts,README.md}, src/cli/{commands.ts,run.ts,README.md}, tests/{structure.test.ts,structure-policy.test.ts,structure-service.test.ts}.
+- AGENTS.md/next-env.d.ts/개인 cli-input.json 사용자 수정은 그대로 보존하고 커밋에서 제외했다. .env/.local 실제 예산 파일 열람·변경 없음. develop 대상 PR 한 건 생성 후 중지하며 다음 WBS로 진행하지 않는다.
