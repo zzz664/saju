@@ -2,10 +2,11 @@ import { createDeveloperAnalysisHandler } from "../../../server/developer-analys
 import { manseryeokCalendarConversionAdapter, manseryeokEquationOfTimeAdapter, manseryeokPolicyCalendarAdapter, manseryeokSymbolCatalogAdapter } from "../../../infrastructure/manseryeok/index";
 import { temporalTimeZoneAdapter } from "../../../infrastructure/timezone/index";
 import { nodeSha256Adapter } from "../../../infrastructure/hashing/index";
+import { isLocalDevelopmentEnvironment } from "../../../server/developer-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const POST = createDeveloperAnalysisHandler({ isDevelopment: () => process.env.NODE_ENV === "development",
+export const POST = createDeveloperAnalysisHandler({ isDevelopment: () => isLocalDevelopmentEnvironment(process.env),
   dependencies: { timeZone: temporalTimeZoneAdapter, calendar: manseryeokCalendarConversionAdapter,
     equationOfTime: manseryeokEquationOfTimeAdapter, pillars: manseryeokPolicyCalendarAdapter, symbols: manseryeokSymbolCatalogAdapter },
   hash: nodeSha256Adapter,

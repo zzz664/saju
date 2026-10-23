@@ -10,6 +10,7 @@ WBS-47의 [승인형 R01 페르소나](src/domain/persona/README.md)는 세 계�
 WBS-25의 [반복 품질 평가](docs/evaluations/WBS-25-persona-quality.md)는 `npm run eval:persona`로 30사례 × 합성 문체 2종 × 3회 Mock 결과와 읽기용 샘플을 생성한다. 사람 점수와 실 모델 평가는 별도다.
 WBS-65/66의 [개발자 API 테스트 설정](src/app/dev/api-test/README.md)은 `npm run dev:api-test`로 시작한 로컬 서버의 `/dev/api-test`에서 잠금해제 후 공통 R01 Mock/Live를 실행한다. 기본 Mock이며 Live는 서버 키/플래그·비용 동의·명시 실행·예산 예약이 필요하다. 모델은 서버 `OPENAI_MODEL` 공통 설정(기본 `gpt-4o-mini`)을 사용한다.
 WBS-17의 [코어 QA 기록](docs/evaluations/WBS-17-core-qa.md)은 계산/Mock/화면·문서 검증 범위, 발견 사항과 Live/사람 평가 잔여 항목을 구분한다.
+WBS-26의 [운영·개인정보·비용 QA](docs/evaluations/WBS-26-security-cost-qa.md)는 공통 로컬 접근 게이트, 운영 차단, 재시작 예산과 비노출 검증을 기록한다. `npm run test:e2e:security`는 실제 키 없이 합성 키/Live=true의 격리 production 빌드와 브라우저 검사를 수행한다. Next의 개발용 버전 조회는 오프라인 503으로 대체하며, 그 외 외부 fetch 시도는 차단하고 실패로 처리한다.
 
 입력 계약과 범위는 [src/domain/input/README.md](src/domain/input/README.md)를 참고한다.
 Zod 검증과 입력 한계 판정은 Next.js/외부 서비스 없이 실행할 수 있다.

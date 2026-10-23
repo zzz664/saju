@@ -20,6 +20,7 @@
     "test:e2e": "node scripts/developer-e2e.mjs",
     "test:e2e:api-test": "node scripts/developer-e2e.mjs api-test",
     "test:e2e:core-qa": "node scripts/developer-e2e.mjs all",
+    "test:e2e:security": "node scripts/developer-e2e.mjs security",
     "eval:persona": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx tests/evaluation/run-persona-evaluation.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint . --max-warnings=0"
