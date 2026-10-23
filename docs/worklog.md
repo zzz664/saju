@@ -1065,3 +1065,15 @@
 - 전체 테스트/전체 format:check/build/E2E는 미실행(관련 검사만 실행, UI/HTTP/전송 변경 없음). 실제 API 호출 0회/LIVE_NOT_RUN, .env/실제 .local 예산 장부 열람·변경 없음. P06/SSE·DB/PG·시크릿·CI 변경 없음. 기존 CRLF 파일은 전체 재포맷하지 않았다.
 - 변경 파일: README.md, docs/{evaluations/WBS-32-temperament.md,worklog.md}, src/domain/features/{temperament.ts,temperament.md,README.md}, src/application/saju/features/{index.ts,registry.ts,profiles/temperament.ts,README.md}, src/cli/README.md, tests/{temperament,temperament-service,temperament-cli,features,features-orchestration,strengths}.test.ts. 사용자 수정 AGENTS.md/next-env.d.ts/개인 cli-input.json은 보존·커밋 제외한다.
 - develop 대상 PR 한 건 생성 후 중지한다. PR은 [기능 브랜치 PR 조회](https://github.com/zzz664/saju/pulls?q=head%3Afeature%2FWBS-32-temperament)와 최종 보고의 직접 URL로 확인한다.
+
+## 2026-10-24 WBS-33 — F04 직업 적성·업무 성향
+
+- 직전/선행 WBS-32 PR #34의 develop MERGED(`43fe91f36fd7c9c8aa900836d5856dabb5de87b0`)와 origin/develop 포함을 확인했다. develop checkout/pull --ff-only 후 이전 feature/WBS-32-temperament를 git branch -d로 안전 삭제하고 feature/WBS-33-career 한 개를 만들었다. 실행순서 34의 WBS-33만 수행했다.
+- AGENTS/WBS/02/05/10을 읽고 docs/evaluations/WBS-33-career.md에 완료 조건·정상/오류/경계 테스트를 먼저 정의했다. F04 미등록 RED를 확인한 뒤 구현했다.
+- 순수 F04에서 일간·월지 배경과 기존 M03 career의 관살+인성/식상+재성 복합 관측을 재사용한다. 실제 경험·교육·업무 조건에 대조할 점검 방향과 evidence 경로/값·출처·정책·버전·미상 예외를 기록한다. 단일 기호/개수/성별로 특정 직업·적성·능력·채용/승진/소득을 확정하지 않으며 점수/추천 목록을 생성하지 않는다.
+- F04 규칙/실행기 v1.0.0, 프로파일/M03 career 투영 v1.1.0을 등록했다. confirmed는 기호 관측에만 적용하고 M03 후보/보류·M01 관법 충돌·M02 검토는 보존한다. 정상 F04도 partial, 코어/필수 모듈 불가는 unavailable이다. F01에서 같은 코어·M01/M02를 재사용하며 기존 F02/F03·코어 JSON/해시는 유지한다. F05 이후 기능은 활성화하지 않았다.
+- feature-json F04와 공통 FeatureResult→NarrationInput/Mock 소비자 계약을 검증했다. 실제 R01/Provider·새 HTTP/UI 연결은 추가하지 않았고 /dev/api-test의 core-base/F03 경로를 유지한다. 미확정 후보를 확정 서술에 전달하거나 외부 JSON·임의 점수로 신뢰 경계를 우회할 수 없다.
+- 검증: 신규 **3파일 21건** 포함 **관련 27파일 342건 PASS**. tsc --noEmit, lint(경고 0), 변경 TS/README LF 포맷, 문서 링크 64파일/106링크/0오류, diff 공백 검사 확인. '의사표현'을 직업명으로 잘못 잡는 테스트 정규식을 수정해 재검증했다. CLI는 기존 Windows 샌드박스 프로세스 제약을 피하는 정상 환경에서 실행했다. 상세 명령·독립 기대값·제약은 평가 문서에 기록했다.
+- 전체 테스트/전체 format:check/build/E2E 미실행(관련 검사만 수행, UI/HTTP/전송 변경 없음). 실제 API 0회/LIVE_NOT_RUN, .env/실제 .local 장부 열람·변경 없음. P06/SSE·DB/PG·시크릿·CI 변경 없음. 기존 CRLF 파일 전체 재포맷 없음.
+- 변경 파일: README.md, docs/{evaluations/WBS-33-career.md,worklog.md}, src/domain/features/{career.ts,career.md,README.md}, src/application/saju/features/{index.ts,registry.ts,profiles/career.ts,README.md}, src/cli/README.md, tests/{career,career-service,career-cli,features,features-orchestration,strengths,temperament-service}.test.ts. 사용자 수정 AGENTS.md/next-env.d.ts/개인 cli-input.json은 보존·커밋 제외한다.
+- develop 대상 PR 한 건 생성 후 즉시 중지한다. PR은 [기능 브랜치 PR 조회](https://github.com/zzz664/saju/pulls?q=head%3Afeature%2FWBS-33-career)와 최종 보고의 직접 URL로 확인한다.

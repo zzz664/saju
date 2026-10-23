@@ -47,6 +47,7 @@ WBS-30의 [M09 기능 조합·공통 계약](src/application/saju/features/READM
 F01~F11 요청을 라우팅하고 필요한 모듈을 공유하며 후속 실행기·모듈의 미구현 상태를 명시한다.
 WBS-31의 [F03 강점·약점](src/domain/features/README.md)은 관측 사실과 조건부 점검 방향을 제공한다.
 WBS-32의 [F02 성격·기질](src/domain/features/temperament.md)은 `feature-json`에서 근거·충돌·미상 한계를 확인한다.
+WBS-33의 [F04 직업 적성·업무 성향](src/domain/features/career.md)은 `feature-json`에서 조건부 업무 검토 방향을 제공한다.
 `feature-json` 또는 보호된 `/dev/api-test`의 F03 선택에서 검토하며 Mock/명시 Live 서술 경로를 공유한다.
 WBS-16의 [독립 골든 30건 검토표](docs/checklists/WBS-16-independent-golden-review.md)는 날짜·간지·DST·태양시·미상 경계를 통합 계산/JSON 경로에서 대조한다. 자동 검증 통과와 사용자 승인을 구분한다.
 WBS-20의 [개발자 검증 화면과 API](src/app/dev/validation/README.md)는

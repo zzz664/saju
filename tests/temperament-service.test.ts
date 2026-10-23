@@ -150,7 +150,7 @@ describe("F02 service, uncertainty and Mock narration boundaries", () => {
     );
     expect(aggregate.status).toBe("partial");
     expect(aggregate.limitations).toContain("SUBFEATURE_INCOMPLETE");
-    expect(executeFeature(featureRequest("F04"), deps).limitations).toContain(
+    expect(executeFeature(featureRequest("F05"), deps).limitations).toContain(
       "EXECUTOR_NOT_IMPLEMENTED",
     );
   });
