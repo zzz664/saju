@@ -1,3 +1,7 @@
+> developer-json/narrateCore는 기존 Mock 비교 계약입니다. 현재 서버 실행 경로는 narratePersona와 승인형 페르소나 카탈로그를 사용합니다. 신규 제품 기능에 기존 비교 경로를 연결하지 않습니다.
+
+서술 요청은 `modelId/instructions/messages/output/maxOutputTokens`와 구조화된 `data/style`을 갖는 공급자 중립 계약이다. `infrastructure/openai/request.ts`만 Responses HTTP 본문의 `model/input/text/max_output_tokens/store/stream`을 조립한다. R01의 `store:false/stream:false`는 그 어댑터가 강제한다. Mock은 프롬프트 문자열을 다시 파싱하지 않고 검증된 `data/style`을 읽는다. 실제 모델은 서버 `OPENAI_MODEL` 설정에서 주입하며 날짜 접미사 응답 매칭은 OpenAI 인프라에 둔다.
+
 # WBS-23 — LLM provider·프롬프트·mock
 
 기존 코어의 확정·채택 기초 관찰을 설명하는 **개발자 내부 비스트리밍 JSON 평가 경로**다.
@@ -63,14 +67,14 @@ sections 0~20개, paragraph는 공백 제거 후 1~1500자, outputText는 실제
 승격하지 않는다. 이 검사는 문장의 의미·환각·안전성·한국어 품질을 입증하지 않는다.
 실제 서술의 의미 평가와 캐릭터/스트리밍 검증은 후속 작업이 필요하다.
 
-|상황|고정 오류 코드|
-|---|---|
-|코어 입력 검증 실패|INPUT_REJECTED|
-|라이브 provider 선택|LIVE_DISABLED|
-|거절/잘림·중단/실패 응답|REFUSED / INCOMPLETE / PROVIDER_FAILED|
-|응답 구조·바이트·근거 ID 검증 실패|OUTPUT_REJECTED|
-|외부 예외|PROVIDER_FAILED, 원문 미노출|
-|시작 전·대기 중·종료 후 취소|CANCELLED|
+| 상황                               | 고정 오류 코드                         |
+| ---------------------------------- | -------------------------------------- |
+| 코어 입력 검증 실패                | INPUT_REJECTED                         |
+| 라이브 provider 선택               | LIVE_DISABLED                          |
+| 거절/잘림·중단/실패 응답           | REFUSED / INCOMPLETE / PROVIDER_FAILED |
+| 응답 구조·바이트·근거 ID 검증 실패 | OUTPUT_REJECTED                        |
+| 외부 예외                          | PROVIDER_FAILED, 원문 미노출           |
+| 시작 전·대기 중·종료 후 취소       | CANCELLED                              |
 
 자동 재시도나 성공 fallback은 없다. signal은 공급자에 전달하며 대기 중 취소 시 기다림을
 끝내고 늦은 결과를 채택하지 않는다. 실제 공급자의 내부 작업 중지는 그 어댑터의 책임이다.

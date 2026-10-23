@@ -1,14 +1,30 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { CalendarAdapterError, DaySnapshotSchema, type CalendarRequest, type DayCalendarAdapter, type DaySnapshot } from "@/domain/calendar";
-import { manseryeokDayCalendarAdapter } from "@/infrastructure/manseryeok";
+import {
+  CalendarAdapterError,
+  DaySnapshotSchema,
+  type CalendarRequest,
+  type DayCalendarAdapter,
+  type DaySnapshot,
+} from "@/domain/calendar";
+import { manseryeokDayCalendarAdapter } from "./support/manseryeok/day-calendar";
 import golden from "./fixtures/day-pillar-golden.json";
 
 const adapter: DayCalendarAdapter = manseryeokDayCalendarAdapter;
 
 function request(date: string, hour = 12, minute = 0): CalendarRequest {
   const [year, month, day] = date.split("-").map(Number);
-  return { year, month, day, hour, minute, calendarType: "solar", isLeapMonth: false, timeReference: "fixed-utc+09:00", dayBoundary: "midnight" };
+  return {
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    calendarType: "solar",
+    isLeapMonth: false,
+    timeReference: "fixed-utc+09:00",
+    dayBoundary: "midnight",
+  };
 }
 
 function day(input: CalendarRequest) {
@@ -19,20 +35,37 @@ function day(input: CalendarRequest) {
 describe("day pillar (installed real package, independent official reference)", () => {
   it.each(golden.quoted)("matches official solar and lunar dates: $solarDate", (fixture) => {
     expect(day(request(fixture.solarDate))).toBe(fixture.day);
-    expect(day({ ...request(fixture.lunarDate), calendarType: "lunar", isLeapMonth: fixture.isLeapMonth })).toBe(fixture.day);
+    expect(
+      day({
+        ...request(fixture.lunarDate),
+        calendarType: "lunar",
+        isLeapMonth: fixture.isLeapMonth,
+      }),
+    ).toBe(fixture.day);
   });
 
-  it.each(golden.quoted)("keeps the official date's pillar across fixed-UTC+9 clock values: $solarDate", (fixture) => {
-    // 00:00 local is on the previous UTC date. 23:00 must stay on this date.
-    for (const [hour, minute] of [[0, 0], [22, 59], [23, 0], [23, 59]]) {
-      expect(day(request(fixture.solarDate, hour, minute))).toBe(fixture.day);
-    }
-  });
+  it.each(golden.quoted)(
+    "keeps the official date's pillar across fixed-UTC+9 clock values: $solarDate",
+    (fixture) => {
+      // 00:00 local is on the previous UTC date. 23:00 must stay on this date.
+      for (const [hour, minute] of [
+        [0, 0],
+        [22, 59],
+        [23, 0],
+        [23, 59],
+      ]) {
+        expect(day(request(fixture.solarDate, hour, minute))).toBe(fixture.day);
+      }
+    },
+  );
 
-  it.each(golden.derived)("matches hand-derived boundary from an independent anchor: $solarDate", (fixture) => {
-    expect(day(request(fixture.solarDate, 0, 0))).toBe(fixture.day);
-    expect(day(request(fixture.solarDate, 23, 59))).toBe(fixture.day);
-  });
+  it.each(golden.derived)(
+    "matches hand-derived boundary from an independent anchor: $solarDate",
+    (fixture) => {
+      expect(day(request(fixture.solarDate, 0, 0))).toBe(fixture.day);
+      expect(day(request(fixture.solarDate, 23, 59))).toBe(fixture.day);
+    },
+  );
 
   it.each([
     ["2024-02-09", "계묘", "2024-02-10", "갑진"],
@@ -50,8 +83,16 @@ describe("day pillar (installed real package, independent official reference)", 
     const snapshot = adapter.calculateDay(input);
     expectTypeOf(snapshot).toEqualTypeOf<DaySnapshot>();
     expect(Object.keys(snapshot.pillars)).toEqual(["day"]);
-    expect(snapshot.provenance).toEqual({ libraryName: "manseryeok", libraryVersion: "2.0.0", timeReference: "fixed-utc+09:00", dayBoundary: "midnight", ruleId: "calendar.day-pillar", ruleVersion: "1.0.0" });
-    for (const item of [snapshot, snapshot.pillars, snapshot.pillars.day, snapshot.provenance]) expect(Object.isFrozen(item)).toBe(true);
+    expect(snapshot.provenance).toEqual({
+      libraryName: "manseryeok",
+      libraryVersion: "2.0.0",
+      timeReference: "fixed-utc+09:00",
+      dayBoundary: "midnight",
+      ruleId: "calendar.day-pillar",
+      ruleVersion: "1.0.0",
+    });
+    for (const item of [snapshot, snapshot.pillars, snapshot.pillars.day, snapshot.provenance])
+      expect(Object.isFrozen(item)).toBe(true);
     expect(DaySnapshotSchema.parse(JSON.parse(JSON.stringify(snapshot)))).toEqual(snapshot);
     expect(input).toEqual(request("2024-02-10"));
   });
@@ -64,7 +105,8 @@ describe("day pillar (installed real package, independent official reference)", 
       { ...snapshot, provenance: { ...snapshot.provenance, timeReference: "Asia/Seoul" } },
       { ...snapshot, pillars: { ...snapshot.pillars, hour: snapshot.pillars.day } },
       { ...snapshot, extra: true },
-    ]) expect(DaySnapshotSchema.safeParse(value).success).toBe(false);
+    ])
+      expect(DaySnapshotSchema.safeParse(value).success).toBe(false);
   });
 
   it("retains the leap-month flag through the actual provider (conversion regression)", () => {
@@ -74,16 +116,25 @@ describe("day pillar (installed real package, independent official reference)", 
     expect(day(leap)).not.toBe(day({ ...leap, isLeapMonth: false }));
   });
 
-  it.each(["1800-01-01", "2300-12-31"])("accepts solar API range endpoint %s (provider regression)", (date) => {
-    expect(DaySnapshotSchema.safeParse(adapter.calculateDay(request(date))).success).toBe(true);
-  });
+  it.each(["1800-01-01", "2300-12-31"])(
+    "accepts solar API range endpoint %s (provider regression)",
+    (date) => {
+      expect(DaySnapshotSchema.safeParse(adapter.calculateDay(request(date))).success).toBe(true);
+    },
+  );
 
   it.each([1800, 2100])("accepts lunar API year endpoint %s (provider regression)", (year) => {
-    expect(DaySnapshotSchema.safeParse(adapter.calculateDay({ ...request(`${year}-01-01`), calendarType: "lunar" })).success).toBe(true);
+    expect(
+      DaySnapshotSchema.safeParse(
+        adapter.calculateDay({ ...request(`${year}-01-01`), calendarType: "lunar" }),
+      ).success,
+    ).toBe(true);
   });
 
   it.each([1900, 2100])("rejects a nonexistent Gregorian leap day in century %s", (year) => {
-    expect(() => adapter.calculateDay(request(`${year}-02-29`))).toThrow(expect.objectContaining({ code: "INPUT_REJECTED" }));
+    expect(() => adapter.calculateDay(request(`${year}-02-29`))).toThrow(
+      expect.objectContaining({ code: "INPUT_REJECTED" }),
+    );
   });
 
   it("counts the Gregorian 2000 leap day in the sixty-day cycle (metamorphic regression)", () => {
@@ -94,11 +145,17 @@ describe("day pillar (installed real package, independent official reference)", 
   });
 
   it.each([
-    null, {}, { ...request("2024-02-10"), year: "2024" },
-    { ...request("2024-02-10"), year: 1799 }, { ...request("2024-02-10"), year: 2301 },
-    { ...request("2024-02-30") }, { ...request("2024-04-31") },
-    { ...request("2024-02-10"), hour: undefined }, { ...request("2024-02-10"), hour: 24 },
-    { ...request("2024-02-10"), minute: 60 }, { ...request("2024-02-10"), isLeapMonth: true },
+    null,
+    {},
+    { ...request("2024-02-10"), year: "2024" },
+    { ...request("2024-02-10"), year: 1799 },
+    { ...request("2024-02-10"), year: 2301 },
+    { ...request("2024-02-30") },
+    { ...request("2024-04-31") },
+    { ...request("2024-02-10"), hour: undefined },
+    { ...request("2024-02-10"), hour: 24 },
+    { ...request("2024-02-10"), minute: 60 },
+    { ...request("2024-02-10"), isLeapMonth: true },
     { ...request("2024-02-01"), calendarType: "lunar", isLeapMonth: true },
     { ...request("2024-01-30"), calendarType: "lunar" },
     { ...request("2101-01-01"), calendarType: "lunar" },
@@ -113,7 +170,10 @@ describe("day pillar (installed real package, independent official reference)", 
       expect.fail("Expected input rejection");
     } catch (error) {
       expect(error).toBeInstanceOf(CalendarAdapterError);
-      expect(error).toMatchObject({ code: "INPUT_REJECTED", message: "Calendar input was rejected." });
+      expect(error).toMatchObject({
+        code: "INPUT_REJECTED",
+        message: "Calendar input was rejected.",
+      });
       expect(error).not.toHaveProperty("cause");
       expect(error).not.toHaveProperty("issues");
       expect(String(error)).not.toContain("2024");

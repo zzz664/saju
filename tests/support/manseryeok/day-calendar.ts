@@ -1,5 +1,10 @@
-import { DaySnapshotSchema, CalendarAdapterError, type CalendarRequest, type DayCalendarAdapter } from "@/domain/calendar";
-import { manseryeokCalendarAdapter } from "./port";
+import {
+  DaySnapshotSchema,
+  CalendarAdapterError,
+  type CalendarRequest,
+  type DayCalendarAdapter,
+} from "@/domain/calendar";
+import { manseryeokCalendarAdapter } from "@/infrastructure/manseryeok/port";
 
 export const manseryeokDayCalendarAdapter: DayCalendarAdapter = Object.freeze({
   calculateDay(request: CalendarRequest) {

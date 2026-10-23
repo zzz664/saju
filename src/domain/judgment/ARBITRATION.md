@@ -1,5 +1,7 @@
 # 충돌·불확실성 중재 — WBS-12
 
+구조 스키마는 `arbitration-schemas.ts`에 있다. 외부 중재 결과의 결정 재구성과 변조 검증은 `parseArbitrationResult`에서 한 번 수행한다. 내부 중재 생성은 구조 스키마 안에서 `resolve`를 재실행하지 않는다.
+
 `arbitration.ts`는 계산이나 전통 해석을 추가하지 않는 순수 중재 계층이다.
 `arbitrateBaseJudgments(evaluation)`는 WBS-11 평가를 검증하고 matched finding만
 중재 후보로 옮긴다. 미상 결과와 부분 근거의 원래 trace는 `uncertainties`에 남긴다.
@@ -11,13 +13,13 @@
 assertion 문구, 십성의 동시 존재, sourceRefs 차이만으로 충돌을 추측하지 않는다.
 method는 관법 식별자이며 출처의 신뢰도 점수가 아니다.
 
-| 같은 key에서의 상황 | 처리 | 결과 상태에 미치는 영향 |
-| --- | --- | --- |
-| value가 모두 같음 | 모든 지지 근거 accepted, 관법별 trace 보존 | 원래 상태 유지 |
-| value가 다르고 method가 다름 | 전체 deferred, method-disagreement | partial |
-| 같은 method지만 부분 근거가 하나라도 있음 | 전체 deferred, incomplete-evidence | partial |
-| 모두 confirmed, 최상위 priority에 서로 다른 value가 있음 | 전체 deferred, tie | partial |
-| 모두 confirmed, 최상위 priority가 하나의 value를 지지함 | 그 value의 모든 지지 후보 accepted, 다른 value suppressed | 원래 상태 유지 |
+| 같은 key에서의 상황                                      | 처리                                                      | 결과 상태에 미치는 영향 |
+| -------------------------------------------------------- | --------------------------------------------------------- | ----------------------- |
+| value가 모두 같음                                        | 모든 지지 근거 accepted, 관법별 trace 보존                | 원래 상태 유지          |
+| value가 다르고 method가 다름                             | 전체 deferred, method-disagreement                        | partial                 |
+| 같은 method지만 부분 근거가 하나라도 있음                | 전체 deferred, incomplete-evidence                        | partial                 |
+| 모두 confirmed, 최상위 priority에 서로 다른 value가 있음 | 전체 deferred, tie                                        | partial                 |
+| 모두 confirmed, 최상위 priority가 하나의 value를 지지함  | 그 value의 모든 지지 후보 accepted, 다른 value suppressed | 원래 상태 유지          |
 
 관법 차이 → 부분 근거 → 동률 → 우선순위 순으로 중재 사유를 정한다.
 최상위 priority가 같아도 같은 value를 지지하면 동률 충돌이 아니다.

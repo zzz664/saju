@@ -5,7 +5,9 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 it("QA preload allows loopback and blocks external or malformed fetch before network without logging raw destinations", () => {
-  const directory = mkdtempSync(path.join(tmpdir(), "saju-fetch-qa-")), marker = path.join(directory, "blocked"), frameworkMarker = path.join(directory, "framework");
+  const directory = mkdtempSync(path.join(tmpdir(), "saju-fetch-qa-")),
+    marker = path.join(directory, "blocked"),
+    frameworkMarker = path.join(directory, "framework");
   try {
     const preload = path.join(directory, "qa preload.cjs");
     copyFileSync(path.resolve("scripts/deny-external-fetch.cjs"), preload);
@@ -35,18 +37,38 @@ it("QA preload allows loopback and blocks external or malformed fetch before net
       })().catch(error => { console.error(error); process.exitCode = 1; });
     `;
     execFileSync(process.execPath, ["-e", source], {
-      env: { ...process.env, NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --require "${preload.replaceAll("\\", "/")}"`.trim(),
-        SAJU_QA_FETCH_MARKER: marker, SAJU_QA_FRAMEWORK_MARKER: frameworkMarker, SAJU_QA_STUB_NEXT_VERSION_CHECK: "0",
+      env: {
+        ...process.env,
+        NODE_OPTIONS:
+          `${process.env.NODE_OPTIONS ?? ""} --require "${preload.replaceAll("\\", "/")}"`.trim(),
+        SAJU_QA_FETCH_MARKER: marker,
+        SAJU_QA_FRAMEWORK_MARKER: frameworkMarker,
+        SAJU_QA_STUB_NEXT_VERSION_CHECK: "0",
         SAJU_QA_CONFIG_DIR: directory,
-        OPENAI_API_KEY: "", ENABLE_LIVE_API_TESTS: "false" }, timeout: 20000, windowsHide: true,
+        OPENAI_API_KEY: "",
+        ENABLE_LIVE_API_TESTS: "false",
+      },
+      timeout: 20000,
+      windowsHide: true,
     });
     const blocked = readFileSync(marker, "utf8");
-    expect(blocked.trim().split("\n")).toEqual(["openai:other", "other:other", "invalid:other", "npm:other", "npm:other", "npm:other"]);
+    expect(blocked.trim().split("\n")).toEqual([
+      "openai:other",
+      "other:other",
+      "invalid:other",
+      "npm:other",
+      "npm:other",
+      "npm:other",
+    ]);
     expect(blocked).not.toMatch(/CANARY|https|registry|Bearer/);
     expect(readFileSync(frameworkMarker, "utf8")).toBe("offline\n");
   } finally {
     const resolved = path.resolve(directory);
-    if (path.dirname(resolved) !== path.resolve(tmpdir()) || !path.basename(resolved).startsWith("saju-fetch-qa-")) throw new Error("Unexpected QA directory");
+    if (
+      path.dirname(resolved) !== path.resolve(tmpdir()) ||
+      !path.basename(resolved).startsWith("saju-fetch-qa-")
+    )
+      throw new Error("Unexpected QA directory");
     rmSync(resolved, { recursive: true });
   }
 }, 25000);

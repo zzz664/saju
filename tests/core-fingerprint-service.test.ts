@@ -15,10 +15,15 @@ describe("100-run determinism and hashed core CLI", () => {
   it("calculates the same input 100 times with one identical hash and manifest", () => {
     const load = vi.fn(fingerprintDependencies.symbols.load);
     const pillars = vi.fn(fingerprintDependencies.pillars.calculate);
-    const hashes = new Set<string>(), manifests = new Set<string>();
+    const hashes = new Set<string>(),
+      manifests = new Set<string>();
     const before = structuredClone(fingerprintInput);
     for (let index = 0; index < 100; index++) {
-      const result = calculateHashedCoreExport(fingerprintInput, { ...fingerprintDependencies, symbols: { load }, pillars: { calculate: pillars } }, nodeSha256Adapter);
+      const result = calculateHashedCoreExport(
+        fingerprintInput,
+        { ...fingerprintDependencies, symbols: { load }, pillars: { calculate: pillars } },
+        nodeSha256Adapter,
+      );
       hashes.add(result.fingerprint.hash);
       manifests.add(JSON.stringify(result.fingerprint.versions));
     }
@@ -41,10 +46,21 @@ describe("100-run determinism and hashed core CLI", () => {
 
   it("keeps partial and unavailable CLI status/exit codes without inventing complete data", () => {
     for (const value of [
-      { ...fingerprintInput, birthInput: { ...fingerprintInput.birthInput, birthTime: { status: "unknown" } } },
-      { ...fingerprintInput, calculationPolicy: { ...fingerprintInput.calculationPolicy, solarTime: "true-solar" } },
+      {
+        ...fingerprintInput,
+        birthInput: { ...fingerprintInput.birthInput, birthTime: { status: "unknown" } },
+      },
+      {
+        ...fingerprintInput,
+        calculationPolicy: { ...fingerprintInput.calculationPolicy, solarTime: "true-solar" },
+      },
     ]) {
-      const result = runCli(["hash-json"], JSON.stringify(value), manseryeokCalendarAdapter, dependencies);
+      const result = runCli(
+        ["hash-json"],
+        JSON.stringify(value),
+        manseryeokCalendarAdapter,
+        dependencies,
+      );
       expect(result).toMatchObject({ exitCode: 2, stderr: "" });
       expect(verifyCoreFingerprint(JSON.parse(result.stdout), nodeSha256Adapter)).toBe(true);
       expect(JSON.parse(result.stdout).status).not.toBe("complete");
@@ -57,18 +73,39 @@ describe("100-run determinism and hashed core CLI", () => {
     const hashed = runCli(["hash-json"], text, manseryeokCalendarAdapter, dependencies);
     expect(plain.exitCode).toBe(0);
     expect(parseCoreExport(plain.stdout)).toEqual(JSON.parse(hashed.stdout).document);
-    expect(runCli(["manual-prompt"], text, manseryeokCalendarAdapter, dependencies).stdout).toContain("<analysis_data>");
+    expect(
+      runCli(["manual-prompt"], text, manseryeokCalendarAdapter, dependencies).stdout,
+    ).toContain("<analysis_data>");
     expect(runCli(["export-schema"], "", manseryeokCalendarAdapter).exitCode).toBe(0);
     expect(runCli(["--help"], "", manseryeokCalendarAdapter).stdout).toContain("hash-json");
   });
 
   it("sanitizes invalid input, missing configuration and hash supplier errors", () => {
-    expect(runCli(["hash-json"], "{ private", manseryeokCalendarAdapter, dependencies).exitCode).toBe(2);
+    expect(
+      runCli(["hash-json"], "{ private", manseryeokCalendarAdapter, dependencies).exitCode,
+    ).toBe(2);
     expect(runCli(["hash-json"], "{}", manseryeokCalendarAdapter, dependencies).exitCode).toBe(2);
-    expect(runCli(["hash-json"], JSON.stringify(fingerprintInput), manseryeokCalendarAdapter, fingerprintDependencies).exitCode).toBe(1);
-    const result = runCli(["hash-json"], JSON.stringify(fingerprintInput), manseryeokCalendarAdapter, { ...dependencies,
-      hash: { digest: () => { throw new Error("private 2024-02-10 secret"); } },
-    });
+    expect(
+      runCli(
+        ["hash-json"],
+        JSON.stringify(fingerprintInput),
+        manseryeokCalendarAdapter,
+        fingerprintDependencies,
+      ).exitCode,
+    ).toBe(1);
+    const result = runCli(
+      ["hash-json"],
+      JSON.stringify(fingerprintInput),
+      manseryeokCalendarAdapter,
+      {
+        ...dependencies,
+        hash: {
+          digest: () => {
+            throw new Error("private 2024-02-10 secret");
+          },
+        },
+      },
+    );
     expect(result).toMatchObject({ exitCode: 1, stdout: "" });
     expect(JSON.parse(result.stderr).error.code).toBe("CALCULATION_FAILED");
     expect(result.stderr).not.toMatch(/private|2024|secret/);
@@ -79,9 +116,17 @@ describe("100-run determinism and hashed core CLI", () => {
     if (!npmCli) throw new Error("Run through npm test.");
     const hashes = [];
     for (const timezone of ["UTC", "Pacific/Honolulu"]) {
-      const result = spawnSync(process.execPath, [npmCli, "run", "--silent", "saju", "--", "hash-json"], {
-        input: JSON.stringify(fingerprintInput), encoding: "utf8", timeout: 20000, windowsHide: true, env: { ...process.env, TZ: timezone },
-      });
+      const result = spawnSync(
+        process.execPath,
+        [npmCli, "run", "--silent", "saju", "--", "hash-json"],
+        {
+          input: JSON.stringify(fingerprintInput),
+          encoding: "utf8",
+          timeout: 20000,
+          windowsHide: true,
+          env: { ...process.env, TZ: timezone },
+        },
+      );
       expect(result.error).toBeUndefined();
       expect(result.status).toBe(0);
       expect(result.stderr).toBe("");

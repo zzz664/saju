@@ -19,14 +19,14 @@ canonicalization=sorted-json-v1, versions, 소문자 64자리 hash를 담는다.
 complete/partial/unavailable의 종료 코드는 0/2/2다. 입력 오류는 2, 공급자/해시 오류는
 고정 비식별 메시지와 종료 1을 반환한다. export-json/manual-prompt/export-schema는 기존 계약을 유지한다.
 
-| versions 필드 | 원본에서 가져오는 실제 버전/근거 |
-| --- | --- |
-| coreSchemaVersion | 코어 내보내기 스키마 버전 |
-| calculation | 실제 라이브러리·기둥 규칙·절기/정책 시계 기준 |
-| normalization | Temporal·ICU·tzdb 및 현지 시각 정규화 규칙 |
-| facts | 파생 facts 스키마·SDK·오행/십성/지장간/개수 규칙·출처/관법 |
-| judgment | 기초 규칙집·출처 카탈로그·facts/SDK 버전·적용 범위 |
-| arbitration | 중재 정책 ID/버전·적용 범위 |
+| versions 필드     | 원본에서 가져오는 실제 버전/근거                           |
+| ----------------- | ---------------------------------------------------------- |
+| coreSchemaVersion | 코어 내보내기 스키마 버전                                  |
+| calculation       | 실제 라이브러리·기둥 규칙·절기/정책 시계 기준              |
+| normalization     | Temporal·ICU·tzdb 및 현지 시각 정규화 규칙                 |
+| facts             | 파생 facts 스키마·SDK·오행/십성/지장간/개수 규칙·출처/관법 |
+| judgment          | 기초 규칙집·출처 카탈로그·facts/SDK 버전·적용 범위         |
+| arbitration       | 중재 정책 ID/버전·적용 범위                                |
 
 해당 단계가 수행되지 않았으면 manifest도 null이다. 미상/거절/미지원 결과에도
 원래 상태를 유지한 체크섬을 만들 수 있으며, 해시 존재가 계산 성공이나 DB 저장 완료를 뜻하지 않는다.
@@ -58,6 +58,7 @@ undefined·비유한 수·BigInt·함수·심볼·Date 등 비평범 객체·접
 입력이나 예외 전문을 반사하지 않는 FingerprintError로 바꾼다.
 
 `HashedCoreExportSchema`는 문서/manifest/상태/해시 형식을 검증한다.
+외부 문서의 의미와 manifest 연결은 `parseHashedCoreExport`로 검증한다. 구조 스키마만 통과한 값을 신뢰하지 않는다.
 실제 바이트 체크섬 검증은 `verifyCoreFingerprint(value, nodeSha256Adapter)`로 수행한다.
 문서나 다이제스트가 달라지면 false이며, 해시 공급자가 실패하면 고정 오류를 발생시킨다.
 원본 생성 환경의 ICU/tzdb 등 버전이 바뀌면 달라질 수 있으며 재현에는 같은 내용·정책·버전이 필요하다.

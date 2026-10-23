@@ -8,9 +8,9 @@ export {
   type BirthInput,
   type BirthTime,
   type CalculationPolicy,
-} from "./schemas";
+} from "@/domain/input/schemas";
 export {
   InputInformationSchema,
   getInputInformation,
   type InputInformation,
-} from "./information";
+} from "@/domain/input/information";

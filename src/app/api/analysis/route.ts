@@ -1,14 +1,13 @@
-import { createDeveloperAnalysisHandler } from "../../../server/developer-analysis";
-import { manseryeokCalendarConversionAdapter, manseryeokEquationOfTimeAdapter, manseryeokPolicyCalendarAdapter, manseryeokSymbolCatalogAdapter } from "../../../infrastructure/manseryeok/index";
-import { temporalTimeZoneAdapter } from "../../../infrastructure/timezone/index";
-import { nodeSha256Adapter } from "../../../infrastructure/hashing/index";
-import { isLocalDevelopmentEnvironment } from "../../../server/developer-access";
+import { createCoreDependencies } from "@/server/core-dependencies";
+import { createDeveloperAnalysisHandler } from "@/server/developer-analysis";
+import { nodeSha256Adapter } from "@/infrastructure/hashing";
+import { isLocalDevelopmentEnvironment } from "@/server/developer-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const POST = createDeveloperAnalysisHandler({ isDevelopment: () => isLocalDevelopmentEnvironment(process.env),
-  dependencies: { timeZone: temporalTimeZoneAdapter, calendar: manseryeokCalendarConversionAdapter,
-    equationOfTime: manseryeokEquationOfTimeAdapter, pillars: manseryeokPolicyCalendarAdapter, symbols: manseryeokSymbolCatalogAdapter },
+export const POST = createDeveloperAnalysisHandler({
+  isDevelopment: () => isLocalDevelopmentEnvironment(process.env),
+  dependencies: createCoreDependencies(),
   hash: nodeSha256Adapter,
 });
 export const GET = POST;

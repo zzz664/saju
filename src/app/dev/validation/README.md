@@ -21,7 +21,7 @@
 ```ts
 type DeveloperAnalysisResponse = {
   analysis: HashedCoreExport; // { status, document, fingerprint }
-  manualPrompt: string;      // 같은 document에서 만든 기존 복사 프롬프트
+  manualPrompt: string; // 같은 document에서 만든 기존 복사 프롬프트
 };
 ```
 
@@ -29,16 +29,16 @@ type DeveloperAnalysisResponse = {
 서버는 기존 계산 서비스를 한 번 호출한다. complete/partial/unavailable 모두 유효한 계산 응답이면 200이다.
 클라이언트는 검증된 응답만 표시한다. 체크섬 형식 검증은 출처 인증이나 DB 커밋 확인이 아니다.
 
-|조건|응답|
-|---|---|
-|development가 아니거나 로컬 Host가 아님|404, 입력을 읽거나 계산하지 않음|
-|POST 이외의 메서드|405, Allow: POST|
-|Origin 누락 또는 프로토콜·호스트·포트 불일치|403|
-|application/json 아님|415|
-|잘못된 UTF-8/JSON 또는 본문 없음|400|
-|선언 길이 또는 실제 수신 바이트가 64 KiB 초과|413|
-|AnalysisInput 불일치|422|
-|계산/체크섬 내부 오류|500, 고정 오류|
+| 조건                                          | 응답                             |
+| --------------------------------------------- | -------------------------------- |
+| development가 아니거나 로컬 Host가 아님       | 404, 입력을 읽거나 계산하지 않음 |
+| POST 이외의 메서드                            | 405, Allow: POST                 |
+| Origin 누락 또는 프로토콜·호스트·포트 불일치  | 403                              |
+| application/json 아님                         | 415                              |
+| 잘못된 UTF-8/JSON 또는 본문 없음              | 400                              |
+| 선언 길이 또는 실제 수신 바이트가 64 KiB 초과 | 413                              |
+| AnalysisInput 불일치                          | 422                              |
+| 계산/체크섬 내부 오류                         | 500, 고정 오류                   |
 
 모든 API 응답에 `Cache-Control: no-store, max-age=0`, `X-Robots-Tag: noindex, nofollow`를 붙인다.
 오류에 입력·공급자 메시지를 반사하거나 별도 로그에 기록하지 않는다. 응답 JSON에는 원본 생년월일·시각·좌표가

@@ -5,27 +5,27 @@
 타입 강제 변환·문자열 trim·기본값 보충·알 수 없는 필드 제거를 하지 않는다.
 파싱된 객체는 readonly이며 서버/Next.js/만세력/LLM/DB 없이 사용할 수 있다.
 
-| BirthInput 필드 | 계약 |
-| --- | --- |
-| `calendarType` | `solar` 또는 `lunar` |
-| `birthDate` | 입력 달력의 `YYYY-MM-DD`, 구조상 0001~9999년. 양력은 Gregorian 윤년/월별 일수 검사, 음력은 1~30일 구조만 검사 |
-| `isLeapMonth` | boolean 필수. 양력은 false, 음력은 입력값 보존 |
-| `birthTime` | `{ status: "known", time: "HH:mm" }` 또는 `{ status: "unknown" }`. 미상 분기에 time 혼입 금지 |
-| `timezoneId` | 명시적 IANA area/location ID 또는 `UTC`. 런타임 Intl 지원 확인. `/`를 포함한 IANA 별칭도 보존. 약어/숫자 offset을 추측하지 않음 |
-| `longitudeDeg` | 유한한 number -180~180 또는 명시적 null(미상) |
-| `latitudeDeg` | 유한한 number -90~90 또는 명시적 null(미상) |
-| `directionBasis` | `male` / `female` / `unspecified`. 전통 대운 순역 규칙의 입력 기준이며 성별 정체성으로 추정하거나 별도 저장하지 않음 |
+| BirthInput 필드  | 계약                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `calendarType`   | `solar` 또는 `lunar`                                                                                                            |
+| `birthDate`      | 입력 달력의 `YYYY-MM-DD`, 구조상 0001~9999년. 양력은 Gregorian 윤년/월별 일수 검사, 음력은 1~30일 구조만 검사                   |
+| `isLeapMonth`    | boolean 필수. 양력은 false, 음력은 입력값 보존                                                                                  |
+| `birthTime`      | `{ status: "known", time: "HH:mm" }` 또는 `{ status: "unknown" }`. 미상 분기에 time 혼입 금지                                   |
+| `timezoneId`     | 명시적 IANA area/location ID 또는 `UTC`. 런타임 Intl 지원 확인. `/`를 포함한 IANA 별칭도 보존. 약어/숫자 offset을 추측하지 않음 |
+| `longitudeDeg`   | 유한한 number -180~180 또는 명시적 null(미상)                                                                                   |
+| `latitudeDeg`    | 유한한 number -90~90 또는 명시적 null(미상)                                                                                     |
+| `directionBasis` | `male` / `female` / `unspecified`. 전통 대운 순역 규칙의 입력 기준이며 성별 정체성으로 추정하거나 별도 저장하지 않음            |
 
 좌표 0과 실제 자정 `00:00`은 알려진 값이다. 필수 값 자체의 생략은 오류이고,
 시각의 `unknown`, 좌표의 null, 순역 기준의 `unspecified`가 허용되는 미상 표현이다.
 시간대는 필수이며 출생지/경도/서버 시간대에서 자동 추정하지 않는다.
 분 단위의 현지 시각만 받는다. 시각 범위/초 단위/날짜 부분 입력은 현재 계약에 없다.
 
-| CalculationPolicy 필드 | 계약 |
-| --- | --- |
-| `solarTime` | `standard`(표준시), `mean-solar`(평태양시), `true-solar`(진태양시) |
-| `dayBoundary` | `midnight`(00시 날짜 경계), `zi-start`(23시 자시 시작 경계) |
-| `dstDisambiguation` | `reject`, `earlier`, `later`. WBS-07 현지 시각 정규화에서 적용하는 중복/누락 시각 정책 |
+| CalculationPolicy 필드 | 계약                                                                                   |
+| ---------------------- | -------------------------------------------------------------------------------------- |
+| `solarTime`            | `standard`(표준시), `mean-solar`(평태양시), `true-solar`(진태양시)                     |
+| `dayBoundary`          | `midnight`(00시 날짜 경계), `zi-start`(23시 자시 시작 경계)                            |
+| `dstDisambiguation`    | `reject`, `earlier`, `later`. WBS-07 현지 시각 정규화에서 적용하는 중복/누락 시각 정책 |
 
 이 enum은 정책 선택을 저장하는 계약이며 각 기능의 지원 범위를 별도로 확인해야 한다.
 실제 음력 변환/윤달 실재/지원 연도는 WBS-01/04, 역사 TZ/DST는 [WBS-07 정규화](../timezone/README.md),

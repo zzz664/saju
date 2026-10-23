@@ -1,28 +1,49 @@
 import { z } from "zod";
 
-import { CalendarAdapterError, CalendarRequestSchema, CalendarSnapshotSchema, type CalendarAdapter } from "../../domain/calendar/index";
-import { AnalysisInputSchema, InputInformationSchema, getInputInformation } from "../../domain/input/index";
+import {
+  CalendarAdapterError,
+  CalendarRequestSchema,
+  CalendarSnapshotSchema,
+  type CalendarAdapter,
+} from "@/domain/calendar";
+import { AnalysisInputSchema, InputInformationSchema, getInputInformation } from "@/domain/input";
 
 const UnsupportedReasonSchema = z.enum([
-  "BIRTH_TIME_UNKNOWN", "TIMEZONE_UNSUPPORTED", "SOLAR_TIME_UNSUPPORTED",
-  "DAY_BOUNDARY_UNSUPPORTED", "DST_POLICY_UNSUPPORTED", "CALENDAR_RANGE_UNSUPPORTED",
+  "BIRTH_TIME_UNKNOWN",
+  "TIMEZONE_UNSUPPORTED",
+  "SOLAR_TIME_UNSUPPORTED",
+  "DAY_BOUNDARY_UNSUPPORTED",
+  "DST_POLICY_UNSUPPORTED",
+  "CALENDAR_RANGE_UNSUPPORTED",
   "CALENDAR_INPUT_REJECTED",
 ]);
 
-export const CalculationResultSchema = z.discriminatedUnion("status", [
-  z.strictObject({ status: z.literal("calculated"), snapshot: CalendarSnapshotSchema, information: InputInformationSchema }),
-  z.strictObject({ status: z.literal("unavailable"), reasons: z.array(UnsupportedReasonSchema).min(1).readonly(), information: InputInformationSchema }),
-]).readonly();
+export const CalculationResultSchema = z
+  .discriminatedUnion("status", [
+    z.strictObject({
+      status: z.literal("calculated"),
+      snapshot: CalendarSnapshotSchema,
+      information: InputInformationSchema,
+    }),
+    z.strictObject({
+      status: z.literal("unavailable"),
+      reasons: z.array(UnsupportedReasonSchema).min(1).readonly(),
+      information: InputInformationSchema,
+    }),
+  ])
+  .readonly();
 
 export type CalculationResult = z.infer<typeof CalculationResultSchema>;
 
+/** @deprecated Fixed UTC+9 CLI compatibility. New entry points use calculatePolicySaju. */
 export function calculateSajuSnapshot(value: unknown, adapter: CalendarAdapter): CalculationResult {
   const input = AnalysisInputSchema.parse(value);
   const { birthInput, calculationPolicy } = input;
   const { birthTime } = birthInput;
   const information = getInputInformation(input);
   const reasons: z.infer<typeof UnsupportedReasonSchema>[] = [];
-  const unavailable = (items: typeof reasons): CalculationResult => CalculationResultSchema.parse({ status: "unavailable", reasons: items, information });
+  const unavailable = (items: typeof reasons): CalculationResult =>
+    CalculationResultSchema.parse({ status: "unavailable", reasons: items, information });
 
   if (birthTime.status === "unknown") reasons.push("BIRTH_TIME_UNKNOWN");
   // IANA Etc/GMT signs are reversed: -9 is explicit fixed UTC+09:00.
@@ -37,9 +58,15 @@ export function calculateSajuSnapshot(value: unknown, adapter: CalendarAdapter):
   const [year, month, day] = birthInput.birthDate.split("-").map(Number);
   const [hour, minute] = birthTime.time.split(":").map(Number);
   const request = CalendarRequestSchema.safeParse({
-    year, month, day, hour, minute,
-    calendarType: birthInput.calendarType, isLeapMonth: birthInput.isLeapMonth,
-    timeReference: "fixed-utc+09:00", dayBoundary: calculationPolicy.dayBoundary,
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    calendarType: birthInput.calendarType,
+    isLeapMonth: birthInput.isLeapMonth,
+    timeReference: "fixed-utc+09:00",
+    dayBoundary: calculationPolicy.dayBoundary,
   });
   if (!request.success) return unavailable(["CALENDAR_RANGE_UNSUPPORTED"]);
 
@@ -54,5 +81,9 @@ export function calculateSajuSnapshot(value: unknown, adapter: CalendarAdapter):
   }
   const snapshot = CalendarSnapshotSchema.safeParse(raw);
   if (!snapshot.success) throw new CalendarAdapterError("OUTPUT_INVALID");
-  return CalculationResultSchema.parse({ status: "calculated", snapshot: snapshot.data, information });
+  return CalculationResultSchema.parse({
+    status: "calculated",
+    snapshot: snapshot.data,
+    information,
+  });
 }

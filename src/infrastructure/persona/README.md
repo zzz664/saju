@@ -2,13 +2,13 @@
 
 [설계 문서](../../../docs/11_캐릭터_페르소나_및_서술_설계.md)의 서버 관리 JSON + Zod + 불변 버전을 적용한다. 현재 등록은 로컬 개발자 테스트/평가용 합성 프로필이며 실제 제품 캐릭터 승인이 아니다.
 
-|구성|역할|
-|---|---|
-|[해요체 JSON](profiles/synthetic-haeyo.v1.0.0.json)|해요체 1.0.0 전체 설정. API에 있던 내용 그대로 이동|
-|[합쇼체 JSON](profiles/synthetic-formal.v1.0.1.json)|합쇼체 1.0.1 전체 설정. 해요체를 상속하지 않음|
-|[서버 승인 목록](synthetic-catalog.ts)|정적 JSON import, 승인 ID/버전과 현재 활성 버전 지정|
-|[공통 카탈로그](../../domain/persona/catalog.ts)|기존 승인형 Zod 로더 재사용, 활성 프로필 목록·정확한 버전 선택|
-|[API 조립](../../server/api-test-catalog.ts)|코어 사례/목차 구성과 공통 카탈로그 연결. 캐릭터 내용/분기 없음|
+| 구성                                                 | 역할                                                            |
+| ---------------------------------------------------- | --------------------------------------------------------------- |
+| [해요체 JSON](profiles/synthetic-haeyo.v1.0.0.json)  | 해요체 1.0.0 전체 설정. API에 있던 내용 그대로 이동             |
+| [합쇼체 JSON](profiles/synthetic-formal.v1.0.1.json) | 합쇼체 1.0.1 전체 설정. 해요체를 상속하지 않음                  |
+| [서버 승인 목록](synthetic-catalog.ts)               | 정적 JSON import, 승인 ID/버전과 현재 활성 버전 지정            |
+| [공통 카탈로그](../../domain/persona/catalog.ts)     | 기존 승인형 Zod 로더 재사용, 활성 프로필 목록·정확한 버전 선택  |
+| [API 조립](../../server/api-test-catalog.ts)         | 코어 사례/목차 구성과 공통 카탈로그 연결. 캐릭터 내용/분기 없음 |
 
 추가 절차:
 

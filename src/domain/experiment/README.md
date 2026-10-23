@@ -1,3 +1,9 @@
+> developer-json/narrateCore는 기존 Mock 비교 계약입니다. 현재 서버 실행 경로는 narratePersona와 승인형 페르소나 카탈로그를 사용합니다. 신규 제품 기능에 기존 비교 경로를 연결하지 않습니다.
+
+현재 공통 계약은 `BudgetLedger.reserve → BudgetLease.settle`이다. Memory는 동시성만 해제하고 예약 금액은 환불하지 않으며, File은 검증된 실제 usage가 있을 때만 사용량을 정산한다. `release/finish`는 기존 호출자 호환 별칭이다. Live는 가짜 금액 정책을 만들지 않고 `estimateNarrationTokens`의 토큰 견적과 실제 로컬 호출/토큰 한도만 사용한다. Mock 금액 견적은 실과금 보장이 아니다.
+
+`neutral-utf8-envelope-plus-output-v2`는 구조화된 내부 문맥까지 포함하는 보수적인 바이트 견적이다. 예산 예약량은 실제 전송 토큰 수와 같지 않으며, 실제 usage 미확인 시 전체 예약을 유지한다. 단일 호스트 File ledger를 분산 운영 예산으로 사용하지 않는다.
+
 # WBS-24 — 예산 가드·실험 접근제어
 
 WBS-23의 **로컬 단일 프로세스 mock 평가**를 위한 서버 진입점이다. 원래 원국·판단과
@@ -40,14 +46,14 @@ kind=openai는 기존 LIVE_DISABLED로 계속 차단한다. 키·무료 혜택·
 
 모든 설정은 필수이며 암묵적인 무료 토큰·단가·무제한 기본값은 없다.
 
-|필드|의미|
-|---|---|
-|enabled / expiresAt / allowedPrincipalIds|mock 실험 활성 여부·만료 epoch ms·허용 서버 principal(최대 50명)|
-|maxRequestBytes|실제 조립된 요청 JSON UTF-8 한도, 1~1 MiB|
-|maxOutputTokens|서버가 요청에 덮어쓰는 max_output_tokens, 1~16,384|
-|rates|입력/출력 각각 100만 예산 토큰당 microUSD 양의 정수 단가. 자동 실가격 조회 없음|
-|daily / perPrincipalDaily / perSession|각 범위의 calls·tokens·microUsd 상한, 0이면 해당 예산 차단|
-|maxConcurrent|원장 전체 동시 공급자 실행 수, 1~32. principal별 동시 실행은 항상 1개|
+| 필드                                      | 의미                                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------------------- |
+| enabled / expiresAt / allowedPrincipalIds | mock 실험 활성 여부·만료 epoch ms·허용 서버 principal(최대 50명)                |
+| maxRequestBytes                           | 실제 조립된 요청 JSON UTF-8 한도, 1~1 MiB                                       |
+| maxOutputTokens                           | 서버가 요청에 덮어쓰는 max_output_tokens, 1~16,384                              |
+| rates                                     | 입력/출력 각각 100만 예산 토큰당 microUSD 양의 정수 단가. 자동 실가격 조회 없음 |
+| daily / perPrincipalDaily / perSession    | 각 범위의 calls·tokens·microUsd 상한, 0이면 해당 예산 차단                      |
+| maxConcurrent                             | 원장 전체 동시 공급자 실행 수, 1~32. principal별 동시 실행은 항상 1개           |
 
 예산 수치는 0~10^12의 정수다. 단가는 1~10^12이며 무료 단가를 추정해 0으로 넣지 않는다.
 음수/소수/NaN/Infinity·추가 필드·중복 principal을 거절한다.
@@ -85,15 +91,15 @@ MemoryExperimentBudgetStore는 한 프로세스 안에서 공유해야 한다. �
 실서비스 원장은 DB 트랜잭션 등 공유 저장소에서 별도 구현/검증해야 한다.
 inspect는 로컬 내부 검사 전용으로 합계만 반환하며 HTTP·일반 로그에 공개하지 않는다.
 
-|상황|고정 오류|
-|---|---|
-|정책 형식 오류|POLICY_REJECTED|
-|환경·허용 목록·인증·기한 불충족|ACCESS_DENIED|
-|요청 크기/예약 산정 범위 초과|REQUEST_TOO_LARGE|
-|어느 범위든 호출/토큰/금액 상한 초과|BUDGET_EXCEEDED|
-|전체 또는 사용자 동시성 초과|CONCURRENCY_LIMIT|
-|잘못된 시각·시계 역행|CLOCK_INVALID|
-|저장소 오류·메모리 기록 한도|STORE_UNAVAILABLE|
+| 상황                                 | 고정 오류         |
+| ------------------------------------ | ----------------- |
+| 정책 형식 오류                       | POLICY_REJECTED   |
+| 환경·허용 목록·인증·기한 불충족      | ACCESS_DENIED     |
+| 요청 크기/예약 산정 범위 초과        | REQUEST_TOO_LARGE |
+| 어느 범위든 호출/토큰/금액 상한 초과 | BUDGET_EXCEEDED   |
+| 전체 또는 사용자 동시성 초과         | CONCURRENCY_LIMIT |
+| 잘못된 시각·시계 역행                | CLOCK_INVALID     |
+| 저장소 오류·메모리 기록 한도         | STORE_UNAVAILABLE |
 
 설정/인증/저장소 예외의 비밀 메시지는 노출하지 않는다. 다른 공급자 오류·취소는
 기존 NarrationError를 유지한다. 권한 확인 실패·invalid core·시작 전 취소는 예약 없이 끝난다.

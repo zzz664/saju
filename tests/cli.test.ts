@@ -25,7 +25,10 @@ describe("pure CLI runner", () => {
     const result = runCli(["calculate"], json, manseryeokCalendarAdapter);
 
     expect(result.exitCode).toBe(0);
-    expect(JSON.parse(result.stdout).snapshot.pillars.day).toEqual({ heavenlyStem: "계", earthlyBranch: "유" });
+    expect(JSON.parse(result.stdout).snapshot.pillars.day).toEqual({
+      heavenlyStem: "계",
+      earthlyBranch: "유",
+    });
     expect(result.stdout.trim().split("\n")).toHaveLength(1);
     expect(result.stderr).toBe("");
   });
@@ -39,12 +42,15 @@ describe("pure CLI runner", () => {
     expect(result.stderr).not.toContain(input.birthInput.birthDate);
   });
 
-  it.each([[], ["unknown"], ["calculate", "--unsafe"], ["--help", "calculate"]])("rejects invalid arguments %j without echoing them", (...args) => {
-    const result = runCli(args, json, manseryeokCalendarAdapter);
-    expect(result.exitCode).toBe(2);
-    expect(JSON.parse(result.stderr).error.code).toBe("USAGE");
-    expect(result.stdout).toBe("");
-  });
+  it.each([[], ["unknown"], ["calculate", "--unsafe"], ["--help", "calculate"]])(
+    "rejects invalid arguments %j without echoing them",
+    (...args) => {
+      const result = runCli(args, json, manseryeokCalendarAdapter);
+      expect(result.exitCode).toBe(2);
+      expect(JSON.parse(result.stderr).error.code).toBe("USAGE");
+      expect(result.stdout).toBe("");
+    },
+  );
 
   it("prints help without requiring input", () => {
     const result = runCli(["--help"], "", manseryeokCalendarAdapter);
@@ -53,17 +59,29 @@ describe("pure CLI runner", () => {
   });
 
   it("keeps unsupported input distinct from validation errors", () => {
-    const unknown = { ...input, birthInput: { ...input.birthInput, birthTime: { status: "unknown" } } };
+    const unknown = {
+      ...input,
+      birthInput: { ...input.birthInput, birthTime: { status: "unknown" } },
+    };
     const result = runCli(["calculate"], JSON.stringify(unknown), manseryeokCalendarAdapter);
 
     expect(result.exitCode).toBe(2);
-    expect(JSON.parse(result.stdout)).toMatchObject({ status: "unavailable", reasons: ["BIRTH_TIME_UNKNOWN"] });
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      status: "unavailable",
+      reasons: ["BIRTH_TIME_UNKNOWN"],
+    });
     expect(result.stderr).toBe("");
-    expect(runCli(["validate"], JSON.stringify(unknown), manseryeokCalendarAdapter).exitCode).toBe(0);
+    expect(runCli(["validate"], JSON.stringify(unknown), manseryeokCalendarAdapter).exitCode).toBe(
+      0,
+    );
   });
 
   it("hides raw adapter exceptions on stderr", () => {
-    const result = runCli(["calculate"], json, { calculate: () => { throw new Error("private 1992-10-24"); } });
+    const result = runCli(["calculate"], json, {
+      calculate: () => {
+        throw new Error("private 1992-10-24");
+      },
+    });
     expect(result.exitCode).toBe(1);
     expect(JSON.parse(result.stderr).error.code).toBe("CALCULATION_FAILED");
     expect(result.stderr).not.toContain(input.birthInput.birthDate);
@@ -77,21 +95,37 @@ describe("pure CLI runner", () => {
 describe("bounded UTF-8 input", () => {
   it("joins split UTF-8 chunks without replacement characters", async () => {
     const bytes = Buffer.from("한글");
-    expect(await readUtf8Input(Readable.from([bytes.subarray(0, 1), bytes.subarray(1, 4), bytes.subarray(4)]))).toBe("한글");
+    expect(
+      await readUtf8Input(
+        Readable.from([bytes.subarray(0, 1), bytes.subarray(1, 4), bytes.subarray(4)]),
+      ),
+    ).toBe("한글");
   });
 
   it("accepts exactly the byte limit", async () => {
-    expect((await readUtf8Input(Readable.from([Buffer.alloc(MAX_STDIN_BYTES, 0x20)]))).length).toBe(MAX_STDIN_BYTES);
+    expect((await readUtf8Input(Readable.from([Buffer.alloc(MAX_STDIN_BYTES, 0x20)]))).length).toBe(
+      MAX_STDIN_BYTES,
+    );
   });
 
   it("rejects one extra byte without returning a partial input", async () => {
-    await expect(readUtf8Input(Readable.from([Buffer.alloc(MAX_STDIN_BYTES), Buffer.from("x")]))).rejects.toMatchObject({ code: "INPUT_TOO_LARGE" });
+    await expect(
+      readUtf8Input(Readable.from([Buffer.alloc(MAX_STDIN_BYTES), Buffer.from("x")])),
+    ).rejects.toMatchObject({ code: "INPUT_TOO_LARGE" });
   });
 
   it("rejects invalid UTF-8 and I/O failures without raw error content", async () => {
-    await expect(readUtf8Input(Readable.from([Buffer.from([0xc3, 0x28])]))).rejects.toMatchObject({ code: "INVALID_UTF8" });
-    const broken = async function* () { yield Buffer.from("{"); throw new Error("private stream failure"); };
-    await expect(readUtf8Input(broken())).rejects.toMatchObject({ code: "STDIN_ERROR", message: "Could not read standard input." });
+    await expect(readUtf8Input(Readable.from([Buffer.from([0xc3, 0x28])]))).rejects.toMatchObject({
+      code: "INVALID_UTF8",
+    });
+    const broken = async function* () {
+      yield Buffer.from("{");
+      throw new Error("private stream failure");
+    };
+    await expect(readUtf8Input(broken())).rejects.toMatchObject({
+      code: "STDIN_ERROR",
+      message: "Could not read standard input.",
+    });
   });
 });
 
@@ -99,7 +133,12 @@ describe("actual npm CLI smoke", () => {
   function command(args: string[], data: string | Buffer) {
     const npmCli = process.env.npm_execpath;
     if (!npmCli) throw new Error("Run this smoke test through npm test.");
-    const result = spawnSync(process.execPath, [npmCli, "run", "--silent", "saju", "--", ...args], { input: data, encoding: "utf8", timeout: 15000, windowsHide: true });
+    const result = spawnSync(process.execPath, [npmCli, "run", "--silent", "saju", "--", ...args], {
+      input: data,
+      encoding: "utf8",
+      timeout: 15000,
+      windowsHide: true,
+    });
     expect(result.error).toBeUndefined();
     return result;
   }
@@ -120,7 +159,10 @@ describe("actual npm CLI smoke", () => {
   }, 20000);
 
   it("validates BOM-prefixed input and provides help through the actual command", () => {
-    const result = command(["validate"], Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(json)]));
+    const result = command(
+      ["validate"],
+      Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(json)]),
+    );
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout).status).toBe("valid");
     expect(result.stderr).toBe("");
@@ -131,7 +173,13 @@ describe("actual npm CLI smoke", () => {
   }, 20000);
 
   it("returns structured unavailable without inventing a time", () => {
-    const result = command(["calculate"], JSON.stringify({ ...input, birthInput: { ...input.birthInput, birthTime: { status: "unknown" } } }));
+    const result = command(
+      ["calculate"],
+      JSON.stringify({
+        ...input,
+        birthInput: { ...input.birthInput, birthTime: { status: "unknown" } },
+      }),
+    );
     expect(result.status).toBe(2);
     expect(JSON.parse(result.stdout).status).toBe("unavailable");
     expect(result.stdout).not.toContain('"snapshot"');

@@ -4,12 +4,33 @@ import { calculateCoreExport } from "@/application/core-export";
 import { calculateArbitratedJudgments } from "@/application/judgment";
 import { parseCoreExport, ManualPromptDataSchema } from "@/domain/core-export";
 import { runCli } from "@/cli/run";
-import { manseryeokCalendarAdapter, manseryeokCalendarConversionAdapter, manseryeokEquationOfTimeAdapter, manseryeokPolicyCalendarAdapter, manseryeokSymbolCatalogAdapter } from "@/infrastructure/manseryeok";
+import {
+  manseryeokCalendarAdapter,
+  manseryeokCalendarConversionAdapter,
+  manseryeokEquationOfTimeAdapter,
+  manseryeokPolicyCalendarAdapter,
+  manseryeokSymbolCatalogAdapter,
+} from "@/infrastructure/manseryeok";
 import { temporalTimeZoneAdapter } from "@/infrastructure/timezone";
 import input from "./fixtures/core-reference-input.json";
 
-const dependencies = { timeZone: temporalTimeZoneAdapter, calendar: manseryeokCalendarConversionAdapter, equationOfTime: manseryeokEquationOfTimeAdapter, pillars: manseryeokPolicyCalendarAdapter, symbols: manseryeokSymbolCatalogAdapter };
-const base = { ...input, birthInput: { ...input.birthInput, birthDate: "2024-02-10", timezoneId: "Asia/Seoul", longitudeDeg: 127.123456, latitudeDeg: 37.654321 } };
+const dependencies = {
+  timeZone: temporalTimeZoneAdapter,
+  calendar: manseryeokCalendarConversionAdapter,
+  equationOfTime: manseryeokEquationOfTimeAdapter,
+  pillars: manseryeokPolicyCalendarAdapter,
+  symbols: manseryeokSymbolCatalogAdapter,
+};
+const base = {
+  ...input,
+  birthInput: {
+    ...input.birthInput,
+    birthDate: "2024-02-10",
+    timezoneId: "Asia/Seoul",
+    longitudeDeg: 127.123456,
+    latitudeDeg: 37.654321,
+  },
+};
 function dataFromCopy(text: string) {
   const match = text.match(/<analysis_data>\r?\n([\s\S]*?)\r?\n<\/analysis_data>/);
   if (!match) throw new Error("Incomplete copy block.");
@@ -21,7 +42,11 @@ describe("core export application and CLI", () => {
     const load = vi.fn(manseryeokSymbolCatalogAdapter.load);
     const pillars = vi.fn(manseryeokPolicyCalendarAdapter.calculate);
     const before = structuredClone(base);
-    const result = calculateCoreExport(base, { ...dependencies, symbols: { load }, pillars: { calculate: pillars } });
+    const result = calculateCoreExport(base, {
+      ...dependencies,
+      symbols: { load },
+      pillars: { calculate: pillars },
+    });
     expect(load).toHaveBeenCalledTimes(1);
     expect(pillars).toHaveBeenCalledTimes(1);
     const original = calculateArbitratedJudgments(base, dependencies);
@@ -36,7 +61,14 @@ describe("core export application and CLI", () => {
     for (const command of ["export-json", "manual-prompt"]) {
       expect(runCli([command], "{}", manseryeokCalendarAdapter, dependencies).exitCode).toBe(2);
       expect(runCli([command], JSON.stringify(base), manseryeokCalendarAdapter).exitCode).toBe(1);
-      const result = runCli([command], JSON.stringify(base), manseryeokCalendarAdapter, { ...dependencies, symbols: { load: () => { throw new Error("private 2024-02-10 secret"); } } });
+      const result = runCli([command], JSON.stringify(base), manseryeokCalendarAdapter, {
+        ...dependencies,
+        symbols: {
+          load: () => {
+            throw new Error("private 2024-02-10 secret");
+          },
+        },
+      });
       expect(result).toMatchObject({ exitCode: 1, stdout: "" });
       expect(result.stderr).not.toMatch(/2024|private|secret/);
       expect(JSON.parse(result.stderr).error.code).toBe("CALCULATION_FAILED");
@@ -44,13 +76,28 @@ describe("core export application and CLI", () => {
   });
 
   it("returns complete/partial/unavailable artifacts with consistent exit codes", () => {
-    for (const value of [base,
+    for (const value of [
+      base,
       { ...base, birthInput: { ...base.birthInput, birthTime: { status: "unknown" } } },
-      { ...base, birthInput: { ...base.birthInput, longitudeDeg: null }, calculationPolicy: { ...base.calculationPolicy, solarTime: "true-solar" } },
+      {
+        ...base,
+        birthInput: { ...base.birthInput, longitudeDeg: null },
+        calculationPolicy: { ...base.calculationPolicy, solarTime: "true-solar" },
+      },
     ]) {
-      const json = runCli(["export-json"], JSON.stringify(value), manseryeokCalendarAdapter, dependencies);
+      const json = runCli(
+        ["export-json"],
+        JSON.stringify(value),
+        manseryeokCalendarAdapter,
+        dependencies,
+      );
       const core = parseCoreExport(json.stdout);
-      const copy = runCli(["manual-prompt"], JSON.stringify(value), manseryeokCalendarAdapter, dependencies);
+      const copy = runCli(
+        ["manual-prompt"],
+        JSON.stringify(value),
+        manseryeokCalendarAdapter,
+        dependencies,
+      );
       expect(dataFromCopy(copy.stdout).status).toBe(core.status);
       expect(copy.exitCode).toBe(json.exitCode);
       expect(json.exitCode).toBe(core.status === "complete" ? 0 : 2);
@@ -69,9 +116,21 @@ describe("core export application and CLI", () => {
     const npmCli = process.env.npm_execpath;
     if (!npmCli) throw new Error("Run through npm test.");
     for (const known of [true, false]) {
-      const value = known ? base : { ...base, birthInput: { ...base.birthInput, birthTime: { status: "unknown" } } };
+      const value = known
+        ? base
+        : { ...base, birthInput: { ...base.birthInput, birthTime: { status: "unknown" } } };
       for (const command of ["export-json", "manual-prompt"]) {
-        const result = spawnSync(process.execPath, [npmCli, "run", "--silent", "saju", "--", command], { input: JSON.stringify(value), encoding: "utf8", env: { ...process.env, TZ: "Pacific/Honolulu" }, timeout: 20000, windowsHide: true });
+        const result = spawnSync(
+          process.execPath,
+          [npmCli, "run", "--silent", "saju", "--", command],
+          {
+            input: JSON.stringify(value),
+            encoding: "utf8",
+            env: { ...process.env, TZ: "Pacific/Honolulu" },
+            timeout: 20000,
+            windowsHide: true,
+          },
+        );
         expect(result.error).toBeUndefined();
         expect(result.status).toBe(known ? 0 : 2);
         expect(result.stderr).toBe("");
@@ -81,7 +140,17 @@ describe("core export application and CLI", () => {
         expect(result.stdout).not.toMatch(/2024-02-10|127\.123456|37\.654321/);
       }
     }
-    const schema = spawnSync(process.execPath, [npmCli, "run", "--silent", "saju", "--", "export-schema"], { input: "", encoding: "utf8", timeout: 20000, windowsHide: true, maxBuffer: 2 * 1024 * 1024 });
+    const schema = spawnSync(
+      process.execPath,
+      [npmCli, "run", "--silent", "saju", "--", "export-schema"],
+      {
+        input: "",
+        encoding: "utf8",
+        timeout: 20000,
+        windowsHide: true,
+        maxBuffer: 2 * 1024 * 1024,
+      },
+    );
     expect(schema.error).toBeUndefined();
     expect(schema.status).toBe(0);
     expect(schema.stderr).toBe("");

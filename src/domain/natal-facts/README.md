@@ -1,5 +1,7 @@
 # 십성·지장간·오행 기초 사실 — WBS-10
 
+구조 스키마는 `schemas.ts`에 있고 합계·상태·근거 연결 불변식은 `parseDerivedNatalFacts`에서 검증한다. 외부 데이터를 구조 스키마 통과만으로 신뢰하지 않는다.
+
 `deriveNatalFacts(knownPillars, catalog)`는 검증된 기둥과 공급자 타입 없는 기호 카탈로그를
 받는 순수 함수다. year/month/day/hour 슬롯은 모두 필요하며 모르는 기둥은 null이다.
 간지의 음양 짝이 맞는 60갑자 조합만 받는다. Node/Next/SDK/네트워크에 의존하지 않는다.

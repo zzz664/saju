@@ -4,28 +4,28 @@
 기둥·십성·오행을 다시 계산하거나 변경하지 않는다. 카탈로그는
 [catalog.ts](catalog.ts)에 고전 4종의 출처 항목 6개와 구현 검토 규칙 20개를 담는다.
 
-| 규칙 ID (`base.` 접두사) | 확인하는 최소 조건 | 출처 항목 |
-| --- | --- | --- |
-| day-wood | 일간 오행 목 | dts.stems |
-| day-fire | 일간 오행 화 | dts.stems |
-| day-earth | 일간 오행 토 | dts.stems |
-| day-metal | 일간 오행 금 | dts.stems |
-| day-water | 일간 오행 수 | dts.stems |
-| month-spring | 월지 인·묘·진 | qtbj.seasons |
-| month-summer | 월지 사·오·미 | qtbj.seasons |
-| month-autumn | 월지 신·유·술 | qtbj.seasons |
-| month-winter | 월지 해·자·축 | qtbj.seasons |
-| exact-hidden-root | 일간과 장간의 동일 글자 | zpzq.roots |
-| month-main-exposed | 월지 본기가 연·월·시간 천간에 존재 | zpzq.exposure |
-| month-other-exposed | 월지 기타 장간이 연·월·시간 천간에 존재 | zpzq.exposure |
-| companions-visible | 표면 천간에 비견/겁재 | smth.families |
-| output-visible | 표면 천간에 식신/상관 | smth.families |
-| wealth-visible | 표면 천간에 편재/정재 | smth.families |
-| officers-visible | 표면 천간에 편관/정관 | smth.families |
-| resources-visible | 표면 천간에 편인/정인 | smth.families |
-| officer-killing-coexist | 천간/장간에 정관과 편관 | smth.families |
-| food-indirect-resource-coexist | 천간/장간에 식신과 편인 | smth.families |
-| hurting-direct-resource-coexist | 천간/장간에 상관과 정인 | zpzq.hurting-resource |
+| 규칙 ID (`base.` 접두사)        | 확인하는 최소 조건                      | 출처 항목             |
+| ------------------------------- | --------------------------------------- | --------------------- |
+| day-wood                        | 일간 오행 목                            | dts.stems             |
+| day-fire                        | 일간 오행 화                            | dts.stems             |
+| day-earth                       | 일간 오행 토                            | dts.stems             |
+| day-metal                       | 일간 오행 금                            | dts.stems             |
+| day-water                       | 일간 오행 수                            | dts.stems             |
+| month-spring                    | 월지 인·묘·진                           | qtbj.seasons          |
+| month-summer                    | 월지 사·오·미                           | qtbj.seasons          |
+| month-autumn                    | 월지 신·유·술                           | qtbj.seasons          |
+| month-winter                    | 월지 해·자·축                           | qtbj.seasons          |
+| exact-hidden-root               | 일간과 장간의 동일 글자                 | zpzq.roots            |
+| month-main-exposed              | 월지 본기가 연·월·시간 천간에 존재      | zpzq.exposure         |
+| month-other-exposed             | 월지 기타 장간이 연·월·시간 천간에 존재 | zpzq.exposure         |
+| companions-visible              | 표면 천간에 비견/겁재                   | smth.families         |
+| output-visible                  | 표면 천간에 식신/상관                   | smth.families         |
+| wealth-visible                  | 표면 천간에 편재/정재                   | smth.families         |
+| officers-visible                | 표면 천간에 편관/정관                   | smth.families         |
+| resources-visible               | 표면 천간에 편인/정인                   | smth.families         |
+| officer-killing-coexist         | 천간/장간에 정관과 편관                 | smth.families         |
+| food-indirect-resource-coexist  | 천간/장간에 식신과 편인                 | smth.families         |
+| hurting-direct-resource-coexist | 천간/장간에 상관과 정인                 | zpzq.hurting-resource |
 
 표면 천간 검색은 일간 자체를 제외한다. 동일 장간 글자 일치는 통근 논의의 좁은 기초
 조건이다. 불일치를 통근 전체의 부재로 해석하지 않는다. 노출·동시 존재도 관살혼잡,

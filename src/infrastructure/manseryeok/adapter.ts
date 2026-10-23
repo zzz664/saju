@@ -6,12 +6,10 @@ import {
   ManseryeokSnapshotSchema,
   SdkPillarsProjectionSchema,
   type ManseryeokSnapshot,
-} from "./schemas";
+} from "@/infrastructure/manseryeok/schemas";
 
 type AdapterErrorCode =
-  | "LIBRARY_REJECTED_INPUT"
-  | "LIBRARY_CALCULATION_FAILED"
-  | "LIBRARY_OUTPUT_INVALID";
+  "LIBRARY_REJECTED_INPUT" | "LIBRARY_CALCULATION_FAILED" | "LIBRARY_OUTPUT_INVALID";
 
 const errorMessages: Record<AdapterErrorCode, string> = {
   LIBRARY_REJECTED_INPUT: "The pinned calendar library rejected the request.",
@@ -33,8 +31,11 @@ export class ManseryeokAdapterError extends Error {
 export function calculateManseryeokSnapshot(value: unknown): ManseryeokSnapshot {
   const request = ManseryeokRequestSchema.parse(value);
   const birthInfo: BirthInfo = {
-    year: request.year, month: request.month, day: request.day,
-    hour: request.hour, minute: request.minute,
+    year: request.year,
+    month: request.month,
+    day: request.day,
+    hour: request.hour,
+    minute: request.minute,
     isLunar: request.calendarType === "lunar",
     isLeapMonth: request.isLeapMonth,
     dayBoundary: request.dayBoundary,

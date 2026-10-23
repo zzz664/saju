@@ -27,11 +27,14 @@ function convert(value: unknown): CalendarConversionSnapshot {
     }
   } catch (error) {
     // Provider messages may contain birth dates. Never propagate the raw cause.
-    throw new CalendarAdapterError(error instanceof RangeError ? "INPUT_REJECTED" : "CALCULATION_FAILED");
+    throw new CalendarAdapterError(
+      error instanceof RangeError ? "INPUT_REJECTED" : "CALCULATION_FAILED",
+    );
   }
 
   const result = CalendarConversionSnapshotSchema.safeParse({
-    solar, lunar,
+    solar,
+    lunar,
     provenance: {
       libraryName: packageInfo.name,
       libraryVersion: packageInfo.version,
@@ -43,4 +46,6 @@ function convert(value: unknown): CalendarConversionSnapshot {
   return result.data;
 }
 
-export const manseryeokCalendarConversionAdapter: CalendarConversionAdapter = Object.freeze({ convert });
+export const manseryeokCalendarConversionAdapter: CalendarConversionAdapter = Object.freeze({
+  convert,
+});

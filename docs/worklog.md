@@ -946,3 +946,47 @@
 - 기준선: `npm test` **47파일/1101건 PASS**, `npm run typecheck` PASS, `npm run lint` 경고 0, `npm run check:docs` 문제 0건.
 - 측정(로컬, 리뷰 근거): 개발자 분석 1건 — 시각 있음 약 44 ms, 시각 미상 약 1.8 s, 요청당 `JudgmentEvaluationSchema` 파싱 15회. 측정 스크립트는 저장소에 남기지 않았다.
 - 미실행: build/E2E(코드 변경 없음), 실제 OpenAI 호출(`LIVE_NOT_RUN`). 리팩터링 착수는 사용자 리뷰·WBS 확정 후.
+
+## 2026-10-24 코드리뷰 리팩터링 A — 포맷·import 규칙
+
+- PR #26 MERGED 및 origin/develop 포함 확인 후 develop을 cafbf27까지 fast-forward. 이전 기능 브랜치는 git branch -d로 안전 삭제. 리뷰는 docs/reviews의 계산엔진 리뷰이며 사용자 지시로 A~F를 순차 커밋하고 최종 PR 한 건을 만든다.
+- A: Prettier 3.9.10 고정/lockfile, format/format:check, src·scripts·TS 테스트 포맷. 소스 import를 @/로 통일하고 domain→application/infrastructure/server 및 상대 import를 ESLint로 제한. 출력 계약·계산 규칙 변경 없음.
+- 검증: tsc --noEmit PASS, lint PASS, 관련 CLI/정책 CLI/내보내기/페르소나 카탈로그 4파일 35건 PASS. 첫 샌드박스 실행 7건은 Windows uv_os_get_passwd ENOMEM으로 실패했고 동일 명령을 승인된 정상 프로세스에서 재실행해 통과했다. 실패 무시·skip 없음.
+- AGENTS.md, next-env.d.ts, tests/fixtures/cli-input.json 사용자 수정은 보존/커밋 제외. .env 열람·변경 및 실제 API 호출 없음(LIVE_NOT_RUN).
+
+## 2026-10-24 코드리뷰 리팩터링 B — 공통 계약과 조립
+
+- domain/contracts·provenance·utilities에 상태/십성/해시/단계별 사유/고정 라이브러리·공용 Gregorian/JSON escape/오류 팩토리를 분리했다. 사유는 하위 단계 enum에서 합성하며 각 규칙의 독립 버전은 임의로 묶지 않는다.
+- server/core-dependencies를 CLI·분석 route·API 테스트가 공유한다. infrastructure/io/bounded-utf8로 CLI/서버 본문 읽기를 통합했고 바이트 상한·엄격 UTF-8·스트림 취소를 검증했다.
+- 음력 변환 예외/잘못된 반환값은 CalendarAdapterError로 분류한다. 정상 시간대 오류는 기존 TimeZoneAdapterError를 유지하며 원문/cause를 보관하지 않는다.
+- 검증: 관련 8파일 388건 중 오류 분류 변경에 대한 기존 기대 1건 실패→CalendarAdapterError 검증으로 갱신. 해당 파일+신규 스트림 테스트 재검증 15건 PASS(기타 376건 기존 실행 PASS). tsc PASS, lint PASS. 실제 API 0회.
+
+## 2026-10-24 코드리뷰 리팩터링 C — 경계 테스트 자산·호환 경로 정리
+
+- day/solar 전용 SDK 어댑터는 tests/support/manseryeok로 이동하고 제품 barrel에서 제거. 기존 골든·오류 검증은 같은 테스트를 유지한다. 계약 DTO는 호환성을 위해 보존하고 향후 WBS-39/40에서의 검토 의도를 명시했다.
+- CLI 명령 목록을 commands.ts에서 공유. calculate는 공개 fixed-clock 호환 명령으로 명시적으로 deprecated하며 신규 경로는 calculate-policy다. 기존 CLI 응답/실패 계약을 깨는 삭제는 하지 않았다. developer-analysis의 테스트 편의 재export 및 항상 덮어쓰던 NARRATION_META.model 제거.
+- parseCoreExport/verifyCoreFingerprint는 WBS-54 저장 재검증 용도로 유지한다. developer-json Mock은 비교·호환 검증 경로이며 제품/R01 진입점으로 안내하지 않는다.
+- 검증: 타입/린트 PASS, 이동한 SDK 경계·CLI·분석 API 관련 6파일 179건 PASS. 실제 API 호출 0회.
+
+## 2026-10-24 코드리뷰 리팩터링 D — 구조 계약/의미 불변식 경계
+
+- natal/judgment/arbitration/core-export/fingerprint/developer-response의 엔진 없는 schemas 모듈을 분리했다. 외부 의미 검증은 parseDerivedNatalFacts/parseJudgmentEvaluation/parseArbitrationResult/validateCoreExport/parseHashedCoreExport로 명시한다. serialize/parse/fingerprint/prompt는 validateCoreExport 경계를 사용한다.
+- 내부 judgment 결과는 이미 생성한 값을 전달하고 중재기 출력 스키마가 resolve를 재실행하지 않는다. 검증된 불변 CoreExport는 브랜드 타입+WeakSet으로 동일 객체를 재사용한다. 순환적 정답 검증을 늘리지 않으며 외부 JSON은 다시 검증한다.
+- 클라이언트 validation form은 구조 스키마만 import. use client ESLint 가드와 두 UI의 전이적 런타임 의존 그래프 테스트로 엔진/카탈로그/전송 유입을 차단한다. JSON.stringify 동등 비교 13곳을 키 정렬 기반 공용 비교로 바꿨다. 평가기 규칙 수는 실제 카탈로그 길이에서 검증한다.
+- 기존 변조 거절 테스트를 의미 검증 함수로 옮겨 유지했다. 골든·해시·내보내기·API 등 9파일 295건 PASS. 정규화 비교/경계/정책/파생 service 추가 재검증 5파일 107건 PASS. 타입/린트 PASS. 외부 API 0회.
+
+## 2026-10-24 코드리뷰 리팩터링 E — 미상 시각 계산 재사용
+
+- 모든 1440 입력 분/거절/불가 구간을 보존한다. 고정 어댑터가 제공하는 요청 단위 scope에서 Temporal 전환표의 선형 구간과 절입·정책 날짜·시지 경계 안의 동일 SDK 투영만 재사용한다. 다른 어댑터나 resolve/calculate 래퍼는 스스로 opt-in하지 않으면 기존 전수 호출로 돌아간다.
+- 공개 입력 경계의 검증 후 내부 parsed-input 경로를 사용하고 후보 구간 중간 파싱을 제거해 최종 후보 결과를 한 번 검증한다. 원본 출생시각 미상을 대표 관측 시각으로 바꾸지 않는다.
+- 신규 17건: 14개 날짜/시간대/DST·태양시·경계 조합 및 음력 윤달의 비최적화 전수 결과와 완전 일치, 일반 날짜 실제 timezone resolve 1회/SDK projection 13회, 구간 내부 00:37 오류를 놓치지 않는 래퍼 fallback을 검증했다.
+- 검증: 초기 관련 3파일 73건 PASS. 내부 재파싱 최적화 후 5파일 99건 중 실제 CLI 1건이 Windows 샌드박스 프로세스 제한으로 실패→해당 파일 정상 환경 재실행 14건 PASS(나머지 85건 PASS). 타입/린트 PASS.
+- benchmark:core(합성 입력, 동일 코드/호스트): 전수 어댑터 692ms, scope 478/422/397ms. 초기 scope 구현의 757~805ms보다 개선. 시간은 환경 의존이며 호출 횟수와 전수 동등성 테스트를 회귀 기준으로 삼는다. 외부 API 0회.
+
+## 2026-10-24 코드리뷰 리팩터링 F — 공급자·예산 경계 및 최종 검증
+
+- 도메인 요청을 modelId/instructions/messages/output/maxOutputTokens 및 구조화 data/style로 변경. infrastructure/openai/request만 Responses body의 model/input/text/store/stream/max_output_tokens를 조립한다. 같은 공통 프롬프트·출력 스키마를 그대로 전송하고 store:false/stream:false·토큰 상한을 강제한다. 날짜 접미사 모델 매칭은 OpenAI 인프라로 이동하고 domain은 일반 ModelIdSchema를 사용한다.
+- Mock은 developer 문자열 접두사·user JSON을 재파싱하지 않고 승인된 구조화 data/style을 읽는다. BudgetLedger/BudgetLease의 reserve→settle를 Memory/File이 공유하며 기존 release/finish는 호환 별칭으로 유지했다. Live는 가짜 microUSD 정책 없이 공통 토큰 견적을 사용한다. 실제 usage 미확인 시 전체 예약 유지, 오류/재시작/멱등 안전 계약은 기존과 같다. 공급자 응답도 공통 bounded UTF-8 reader를 사용한다.
+- 검증: 관련 11파일 187건 및 신규 공급자 경계 2건 PASS. 타입·린트(경고 0)·포맷 PASS. 문서 50파일/79링크/0오류. 격리 QA 개발 E2E 22/22, 운영 E2E 4/4, 프로덕션 빌드·typegen·tsc PASS. 예상 외 외부 fetch 시도 0건(Next 버전 확인 1건은 기존 오프라인 stub). 실제 OpenAI 호출 0회/LIVE_NOT_RUN.
+- A→B→C→D→E를 검증 후 각각 커밋하고 F를 마지막으로 커밋한다. 전체 npm test를 일괄 실행하지 않고 단계별 관련 테스트만 실행했다. 전체 범위·유지한 호환 API·성능 수치는 docs/evaluations/core-review-refactor.md에 기록했다.
+- AGENTS.md, next-env.d.ts, 개인 cli-input.json은 사용자 변경 그대로 커밋에서 제외. .env 및 실제 .local 예산 파일을 읽거나 수정하지 않았다. CI·미래 WBS·DB·PG·라이브 API 실행 없음.
