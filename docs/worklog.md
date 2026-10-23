@@ -1,5 +1,38 @@
 # 작업 기록
 
+## 2026-10-23 — WBS-47: R01 승인형 페르소나·문체·내부 JSON 검증
+
+### 선행 확인과 구현 전 완료 조건
+
+- 직전/직접 선행 PR #19(WBS-24)의 GitHub MERGED, 대상 develop, 병합 시각 2026-10-23 15:04:33 KST 및 merge commit `b03d3803b8d16e21d0e9d5afc79d580cdc401600`를 확인했다. 원격 origin/develop hash 일치, fetch 후 ancestor 확인. 다른 직접 선행 WBS-23(PR #18)도 develop MERGED 및 ancestor 확인. WBS.csv 실행순서 21의 WBS-47 한 건만 진행했다.
+- develop checkout/ff-only pull 후 `git branch -d feature/WBS-24-experiment-budget-access-guard` 안전 삭제 성공. 최신 develop에서 `feature/WBS-47-approved-persona-narration` 한 개를 생성했다. AGENTS/WBS/02/05, 필수 11/12/20과 관련 08·기존 provider/예산/해시 계약을 읽었다. 11의 내부 JSON 예외와 20의 R02/R03 텍스트 전용 경계를 구분했다.
+- 구현 전 완료 조건: strict PersonaProfile/Zod와 서버 승인형 JSON 목록/정확한 버전 선택, 공통·승인 스타일/목차·판단 데이터 3계층, mock 서술 JSON/근거·제한 검증, 문체 평가와 코어/서술 캐시 분리. 제품명/캐릭터명·실 API/키·P06/SSE·명리 판단은 변경하지 않는다.
+- 먼저 정의한 정상/오류/경계 테스트: 승인 JSON/프로필 강도·표현/범위·버전·중복/미승인/크기, 공통 원문과 세 역할·개인정보 최소화, 두 문체의 동일 근거/코어 키와 서로 다른 서술 키, 미상·계산 불가, 기능/섹션/근거 위조·누락/중복·길이, 상투어·과장·유행어·문체, 기존 예산/접근·실호출 차단. 첫 실행은 새 서비스 모듈 부재로 종료 1을 확인했다.
+
+### 구현과 검증 결과
+
+- PersonaProfile은 docs/11의 가상 서술자 공개·성격/강도·한국어 목소리·표현/회피/유행어·문단/문장 범위·비교 예시를 strict/readonly 스키마로 검증한다. 서버 manifest에 명시적으로 등록된 approved JSON만 ID+버전으로 조회한다. 기본 목록은 비어 있고 UTF-8 32 KiB/개수·길이·범위/본문 ID 불일치·중복/잘못된 JSON을 거절한다. 사용자 프로필/프롬프트 업로드·경로 선택·자동 승인은 없다.
+- docs/12의 text 블록을 코드펜스/설명 없이 그대로 상위 instructions에 넣고 원문 동기화 테스트를 추가했다. 별도 developer에는 R01 내부 JSON 계약과 승인형 PersonaProfile/FeatureNarrationSpec만, user에는 기존 확정·채택 판단/근거·제한을 전달한다. docs/20 전용 텍스트 스트림 지시를 조립하지 않는다. 공통 정책은 표현보다 우선하며 문체 예시를 분석 대상의 사실로 쓰지 않도록 명시한다.
+- 현재 코어를 내부 featureId=core-base로 명시했다. 아직 구현되지 않은 F01~F11 결과를 만들거나 기존 코어를 해당 기능이라고 표시하지 않는다. 서버 spec의 고유 섹션/목적·최소 근거·길이·일반 독자/제한 포함·점수 금지를 검증한다. 공급자는 schemaVersion/featureId/sections만 생성하며 서버가 sourceStatus·원래 limitations·버전/모델·persona/spec 메타를 붙인다.
+- 출력의 기능·섹션/제목·길이·중복/누락·알 수 없는/빈 근거 ID, 현재 코어에 없는 날짜 삽입·추가 meta/limitations·손상/과대 JSON을 거절한다. 섹션 순서는 서버 spec에 맞춘다. 확정 근거가 없는 unavailable은 빈 근거와 한계 설명으로 처리하고, partial도 원래 제한/확정 근거만 사용한다. 문장의 모든 의미나 환각을 입증하는 검증이라고 표시하지 않는다.
+- 코어 체크섬은 기존 fingerprintCoreExport로 계산하며 페르소나와 무관하다. 별도 narration.persona-cache/1.0.0 키에는 코어 키·기능·persona/프롬프트/모델/spec/출력 스키마 버전과 프로필/spec/프롬프트 내용 digest를 넣는다. 같은 버전 내용이 바뀌어도 키가 달라지며 실제 캐시 저장/조회는 구현하지 않는다. 기존 명리 계산·판단·해시 정책은 변경하지 않았다.
+- 공통 provider 포트는 developer/user 역할과 독립 출력 JSON Schema 타입을 지원하도록 정리하고, 거절/오류·취소 처리를 receiveNarrationText로 공유했다. 예산 가드는 서버가 고정한 execute 전략을 지원해 R01 전체 요청을 같은 권한·기한·예약·동시성 경로로 실행한다. 실행 전략은 사용자 본문에서 받지 않는다. 기존 코어 provider/예산 결과는 유지하고 실 API/production 차단도 유지한다.
+- Mock은 실제 assertion을 그대로 인용하고 승인 register에 따른 합성 도입/한계 문장만 바꾼다. styleEvaluation은 상투어·중복·확정 표현·이모지·높임법·유행어 횟수·문단/문장 수·내부 ID를 휴리스틱으로 평가한다. 해요체/합쇼체/반말 합성 대조는 통과했지만 모든 성격 특성을 재현하거나 실제 모델의 자연스러움을 검증한 것은 아니다. 평가 실패 초안도 내부 진단 결과로 반환하며 고객 게시에 연결하지 않는다.
+- 최초 구현 검사에서 mock이 여러 줄의 developer 계약을 첫 줄 뒤 JSON으로 오해해 6건 실패했다. 고정 계약 prefix 뒤의 JSON만 읽도록 수정했다. 이후 79건 통과 후 타입 검사에서 literal widening 및 Zod JSON 스키마가 기존 출력 타입에 묶인 오류를 발견해 포트를 일반 JSON Schema 타입으로 수정했다. 실패를 무시하거나 테스트/CI를 우회하지 않았다.
+- 추가로 반말 대조·미승인/위조 본문 예산 0·환경/예산/실호출 차단·거절/중단/실패·공급자/해시 예외·취소·여러 섹션 재정렬·UTF-8 크기·내부 ID/문장 경계를 보강했다. 최종 `npm.cmd test -- tests/persona.test.ts tests/narration.test.ts tests/experiment-guard.test.ts`: 종료 0, 관련 3파일/89건 통과(신규 23 + provider 30 + 예산/보안 36). 코어/원래 근거·분석 키 불변과 스타일/버전·내용 변경 시 서술 키 변경을 확인했다.
+- `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`: 모두 종료 0, 린트 경고 0개. 변경 문서 로컬 링크 16개와 Git 공백 검사도 통과했다. HTTP 라우트/Next 설정·의존성 변경이 없어 빌드/E2E/설치·전체 회귀는 반복하지 않았다. 개인 cli-input.json 대신 별도 합성 출생 입력과 제품이 아닌 합성 persona fixture만 사용했다.
+- OpenAI Docs 스킬로 공식 [Prompt engineering](https://developers.openai.com/api/docs/guides/prompt-engineering), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs), [GPT-4o mini](https://developers.openai.com/api/docs/models/gpt-4o-mini)를 검색 후 실제 페이지를 읽어 역할 우선순위와 구조/거절 경계를 확인했다. 문서 예시의 다른 모델로 치환하지 않았다.
+
+### 변경 파일과 제약
+
+- `src/domain/persona/index.ts`, `prompt.ts`, `narration.ts`, `README.md`: 승인 목록/프로필·서버 목차 계약, 3계층·출력/근거·문체·캐시 키와 범위.
+- `src/application/narration/persona.ts`, `src/infrastructure/llm/persona-mock.ts`: 기존 실험 가드 조합, 메타 부착·문체 평가 및 합성 mock.
+- `src/application/narration/index.ts`, `experiment.ts`, `src/domain/narration/index.ts`: 기존 공급자 응답/취소 공통화와 독립 스키마·서버 실행 전략 지원.
+- `tests/persona.test.ts`, `tests/fixtures/persona-style.json`, 루트 `README.md`, `docs/worklog.md`: 정상/오류/경계·문체/근거/버전·회귀 및 사용법/결과. 총 13개 작업 파일만 커밋한다.
+- 승인 manifest는 신뢰할 수 있는 서버 설정이며 스키마 통과/approved 문자열이 실제 콘텐츠 승인 자체를 증명하지 않는다. 테스트용 synthetic-style 등은 제품 캐릭터가 아니고 실제 승인 프로필/상품명은 미정이다. 문서의 character-a와 서비스명·이미지를 런타임 제품으로 채택하지 않았다.
+- 사람 평가 평균 4점·30개 케이스 반복·실 모델 자연스러움/가독성 평가는 미실시이며 WBS-25 범위다. 의미·안전·환각은 휴리스틱으로 보장하지 않는다. 실 OpenAI/계정 혜택·동의/과금·실 OAuth/공유 원장·R02/R03/P06·DB 완료 연동은 **BLOCKED/미구현**이며 Mock 성공을 실연동 성공으로 표시하지 않는다.
+- 사용자 수정 AGENTS.md/작업지시 문서/next-env.d.ts/cli-input.json의 SHA-256 동일을 확인하고 커밋 제외한다. WBS.csv 상태·명리 규칙/11개 기능·키/PG/CI/배포 및 후속 WBS는 변경하지 않는다. develop 대상 PR 한 건 생성 후 즉시 중지한다.
+
 ## 2026-10-23 — WBS-24: API 예산 가드·실험 접근제어
 
 ### 선행 확인과 구현 전 완료 조건

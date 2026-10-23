@@ -3,11 +3,15 @@ import { NarrationError, type NarrationProvider } from "../../domain/narration/i
 import { experimentDay, ExperimentAccessSchema, ExperimentError, ExperimentPolicySchema, quoteExperimentRequest, type ExperimentBudgetStore } from "../../domain/experiment/index";
 
 /** Server-owned composition only: never bind policy/identity/clock/store to request body fields. */
-export function createExperimentRunner(options: {
+export interface ExperimentRunnerOptions {
   readonly policy: unknown; readonly provider: NarrationProvider; readonly store: ExperimentBudgetStore;
   readonly environment?: () => string | undefined; readonly now?: () => number;
   readonly resolveAccess?: () => Promise<unknown>;
-}) {
+}
+type Execution<T> = (core: unknown, provider: NarrationProvider, options: { readonly signal?: AbortSignal }) => Promise<T>;
+export function createExperimentRunner<T>(options: ExperimentRunnerOptions & { readonly execute: Execution<T> }): { run(core: unknown, options?: { readonly signal?: AbortSignal }): Promise<T> };
+export function createExperimentRunner(options: ExperimentRunnerOptions): { run(core: unknown, options?: { readonly signal?: AbortSignal }): ReturnType<typeof narrateCore> };
+export function createExperimentRunner(options: ExperimentRunnerOptions & { readonly execute?: Execution<unknown> }) {
   const parsed = ExperimentPolicySchema.safeParse(options.policy);
   if (!parsed.success) throw new ExperimentError("POLICY_REJECTED");
   const policy = parsed.data;
@@ -48,7 +52,8 @@ export function createExperimentRunner(options: {
       try { return await options.provider.generate(limitedRequest, callOptions); }
       finally { lease.release(); }
     } };
-    try { return await narrateCore(core, guarded, { signal }); }
+    // Execution is a trusted server strategy, never a request body callback or prompt.
+    try { return await (options.execute ?? narrateCore)(core, guarded, { signal }); }
     catch (cause) { if (denial) throw denial; throw cause; }
   } });
 }

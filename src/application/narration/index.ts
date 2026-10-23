@@ -17,14 +17,10 @@ async function generate(provider: NarrationProvider, request: NarrationRequest, 
   } finally { signal.removeEventListener("abort", onAbort); }
 }
 
-/** Internal evaluation only. No UI, persistence, retries, budget gate or live adapter. */
-export async function narrateCore(value: unknown, provider: NarrationProvider, options: { readonly signal?: AbortSignal } = {}) {
-  const { signal } = options;
+/** Shared supplier boundary, independent of the selected developer JSON output contract. */
+export async function receiveNarrationText(request: NarrationRequest, provider: NarrationProvider, signal?: AbortSignal): Promise<string> {
   if (signal?.aborted) throw new NarrationError("CANCELLED");
   if (provider.kind !== "mock") throw new NarrationError("LIVE_DISABLED");
-  const request = createNarrationRequest(value);
-  // Keep a validated, independent snapshot before handing the request to a supplier.
-  const data = ManualPromptDataSchema.parse(JSON.parse(request.input[0].content));
   let raw: unknown;
   try { raw = await generate(provider, request, signal); }
   catch { throw new NarrationError(signal?.aborted ? "CANCELLED" : "PROVIDER_FAILED"); }
@@ -32,7 +28,17 @@ export async function narrateCore(value: unknown, provider: NarrationProvider, o
   const response = NarrationProviderResponseSchema.safeParse(raw);
   if (!response.success) throw new NarrationError("OUTPUT_REJECTED");
   if (response.data.status !== "completed") throw new NarrationError(response.data.status === "failed" ? "PROVIDER_FAILED" : response.data.status === "refused" ? "REFUSED" : "INCOMPLETE");
-  const draft = validateNarrationOutput(response.data.outputText, data);
+  return response.data.outputText;
+}
+
+/** Internal evaluation only. No UI, persistence, retries, budget gate or live adapter. */
+export async function narrateCore(value: unknown, provider: NarrationProvider, options: { readonly signal?: AbortSignal } = {}) {
+  const { signal } = options;
+  if (signal?.aborted) throw new NarrationError("CANCELLED");
+  if (provider.kind !== "mock") throw new NarrationError("LIVE_DISABLED");
+  const request = createNarrationRequest(value);
+  const data = ManualPromptDataSchema.parse(JSON.parse(request.input[0].content));
+  const draft = validateNarrationOutput(await receiveNarrationText(request, provider, signal), data);
   return Object.freeze({ mode: "developer-json" as const, sourceStatus: data.status, sections: draft.sections,
     limitations: data.limitations, meta: Object.freeze({ ...NARRATION_META, providerKind: "mock" as const }) });
 }
