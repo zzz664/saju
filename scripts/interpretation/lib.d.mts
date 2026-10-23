@@ -1,6 +1,10 @@
 export function digestText(text: string): string;
 export function stripWikitext(source: string): string;
-export function extractSection(wikitext: string, locator: string): string | null;
+export function extractSection(text: string, locator: string): string | null;
+export function htmlToText(html: string): string;
+export function listHeadings(text: string): string[];
+export type WikisourcePage = { wikitext: string; text: string | null };
+export function extractFromPage(page: WikisourcePage, locator: string): string | null;
 export function boundPassage(text: string, maxCharacters?: number): string;
 export function wikisourceApiUrl(title: string): string;
 export function titleFromUrl(url: string): string;
@@ -14,7 +18,7 @@ export function createWikitextLoader(options?: {
   sleep?: (ms: number) => Promise<void>;
   delayMs?: number;
   maxRetries?: number;
-}): { load(title: string): Promise<string>; readonly requests: number };
+}): { load(title: string): Promise<WikisourcePage>; readonly requests: number };
 export const SUMMARY_PROMPT_VERSION: string;
 export const SUMMARY_INSTRUCTIONS: string;
 export const ENTAILMENT_INSTRUCTIONS: string;

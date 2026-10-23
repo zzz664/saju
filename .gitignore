@@ -10,3 +10,4 @@ playwright-report/
 !.env.example
 .vercel/
 .local/api-test/
+tmp/

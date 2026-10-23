@@ -5,7 +5,10 @@ import {
   createWikitextLoader,
   digestText,
   entailmentRequestBody,
+  extractFromPage,
   extractSection,
+  htmlToText,
+  listHeadings,
   outputTextOf,
   parseEntailmentVerdict,
   stripWikitext,
@@ -32,6 +35,42 @@ describe("interpretation collector helpers (offline)", () => {
     expect(extractSection(wikitext, "十二月癸水")).toBeNull();
     expect(stripWikitext("<b>甲</b>木 {{x}}")).toBe("甲木");
   });
+  it("falls back to the paragraph that begins with the locator when there is no heading", () => {
+    const prose = `== 三春甲木 ==
+三春甲木總論。
+正月甲木，初春尚有餘寒。得丙癸透，富貴雙全。
+續段。
+
+二月甲木，陽氣漸升。
+目錄：[[穷通宝鉴#正月甲木|正月甲木]]
+== 天干論 ==
+甲木參天，脫胎要火。
+乙木雖柔，刲羊解牛。`;
+    expect(extractSection(prose, "正月甲木")).toBe(
+      "正月甲木，初春尚有餘寒。得丙癸透，富貴雙全。\n續段。",
+    );
+    expect(extractSection(prose, "二月甲木")).toBe("二月甲木，陽氣漸升。\n目錄：正月甲木");
+    expect(extractSection(prose, "甲木")).toBe("甲木參天，脫胎要火。\n乙木雖柔，刲羊解牛。");
+    expect(extractSection(prose, "三月甲木")).toBeNull();
+    // A `·` locator needs every part; parts are concatenated in order.
+    const smth = "== 論印綬 ==\n印者。\n== 論食神 ==\n食者。\n== 論正財 ==\n財者。";
+    expect(extractSection(smth, "論印綬·論食神")).toBe("印者。\n\n食者。");
+    expect(extractSection(smth, "論印綬·論偏印")).toBeNull();
+  });
+  it("normalizes rendered html and prefers it over raw wikitext", () => {
+    const html = `<div class="mw-parser-output"><table><tr><td>上一卷</td></tr></table>
+<h2><span class="mw-headline" id="x">論印綬</span><span class="mw-editsection">[编辑]</span></h2>
+<p>印者&nbsp;生我之物。<br/>二句。</p><h2>論食神</h2><p>食者。</p></div>`;
+    expect(htmlToText(html)).toBe(
+      "上一卷\n\n== 論印綬 ==\n\n印者 生我之物。\n二句。\n\n== 論食神 ==\n食者。",
+    );
+    expect(listHeadings(htmlToText(html))).toEqual(["# 論印綬", "# 論食神"]);
+    expect(extractFromPage({ wikitext: "<pages index=x />", text: html }, "論印綬")).toBe(
+      "印者 生我之物。\n二句。",
+    );
+    expect(extractFromPage({ wikitext: "== 論印綬 ==\n原文", text: null }, "論印綬")).toBe("原文");
+    expect(extractFromPage({ wikitext: "", text: html }, "論偏印")).toBeNull();
+  });
   it("bounds passages, derives titles and api urls from scaffold sources", () => {
     expect(boundPassage("  a  b\n\nc ", 3)).toBe("a b");
     const [first] = buildScaffold();
@@ -39,6 +78,7 @@ describe("interpretation collector helpers (offline)", () => {
     expect(wikisourceApiUrl("穷通宝鉴")).toContain("action=parse");
     expect(wikisourceApiUrl("穷通宝鉴")).toContain("prop=wikitext");
     expect(wikisourceApiUrl("穷通宝鉴")).toContain("redirects=1");
+    expect(wikisourceApiUrl("穷通宝鉴")).toContain("variant=zh-hant");
     expect(digestText("x")).toMatch(/^[0-9a-f]{64}$/);
   });
   it("builds bounded, store:false request bodies and reads verdicts strictly", () => {
@@ -83,9 +123,9 @@ describe("interpretation collector helpers (offline)", () => {
     });
     await expect(loader.load("missing-page")).rejects.toMatchObject({ code: "MISSING_TITLE" });
     await expect(loader.load("missing-page")).rejects.toBeInstanceOf(WikisourcePageError);
-    expect(await loader.load("busy-page")).toContain("本文");
-    expect(await loader.load("busy-page")).toContain("本文");
-    expect(await loader.load("ok-page")).toContain("ok-page");
+    expect((await loader.load("busy-page")).wikitext).toContain("本文");
+    expect((await loader.load("busy-page")).wikitext).toContain("本文");
+    expect(await loader.load("ok-page")).toEqual({ wikitext: "== ok-page ==\n本文", text: null });
     expect(calls).toEqual(["missing-page", "busy-page", "busy-page", "ok-page"]);
     expect(loader.requests).toBe(4);
     expect(slept).toEqual([100, 2000, 100, 100]);

@@ -28,6 +28,8 @@ scaffold.ts (코드)         조건 키 141개: 궁통보감 120 + 적천수 10 
 ```
 
 1. `node scripts/interpretation/collect-passages.mjs --dry-run`으로 어느 슬롯의 제목이 Wikisource 본문에서 발견되는지 먼저 본다. 수집기는 **페이지 제목당 HTTP 요청 1회**(전체 3회)만 보내고 요청 사이 1.5초를 쉬며, 429는 `Retry-After`를 따라 1회만 재시도한다. `page <제목>: MISSING_TITLE`이면 `scaffold.ts`의 `url` 제목이 실제 Wikisource 제목과 다른 것이고, `RATE_LIMITED`면 몇 분 뒤 다시 실행한다. 발견되지 않는 슬롯은 `missing`으로 보고되고 null로 남는다. **제목이 안 맞는다고 손으로 구절을 붙이지 않는다.** `scaffold.ts`의 `locator`를 고쳐 다시 수집한다.
+   - locator 매칭은 **렌더링 본문(zh-hant 변환, 하위 페이지·ProofreadPage 전사 포함) → 원시 wikitext** 순서로, 각각 **소제목(정확히 일치 또는 locator로 시작) → locator로 시작하는 단락** 순서로 찾는다. 궁통보감처럼 "正月甲木，…"이 소제목이 아니라 단락 첫 구절인 본문도 잡는다. `論印綬·論食神`처럼 `·`로 이은 locator는 두 부분이 모두 있어야 하며 순서대로 이어 붙인다.
+   - 141건 전부 `missing`이면 페이지는 열렸지만 locator 모양이 본문과 다른 것이다. `--dry-run --inspect`로 페이지별 소제목 목록·본문 앞부분을 보고, 필요하면 `--dump tmp/wikisource`로 정규화 본문을 저장해 확인한다(`tmp/`는 커밋 제외).
 2. `--dry-run`을 빼고 실행해 `passages.json`을 채운다. 커밋 전에 diff로 수집 범위를 확인한다.
 3. 요약 생성은 **비용이 드는 Live 실행**이다. `ENABLE_INTERPRETATION_SUMMARY=true`, `OPENAI_API_KEY`, `--confirm`, `--max <n>`이 모두 있어야 시작한다. 단위마다 2회 호출(요약 + 함의 검사)이며 매 단위 저장하므로 중단해도 유료 작업이 사라지지 않는다.
 4. 함의 검사 FAIL은 `summaries.json`에 `status: "failed"`로 남고 카탈로그에서 `usable=false`가 된다. 요약을 고쳐 쓰지 않고 다시 생성한다.

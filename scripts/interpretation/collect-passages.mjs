@@ -4,17 +4,21 @@
 //   node scripts/interpretation/collect-passages.mjs            # fill missing slots
 //   node scripts/interpretation/collect-passages.mjs --dry-run  # report only
 //   node scripts/interpretation/collect-passages.mjs --only src.qtbj.gap-in
+//   node scripts/interpretation/collect-passages.mjs --dry-run --inspect        # show page structure
+//   node scripts/interpretation/collect-passages.mjs --dry-run --dump tmp/wikisource  # save page text
 //
 // The scaffold (conditions → locators) lives in src/infrastructure/interpretation/scaffold.ts.
-// A heading that cannot be found is reported and left null; nothing is guessed or typed by hand.
-import { readFileSync, writeFileSync } from "node:fs";
+// A locator that cannot be found is reported and left null; nothing is guessed or typed by hand.
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import {
   boundPassage,
   createWikitextLoader,
   digestText,
-  extractSection,
+  extractFromPage,
+  htmlToText,
+  listHeadings,
   titleFromUrl,
   WikisourcePageError,
 } from "./lib.mjs";
@@ -24,8 +28,12 @@ const root = path.resolve(here, "../..");
 const dataFile = path.join(root, "src/infrastructure/interpretation/data/passages.json");
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has("--dry-run");
+const inspect = args.has("--inspect");
 const onlyIndex = process.argv.indexOf("--only");
 const only = onlyIndex >= 0 ? process.argv[onlyIndex + 1] : null;
+const dumpIndex = process.argv.indexOf("--dump");
+const dumpDir =
+  dumpIndex >= 0 ? path.resolve(process.argv[dumpIndex + 1] ?? "tmp/wikisource") : null;
 
 if (process.env.NODE_ENV === "production" || process.env.CI) {
   console.error("Collector runs only in a developer environment.");
@@ -53,6 +61,7 @@ async function main() {
   // One request per page title (3 pages for the full scaffold), paced to respect Wikisource.
   const loader = createWikitextLoader();
   const report = { collected: 0, skipped: 0, missing: [], pageErrors: new Map(), unavailable: 0 };
+  const pages = new Map(); // title -> page, for --inspect / --dump
   for (const entry of scaffold) {
     const { sourceId, url, locator } = entry.source;
     if (only && only !== sourceId) continue;
@@ -61,16 +70,17 @@ async function main() {
       continue;
     }
     const title = titleFromUrl(url);
-    let wikitext;
+    let page;
     try {
-      wikitext = await loader.load(title);
+      page = await loader.load(title);
+      pages.set(title, page);
     } catch (error) {
       const code = error instanceof WikisourcePageError ? error.code : "FETCH_FAILED";
       report.pageErrors.set(title, code);
       report.unavailable++;
       continue;
     }
-    const section = extractSection(wikitext, locator);
+    const section = extractFromPage(page, locator);
     if (!section) {
       report.missing.push(`${sourceId} (${title} › ${locator})`);
       continue;
@@ -110,7 +120,36 @@ async function main() {
             ? " — 요청 제한. 몇 분 뒤 다시 실행한다(페이지당 1회만 요청한다)."
             : ""),
     );
+  if (inspect || dumpDir) describePages(pages, dumpDir);
+  if (report.missing.length && !inspect)
+    console.log(
+      "hint     locator가 하나도 안 맞으면 --dry-run --inspect 로 페이지의 소제목·본문 모양을 확인하고 scaffold.ts의 locator를 고친다.",
+    );
   if (report.pageErrors.size) process.exitCode = 1;
+}
+
+/** Print what each page actually looks like so locators can be fixed without guessing. */
+function describePages(pages, dir) {
+  if (dir) mkdirSync(dir, { recursive: true });
+  for (const [title, page] of pages) {
+    const rendered = page.text ? htmlToText(page.text) : "";
+    const transcluded = /<pages\s|\{\{:/.test(page.wikitext);
+    const headings = listHeadings(rendered || page.wikitext);
+    console.log(
+      `inspect  ${title}: wikitext ${page.wikitext.length}자, rendered ${rendered.length}자, headings ${headings.length}` +
+        (transcluded ? ", 하위 페이지/ProofreadPage 전사 포함(렌더링 본문 사용)" : ""),
+    );
+    for (const heading of headings.slice(0, 40)) console.log(`         ${heading}`);
+    if (headings.length > 40) console.log(`         … ${headings.length - 40}개 더`);
+    const sample = (rendered || page.wikitext).replace(/\s+/g, " ").slice(0, 240);
+    console.log(`         본문 앞부분: ${sample}`);
+    if (dir) {
+      const base = path.join(dir, title.replace(/[\\/:*?"<>|]/g, "_"));
+      writeFileSync(`${base}.wikitext.txt`, page.wikitext, "utf8");
+      if (rendered) writeFileSync(`${base}.rendered.txt`, rendered, "utf8");
+      console.log(`         저장: ${base}.{wikitext,rendered}.txt`);
+    }
+  }
 }
 
 main().catch((error) => {
