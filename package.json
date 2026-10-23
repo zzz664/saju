@@ -18,7 +18,7 @@
     "test:watch": "vitest",
     "test:e2e": "node scripts/developer-e2e.mjs",
     "test:e2e:api-test": "node scripts/developer-e2e.mjs api-test",
-    "eval:persona": "node --import tsx tests/evaluation/run-persona-evaluation.ts",
+    "eval:persona": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx tests/evaluation/run-persona-evaluation.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint . --max-warnings=0"
   },

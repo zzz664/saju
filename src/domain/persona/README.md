@@ -105,4 +105,4 @@ npm run lint
 비밀키·개인 출생정보·일반 원문 로그 없이 별도 합성 입력만 사용한다.
 공식 참고(2026-10-23 확인): [Prompt engineering](https://developers.openai.com/api/docs/guides/prompt-engineering)의
 지시/입력 역할 구분과 [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)의
-구조화 출력·별도 거절 처리를 참고했다. 모델은 지정된 gpt-4o-mini를 유지한다.
+구조화 출력·별도 거절 처리를 참고했다. 기본 모델은 gpt-4o-mini이며, 서버 OPENAI_MODEL 공통 설정을 model 인자로 주입한다. 도메인은 환경변수를 직접 읽지 않는다.

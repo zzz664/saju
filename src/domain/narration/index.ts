@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { buildManualPromptData, type ManualPromptData } from "../core-export/index";
 import { NARRATION_INSTRUCTIONS, NARRATION_PROMPT_VERSION } from "./prompt";
+import { DEFAULT_OPENAI_MODEL, OpenAiModelIdSchema } from "./model";
 
 export const MAX_NARRATION_BYTES = 128 * 1024;
 export const NarrationDraftSchema = z.strictObject({
@@ -15,23 +16,26 @@ const messages = {
   INPUT_REJECTED: "Narration input was rejected.", OUTPUT_REJECTED: "Narration output was rejected.",
   REFUSED: "Narration provider refused.", INCOMPLETE: "Narration provider output was incomplete.",
   PROVIDER_FAILED: "Narration provider failed.", CANCELLED: "Narration was cancelled.", LIVE_DISABLED: "Live narration is disabled.",
+  RATE_LIMITED: "Narration provider rate limited.", TIMEOUT: "Narration provider timed out.", MODEL_MISMATCH: "Narration model was rejected.",
+  USAGE_MISSING: "Narration usage is missing.",
 } as const;
 export class NarrationError extends Error {
   constructor(readonly code: keyof typeof messages) { super(messages[code]); this.name = "NarrationError"; }
 }
-export function createNarrationRequest(core: unknown) {
+export function createNarrationRequest(core: unknown, model = DEFAULT_OPENAI_MODEL) {
+  const modelId = OpenAiModelIdSchema.parse(model);
   let data: ManualPromptData;
   try { data = buildManualPromptData(core); }
   catch { throw new NarrationError("INPUT_REJECTED"); }
   const content = JSON.stringify(data).replace(/[<>&\u2028\u2029]/g, char => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
-  return Object.freeze({ model: "gpt-4o-mini" as const, store: false as const, stream: false as const,
+  return Object.freeze({ model: modelId, store: false as const, stream: false as const,
     instructions: NARRATION_INSTRUCTIONS,
     input: Object.freeze([Object.freeze({ role: "user" as const, content })]),
     text: { format: { type: "json_schema" as const, name: "developer_narration", strict: true as const, schema: narrationJsonSchema() } },
   });
 }
 export interface NarrationRequest {
-  readonly model: "gpt-4o-mini"; readonly store: false; readonly stream: false; readonly instructions: string;
+  readonly model: string; readonly store: false; readonly stream: false; readonly instructions: string;
   readonly input: readonly { readonly role: "developer" | "user"; readonly content: string }[];
   readonly text: { readonly format: { readonly type: "json_schema"; readonly name: string; readonly strict: true; readonly schema: z.core.JSONSchema.JSONSchema } };
   readonly max_output_tokens?: number;
@@ -56,4 +60,4 @@ export function validateNarrationOutput(outputText: string, data: ManualPromptDa
     || data.verifiedFindings.some(finding => !byId.has(finding.findingId))) throw new NarrationError("OUTPUT_REJECTED");
   return NarrationDraftSchema.parse({ ...parsed.data, sections: data.verifiedFindings.map(finding => byId.get(finding.findingId)) });
 }
-export const NARRATION_META = Object.freeze({ model: "gpt-4o-mini", promptVersion: NARRATION_PROMPT_VERSION, schemaVersion: "1.0.0" } as const);
+export const NARRATION_META = Object.freeze({ model: DEFAULT_OPENAI_MODEL, promptVersion: NARRATION_PROMPT_VERSION, schemaVersion: "1.0.0" } as const);

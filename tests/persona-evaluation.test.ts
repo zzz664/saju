@@ -62,7 +62,7 @@ describe("WBS-25 fixed R01 mock quality matrix", () => {
       expect(rows[0].sections?.[0].paragraphs).not.toEqual(rows[3].sections?.[0].paragraphs);
       expect(rows[0].sections?.[0].evidenceIds).toEqual(rows[3].sections?.[0].evidenceIds);
     }
-    expect(report.versions).toMatchObject({ commonPromptVersion: "1.0.0", promptVersion: "1.0.0", outputSchemaVersion: "1.0.0" });
+    expect(report.versions).toMatchObject({ commonPromptVersion: "1.0.0", promptVersion: "1.0.1", outputSchemaVersion: "1.0.0" });
     expect(report.profiles.every(profile => profile.personaVersion === "1.0.0")).toBe(true);
   });
 
@@ -82,6 +82,12 @@ describe("WBS-25 fixed R01 mock quality matrix", () => {
 });
 
 describe("WBS-25 evaluator failures, boundaries and adversarial cases", () => {
+  it("records the injected server model consistently in offline requests, report and cache", async () => {
+    const options = { ...smallOptions(), model: "gpt-4.1-mini" }, generate = vi.spyOn(options.provider, "generate");
+    const report = await evaluatePersonaMatrix({ suiteId: "unit", suiteVersion: "1.0.0", cases: one() }, options);
+    expect(report.modelId).toBe(options.model); expect(report.summary.contractPassed).toBe(true);
+    expect(generate.mock.calls.every(([request]) => request.model === options.model)).toBe(true);
+  });
   it.each([1, 4, 2.5])("rejects unsupported repetition count %s before generation", async repetitions => {
     const options = smallOptions(), generate = vi.spyOn(options.provider, "generate");
     await expect(evaluatePersonaMatrix({ suiteId: "unit", suiteVersion: "1.0.0", cases: one() }, { ...options, repetitions })).rejects.toThrow();
