@@ -3,6 +3,10 @@
 개발자용 내보내기다. `calculateCoreExport`는 기존 WBS-12 계산/판단/중재를 한 번 호출하고
 명시적인 필드만 옮긴다. Next.js, DB, 외부 API, 클립보드 권한 없이 실행한다.
 
+WBS-23의 `buildManualPromptData(core)`는 기존 수동 복사 프롬프트에 넣던 동일한
+확정·채택 판단과 제한 데이터를 반환한다. `buildManualPrompt`의 출력은 유지하며,
+[내부 provider·mock](../narration/README.md)에서 이 투영을 공유한다. 부분/제외 판단을 새 근거로 승격하지 않는다.
+
 ```sh
 npm run --silent saju -- export-json < tests/fixtures/cli-input.json
 npm run --silent saju -- manual-prompt < tests/fixtures/cli-input.json

@@ -1,0 +1,54 @@
+import { z } from "zod";
+import { buildManualPromptData, type ManualPromptData } from "../core-export/index";
+import { NARRATION_INSTRUCTIONS, NARRATION_PROMPT_VERSION } from "./prompt";
+
+export const MAX_NARRATION_BYTES = 128 * 1024;
+export const NarrationDraftSchema = z.strictObject({
+  schemaVersion: z.literal("1.0.0"),
+  sections: z.array(z.strictObject({ findingId: z.string().min(1).max(200), paragraph: z.string().trim().min(1).max(1500) }).readonly()).max(20).readonly(),
+}).readonly();
+export type NarrationDraft = z.infer<typeof NarrationDraftSchema>;
+/** Structural schema only. Source ID binding and prose review are separate checks. */
+export function narrationJsonSchema() { return z.toJSONSchema(NarrationDraftSchema, { target: "draft-2020-12" }); }
+
+const messages = {
+  INPUT_REJECTED: "Narration input was rejected.", OUTPUT_REJECTED: "Narration output was rejected.",
+  REFUSED: "Narration provider refused.", INCOMPLETE: "Narration provider output was incomplete.",
+  PROVIDER_FAILED: "Narration provider failed.", CANCELLED: "Narration was cancelled.", LIVE_DISABLED: "Live narration is disabled.",
+} as const;
+export class NarrationError extends Error {
+  constructor(readonly code: keyof typeof messages) { super(messages[code]); this.name = "NarrationError"; }
+}
+export function createNarrationRequest(core: unknown) {
+  let data: ManualPromptData;
+  try { data = buildManualPromptData(core); }
+  catch { throw new NarrationError("INPUT_REJECTED"); }
+  const content = JSON.stringify(data).replace(/[<>&\u2028\u2029]/g, char => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
+  return Object.freeze({ model: "gpt-4o-mini" as const, store: false as const, stream: false as const,
+    instructions: NARRATION_INSTRUCTIONS,
+    input: Object.freeze([Object.freeze({ role: "user" as const, content })]),
+    text: { format: { type: "json_schema" as const, name: "developer_narration", strict: true as const, schema: narrationJsonSchema() } },
+  });
+}
+export type NarrationRequest = ReturnType<typeof createNarrationRequest>;
+export interface NarrationProvider {
+  readonly kind: "mock" | "openai";
+  generate(request: NarrationRequest, options?: { readonly signal?: AbortSignal }): Promise<unknown>;
+}
+export const NarrationProviderResponseSchema = z.discriminatedUnion("status", [
+  z.strictObject({ status: z.literal("completed"), outputText: z.string().min(1).max(MAX_NARRATION_BYTES) }),
+  z.strictObject({ status: z.literal("refused") }), z.strictObject({ status: z.literal("incomplete") }), z.strictObject({ status: z.literal("failed") }),
+]);
+
+export function validateNarrationOutput(outputText: string, data: ManualPromptData): NarrationDraft {
+  if (new TextEncoder().encode(outputText).byteLength > MAX_NARRATION_BYTES) throw new NarrationError("OUTPUT_REJECTED");
+  let raw: unknown;
+  try { raw = JSON.parse(outputText); } catch { throw new NarrationError("OUTPUT_REJECTED"); }
+  const parsed = NarrationDraftSchema.safeParse(raw);
+  if (!parsed.success) throw new NarrationError("OUTPUT_REJECTED");
+  const byId = new Map(parsed.data.sections.map(section => [section.findingId, section]));
+  if (byId.size !== parsed.data.sections.length || byId.size !== data.verifiedFindings.length
+    || data.verifiedFindings.some(finding => !byId.has(finding.findingId))) throw new NarrationError("OUTPUT_REJECTED");
+  return NarrationDraftSchema.parse({ ...parsed.data, sections: data.verifiedFindings.map(finding => byId.get(finding.findingId)) });
+}
+export const NARRATION_META = Object.freeze({ model: "gpt-4o-mini", promptVersion: NARRATION_PROMPT_VERSION, schemaVersion: "1.0.0" } as const);
