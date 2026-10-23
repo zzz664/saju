@@ -74,7 +74,8 @@ sections 0~20개, paragraph는 공백 제거 후 1~1500자, outputText는 실제
 
 자동 재시도나 성공 fallback은 없다. signal은 공급자에 전달하며 대기 중 취소 시 기다림을
 끝내고 늦은 결과를 채택하지 않는다. 실제 공급자의 내부 작업 중지는 그 어댑터의 책임이다.
-예산·인증·동시성 제한은 WBS-24, 실제 SSE/DB 완료는 후속 WBS의 별도 경계다.
+로컬 mock 실험은 WBS-24의 [서버 접근·예산·동시성 가드](../experiment/README.md)를 통해 실행한다.
+이 모듈의 narrateCore는 내부 구성요소이며 HTTP에 직접 노출하지 않는다. 실제 SSE/DB 완료는 후속 WBS의 별도 경계다.
 
 ## Mock과 검증
 

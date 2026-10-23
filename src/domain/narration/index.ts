@@ -30,7 +30,7 @@ export function createNarrationRequest(core: unknown) {
     text: { format: { type: "json_schema" as const, name: "developer_narration", strict: true as const, schema: narrationJsonSchema() } },
   });
 }
-export type NarrationRequest = ReturnType<typeof createNarrationRequest>;
+export type NarrationRequest = ReturnType<typeof createNarrationRequest> & { readonly max_output_tokens?: number };
 export interface NarrationProvider {
   readonly kind: "mock" | "openai";
   generate(request: NarrationRequest, options?: { readonly signal?: AbortSignal }): Promise<unknown>;

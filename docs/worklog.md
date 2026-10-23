@@ -1,5 +1,36 @@
 # 작업 기록
 
+## 2026-10-23 — WBS-24: API 예산 가드·실험 접근제어
+
+### 선행 확인과 구현 전 완료 조건
+
+- 직전/직접 선행 PR #18(WBS-23)의 GitHub 실제 MERGED, 대상 develop, 병합 시각 2026-10-23 14:39:34 KST와 merge commit `8af0bf564769af76918013360e7849aaf35a171b`를 확인했다. origin/develop 원격 hash 일치, fetch 후 ancestor 확인. WBS.csv 실행순서 20의 WBS-24 한 건만 진행했다.
+- develop checkout/ff-only pull 후 `git branch -d feature/WBS-23-llm-provider-prompt-mock` 안전 삭제 성공. 최신 develop에서 `feature/WBS-24-experiment-budget-access-guard` 하나를 생성했다. AGENTS/WBS/02/05/06/08, 관련 07·WBS-22 기록과 WBS-23 provider/서비스를 읽었다.
+- 구현 전 완료 조건: 서버가 관리하는 실험 권한·허용 기한/환경·목록 확인, 요청 전에 전체 일/사용자 일/세션의 호출·토큰·비용 예약과 동시성 확인을 원자 적용, 실패/취소/저장소 오류에서 한도를 우회하지 않음. 실 API·계정/키·고객 UI/인증·DB·후속 WBS는 구현하지 않는다.
+- 정상/오류/경계 테스트 선작성: 세 범위의 정확한 상한/초과·정수 단가, 환경/권한/기한/본문 위조 차단, 전역·사용자 동시성, 남은 예산의 경쟁 요청, 시각 미상 등 기존 provider 회귀, 실패 후 예약 유지, 취소 후 미종료 공급자 잠금, UTC 날짜 경계·시계 역행·원장 실패. 첫 실행은 새 서비스 모듈 부재로 종료 1을 확인한 후 구현했다.
+
+### 구현과 검증 결과
+
+- 순수 Zod 정책/권한 계약과 고정 오류, 요청 예약 산정을 추가했다. 활성화·development 환경·서버 resolver의 principal/session·허용 목록·만료 전 조건을 모두 요구한다. 환경/resolver 미설정과 예외는 기본 거절이다. 비동기 권한 확인 이후 예약 직전 환경/기한을 다시 확인한다. 클라이언트 userId/role/예산/세션 ID는 받지 않으며 코어의 추가 필드도 기존 검증으로 거절한다. 실제 OAuth resolver나 HTTP 실행 경로는 추가하지 않았다.
+- 전체 요청(지시·입력·출력 스키마와 서버 max_output_tokens)의 UTF-8 바이트 한도를 확인한다. utf8-envelope-plus-output-v1은 입력 바이트+256 및 서버 출력 상한을 토큰 예산 단위로 예약하고 명시적 양의 정수 단가에서 microUSD를 BigInt로 올림 계산한다. 가정의 무료 토큰/0단가·자동 유료 전환을 사용하지 않는다. 이는 mock 예약 추정이며 실제 토크나이저·청구/가격표·모델 출력 상한 준수 검증이 아니다.
+- MemoryExperimentBudgetStore는 전체/사용자 일/세션 예산을 모두 확인한 후 동기적으로 함께 반영하며 검사·반영 사이 await가 없다. 글로벌 동시 실행 상한과 principal별 1개 잠금을 함께 예약한다. 한 범위라도 실패하면 어떤 예산도 쓰지 않고 공급자를 호출하지 않는다. 세션 변경으로 사용자 일/전체 일 한도를 우회하지 못한다.
+- 입장한 시도의 호출·예약량은 성공/거절/잘림/손상/공급자 실패/취소 후에도 유지한다. release는 활성 잠금만 해제하고 중복 실행에 안전하다. 호출자가 취소해도 실제 공급자 Promise가 끝날 때까지 잠금을 유지한다. 자정에도 활성 잠금과 세션 누적을 보존하며 일 예산만 UTC 날짜로 나눈다. 시계 역행·원장 장애·기록 한도 초과는 차단한다. 저장소/설정/권한 예외 전문은 고정 오류로 바꾼다.
+- 기존 narrateCore에 직접 연결되는 guarded provider가 예약 이후 mock을 한 번 호출한다. 기존 sourceStatus·제한·근거 ID/출력 검증을 유지한다. NarrationRequest의 선택적 max_output_tokens 타입만 확장했고 공급자 호출 전 서버 상한으로 덮어쓴다. 기존 LIVE_DISABLED는 유지하며 실제 OpenAI 호출·키/SDK 설정·재시도·fallback은 없다.
+- 초기 신규 27건/타입 검사가 통과한 뒤 기본 차단·서버 예외 비식별화·인증 후 만료/시작 전 취소·새 세션 우회·자정 잠금·원장 메모리 한도/해제 중복·정책 스냅샷·분수 단가 올림·무네트워크/로그·10건 동시 경쟁을 보강했다. 0단가 거절과 전체 요청 정확한 바이트 경계도 확인했다.
+- 최종 `npm.cmd test -- tests/experiment-guard.test.ts tests/narration.test.ts`: 종료 0, 관련 2파일/66건 통과(신규 36 + 기존 provider 30). 동시에 들어온 서로 다른 principal의 요청 10건 중 남은 예산 3건만 허용되고 7건은 차단되며 호출/원장도 정확히 3건임을 확인했다. 각 예산 차원의 정확한 상한·1단위 부족 및 변경 없는 거절도 확인했다.
+- `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`: 모두 종료 0, 린트 경고 0개. 변경 문서 로컬 링크 16개와 Git 공백 검사도 통과했다. 새 HTTP 라우트/Next 설정/의존성 변경이 없어 빌드/E2E/전체 회귀·설치를 반복하지 않았다. 테스트는 합성 입력만 사용하고 개인 cli-input.json을 실행 자료로 사용하거나 값을 로그에 출력하지 않았다.
+- OpenAI Docs 스킬로 [공식 Rate limits](https://developers.openai.com/api/docs/guides/rate-limits)를 검색 후 실제 페이지를 읽어 조직/프로젝트 제한과 별도 사용자 상한·재시도 누적을 확인했다. 애플리케이션의 UTC 예약 예산을 실제 계정 한도/무료 혜택/청구액과 동일하다고 표시하지 않는다.
+
+### 변경 파일과 제약
+
+- `src/domain/experiment/index.ts`, `README.md`: 정책·서버 principal/session·예산 예약·고정 오류/저장소 계약 및 mock/실연동 경계.
+- `src/infrastructure/llm/experiment-budget.ts`, `src/application/narration/experiment.ts`: 단일 프로세스 원자 원장·잠금·메모리 상한·서버 접근/예약/실제 종료 연동.
+- `src/domain/narration/index.ts`, `README.md`: 선택적 서버 출력 상한 타입과 guarded 실험 진입 문서.
+- `tests/experiment-guard.test.ts`, 루트 `README.md`, `docs/worklog.md`: 예산·동시성·보안/경계·회귀와 결과/제약. 총 9개 작업 파일만 커밋한다.
+- 메모리 원장은 프로세스 재시작/새 인스턴스/다중 프로세스 간 공유되지 않는다. 요청마다 새로 만들면 안 된다. 기존 기록을 버려 예산을 되살리지 않으며 기본 10,000개 기록 한도 도달 시 차단한다. production과 실 API를 계속 닫고 로컬 mock 용도로만 제공한다. 공유 영속 원장·실 SDK 토큰/과금·실험 계정/동의/환경·실 OAuth 검증은 **BLOCKED**이며 이번 테스트로 완료를 주장하지 않는다.
+- 서버 resolver는 신뢰할 수 있는 인증 어댑터의 포트다. 클라이언트 객체를 그대로 돌려주는 구현을 인증으로 간주하지 않는다. 소셜로그인·실서비스 API 게이트·분산 잠금은 해당 후속 WBS에서 별도 구현/검증한다. DB 커밋/report.completed 판정이나 R01/P06/R02/R03 계약은 변경하지 않는다.
+- 사용자 수정 AGENTS.md/작업지시 문서/next-env.d.ts/cli-input.json의 SHA-256 동일을 확인하고 보존·커밋 제외한다. WBS.csv 상태·명리 규칙/11개 기능·키/PG/CI/배포 및 다음 WBS는 변경하지 않는다. develop 대상 PR 한 건 생성 뒤 즉시 중지한다.
+
 ## 2026-10-23 — WBS-23: LLM provider·프롬프트·mock
 
 ### 선행 확인과 구현 전 완료 조건
