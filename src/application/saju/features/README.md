@@ -30,7 +30,8 @@ M01/M02/M05/M06, M08은 양쪽 M01/M02/M03에 의존한다. F01은 F02~F07과 so
 외부 영속 캐시는 이번에 구현하지 않는다.
 
 기본 구현은 기존 M01~M03 어댑터까지다. M04~M08은 MODULE_NOT_IMPLEMENTED,
-F04~F11 실행기는 EXECUTOR_NOT_IMPLEMENTED로 남긴다. F02는 WBS-32의
+F05~F11 실행기는 EXECUTOR_NOT_IMPLEMENTED로 남긴다. F04는 WBS-33의
+[업무 관측·조건부 검토 실행기](../../../domain/features/career.md), F02는 WBS-32의
 [기질 관측·조건부 검토 실행기](../../../domain/features/temperament.md), F03은 WBS-31의
 [관측·조건부 검토 실행기](../../../domain/features/README.md)를 등록했다. F01은 하위 상태/근거를 합치는
 프레임워크이며 WBS-38의 종합 풀이 완료가 아니다. 미구현 기능을 공개 활성화하지 않는다.
@@ -60,7 +61,7 @@ buildFeatureNarrationInput은 엔진이 만든 검증된 불변 결과만 받는
 WBS-31에서 F03은 공통 R01과 보호된 개발자 API 테스트의 Mock/Live 공급자에 연결했다.
 R02/R03/P06에는 연결하지 않으며 Mock 소비자의 계산 변경도 차단한다.
 
-검토 CLI feature-json은 FeatureRequest 한 개를 표준입력으로 받는다. F02/F03도 상위 해석 한계를
+검토 CLI feature-json은 FeatureRequest 한 개를 표준입력으로 받는다. F02/F03/F04도 상위 해석 한계를
 보존하므로 정상 요청이 partial·종료 2다. 그 외 실행기 미구현도 partial/unavailable을 명시한다. 입력/공급자 오류의 빈 stdout과
 고정 오류 stderr와 구분한다. complete에만 종료 0을 사용한다. M09는 새 명리 판단이나 문장을
 창작하지 않고 기존 판단의 구조 투영·선택·상태 조합만 담당한다.

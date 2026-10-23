@@ -31,6 +31,7 @@ import {
 } from "@/application/saju/features/registry";
 import { observeStrengths } from "@/domain/features/strengths";
 import { observeTemperament } from "@/domain/features/temperament";
+import { observeCareer } from "@/domain/features/career";
 import type { FeatureDependencies, FeatureEngine } from "@/application/saju/features/ports";
 export * from "@/application/saju/features/ports";
 export { getProfile, planFeature, FEATURE_PROFILES } from "@/application/saju/features/registry";
@@ -193,7 +194,7 @@ export function executeFeature(value: unknown, deps: FeatureDependencies): Featu
         data = result;
         payload = { status: result.status, judgments: [], limitations: ["UPSTREAM_PARTIAL"] };
       } else if (moduleId === "M03" && topic) {
-        if (topic === "strengths" || topic === "temperament") version = "1.1.0";
+        if (["strengths", "temperament", "career"].includes(topic)) version = "1.1.0";
         const structure = load("M01", subject).data as StructureDiagnosis | null;
         const relations = load("M02", subject).data as RelationAnalysis | null;
         if (!structure || !relations)
@@ -209,7 +210,9 @@ export function executeFeature(value: unknown, deps: FeatureDependencies): Featu
               ? observeStrengths(facts, subject)
               : topic === "temperament"
                 ? observeTemperament(facts, subject)
-                : [];
+                : topic === "career"
+                  ? observeCareer(facts, subject)
+                  : [];
           data = result;
           payload = {
             status:
