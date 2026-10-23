@@ -1,3 +1,4 @@
+import type { BudgetLedger } from "@/domain/budget-ledger";
 import {
   closeSync,
   existsSync,
@@ -14,14 +15,14 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { experimentDay, ExperimentError } from "@/domain/experiment";
 import type { LiveObservation } from "@/infrastructure/openai/narration";
-import { OpenAiModelIdSchema } from "@/domain/narration/model";
+import { ModelIdSchema } from "@/domain/narration/model";
 
 const Entry = z.strictObject({
   key: z.string().regex(/^[a-f0-9]{64}$/),
   day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   tokens: z.number().int().nonnegative().max(2_000_000_000),
   pending: z.boolean(),
-  modelId: OpenAiModelIdSchema.optional(),
+  modelId: ModelIdSchema.optional(),
   inputTokens: z.number().int().nonnegative().max(1_000_000_000).optional(),
   outputTokens: z.number().int().nonnegative().max(1_000_000_000).optional(),
   responseId: z
@@ -45,7 +46,15 @@ type StateValue = z.infer<typeof State>;
 
 /** Local disk only. Exclusive OS file lock survives crashes and fails closed until reviewed.
  * One host/project ledger across processes; not a distributed deployment budget. */
-export class FileLiveBudget {
+export type LiveBudgetReservation = {
+  now: number;
+  key: string;
+  tokens: number;
+  callsLimit: number;
+  tokensLimit: number;
+  modelId?: string;
+};
+export class FileLiveBudget implements BudgetLedger<LiveBudgetReservation, LiveObservation> {
   readonly file: string;
   readonly lock: string;
   constructor(readonly directory: string) {
@@ -81,14 +90,7 @@ export class FileLiveBudget {
       throw new ExperimentError("STORE_UNAVAILABLE");
     }
   }
-  reserve(input: {
-    now: number;
-    key: string;
-    tokens: number;
-    callsLimit: number;
-    tokensLimit: number;
-    modelId?: string;
-  }) {
+  reserve(input: LiveBudgetReservation) {
     let descriptor: number;
     try {
       mkdirSync(this.directory, { recursive: true, mode: 0o700 });
@@ -132,23 +134,22 @@ export class FileLiveBudget {
       throw new ExperimentError("STORE_UNAVAILABLE");
     }
     let finished = false;
-    return {
-      finish: (observation: LiveObservation) => {
-        if (finished) return;
-        try {
-          const entry = state.entries[state.entries.length - 1];
-          const usageKnown =
-            observation.inputTokens !== undefined && observation.outputTokens !== undefined;
-          Object.assign(entry, observation, { pending: false });
-          // Unknown usage retains the full reservation; known usage can exceed the estimate and blocks future admissions.
-          if (usageKnown) entry.tokens = observation.inputTokens! + observation.outputTokens!;
-          this.save(state);
-          unlinkSync(this.lock);
-          finished = true;
-        } catch {
-          throw new ExperimentError("STORE_UNAVAILABLE");
-        }
-      },
+    const settle = (observation: LiveObservation) => {
+      if (finished) return;
+      try {
+        const entry = state.entries[state.entries.length - 1];
+        const usageKnown =
+          observation.inputTokens !== undefined && observation.outputTokens !== undefined;
+        Object.assign(entry, observation, { pending: false });
+        // Unknown usage retains the full reservation; known usage can exceed the estimate and blocks future admissions.
+        if (usageKnown) entry.tokens = observation.inputTokens! + observation.outputTokens!;
+        this.save(state);
+        unlinkSync(this.lock);
+        finished = true;
+      } catch {
+        throw new ExperimentError("STORE_UNAVAILABLE");
+      }
     };
+    return { settle, finish: settle };
   }
 }

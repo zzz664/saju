@@ -148,13 +148,13 @@ describe("R01 approved persona and internal narration", () => {
       .replace(/\r\n/g, "\n");
     expect(COMMON_SYSTEM_PROMPT).toBe(documented);
     expect(request.instructions).toBe(COMMON_SYSTEM_PROMPT);
-    expect(request.input.map((message) => message.role)).toEqual(["developer", "user"]);
-    expect(request.input[0].content).toContain("server-approved-style-only");
-    expect(request.input[0].content).not.toContain("확정 일간의 오행은");
-    expect(request.input[1].content).toContain("verifiedFindings");
-    expect(request.input[1].content).not.toContain("personaId");
-    expect(request).toMatchObject({ model: "gpt-4o-mini", stream: false, store: false });
-    expect(request.input[0].content).not.toMatch(/R02|R03|자연어 텍스트만/);
+    expect(request.messages.map((message) => message.role)).toEqual(["developer", "user"]);
+    expect(request.messages[0].content).toContain("server-approved-style-only");
+    expect(request.messages[0].content).not.toContain("확정 일간의 오행은");
+    expect(request.messages[1].content).toContain("verifiedFindings");
+    expect(request.messages[1].content).not.toContain("personaId");
+    expect(request).toMatchObject({ modelId: "gpt-4o-mini" });
+    expect(request.messages[0].content).not.toMatch(/R02|R03|자연어 텍스트만/);
     expect(JSON.stringify(request)).not.toMatch(/2024-02-10|05:30|Asia\/Seoul/);
   });
 
@@ -340,7 +340,7 @@ describe("R01 approved persona and internal narration", () => {
     const log = vi.spyOn(console, "log");
     await experiment(selection, provider).run(core);
     expect(generate).toHaveBeenCalledTimes(1);
-    expect(generate.mock.calls[0][0].max_output_tokens).toBe(1024);
+    expect(generate.mock.calls[0][0].maxOutputTokens).toBe(1024);
     expect(fetch).not.toHaveBeenCalled();
     expect(log).not.toHaveBeenCalled();
   });

@@ -40,7 +40,7 @@ describe("approved persona catalog independent of character count", () => {
       ...catalog,
       selection: catalog.selection(third.personaId),
     });
-    const supplied = JSON.parse(request.request.input[0].content.split("\n").at(-1)!).persona;
+    const supplied = JSON.parse(request.request.messages[0].content.split("\n").at(-1)!).persona;
     expect(supplied).toEqual(third);
     expect(request.cache.analysisKey).toBe(
       preparePersonaNarration(core, { ...source, selection: source.selection("synthetic-style") })

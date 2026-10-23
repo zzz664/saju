@@ -10,7 +10,7 @@ export function createMockNarrationProvider(
     async generate(request, { signal } = {}) {
       if (signal?.aborted) throw new NarrationError("CANCELLED");
       if (options.outcome && options.outcome !== "success") return { status: options.outcome };
-      const data = ManualPromptDataSchema.parse(JSON.parse(request.input[0].content));
+      const data = ManualPromptDataSchema.parse(request.data);
       return {
         status: "completed",
         outputText: JSON.stringify({

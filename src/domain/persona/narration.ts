@@ -1,4 +1,5 @@
 import { escapeJsonForPrompt } from "@/domain/utilities";
+
 import { z } from "zod";
 import { buildManualPromptData } from "@/domain/core-export";
 import {
@@ -19,7 +20,7 @@ import {
   PERSONA_JSON_CONTRACT,
   PERSONA_PROMPT_VERSION,
 } from "@/domain/persona/prompt";
-import { DEFAULT_OPENAI_MODEL, OpenAiModelIdSchema } from "@/domain/narration/model";
+import { DEFAULT_NARRATION_MODEL, ModelIdSchema } from "@/domain/narration/model";
 
 export const PersonaNarrationDraftSchema = z
   .strictObject({
@@ -69,7 +70,7 @@ export function preparePersonaNarration(
     model?: string;
   },
 ) {
-  const modelId = OpenAiModelIdSchema.parse(options.model ?? DEFAULT_OPENAI_MODEL);
+  const modelId = ModelIdSchema.parse(options.model ?? DEFAULT_NARRATION_MODEL);
   const profile = options.registry.load(options.selection);
   const parsed = FeatureNarrationSpecSchema.safeParse(options.spec);
   if (!parsed.success) throw new PersonaError("SPEC_REJECTED");
@@ -109,11 +110,11 @@ export function preparePersonaNarration(
     ),
   };
   const request: NarrationRequest = Object.freeze({
-    model: modelId,
-    store: false,
-    stream: false,
+    modelId,
+    data,
+    style: { persona: profile, spec },
     instructions: COMMON_SYSTEM_PROMPT,
-    input: Object.freeze([
+    messages: Object.freeze([
       Object.freeze({
         role: "developer" as const,
         content:
@@ -126,14 +127,7 @@ export function preparePersonaNarration(
         content: json({ featureId: spec.featureId, ...data }),
       }),
     ]),
-    text: {
-      format: {
-        type: "json_schema" as const,
-        strict: true as const,
-        name: "r01_internal_narration",
-        schema: personaNarrationJsonSchema(),
-      },
-    },
+    output: { name: "r01_internal_narration", jsonSchema: personaNarrationJsonSchema() },
   });
   return Object.freeze({
     profile,

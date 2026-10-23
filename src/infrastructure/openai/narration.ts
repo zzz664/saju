@@ -1,6 +1,9 @@
+import { readBoundedUtf8, webBytes } from "@/infrastructure/io/bounded-utf8";
+import { matchesOpenAiModel } from "@/infrastructure/openai/model";
+import { toOpenAiResponsesBody } from "@/infrastructure/openai/request";
 import { z } from "zod";
 import { MAX_NARRATION_BYTES, NarrationError, type NarrationProvider } from "@/domain/narration";
-import { OpenAiModelIdSchema, matchesOpenAiModel } from "@/domain/narration/model";
+import { ModelIdSchema } from "@/domain/narration/model";
 
 const Usage = z.object({
   input_tokens: z.number().int().min(0).max(1_000_000_000),
@@ -41,12 +44,7 @@ export function createOpenAiNarrationProvider(options: {
   return {
     kind: "openai",
     async generate(request, { signal } = {}) {
-      if (
-        !OpenAiModelIdSchema.safeParse(request.model).success ||
-        request.store !== false ||
-        request.stream !== false ||
-        !request.max_output_tokens
-      )
+      if (!ModelIdSchema.safeParse(request.modelId).success || !request.maxOutputTokens)
         throw new NarrationError("INPUT_REJECTED");
       const timeout = AbortSignal.timeout(options.timeoutMs ?? 60_000);
       const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
@@ -60,7 +58,7 @@ export function createOpenAiNarrationProvider(options: {
             authorization: `Bearer ${options.apiKey}`,
             "content-type": "application/json",
           },
-          body: JSON.stringify(request),
+          body: JSON.stringify(toOpenAiResponsesBody(request)),
         });
         const requestId = response.headers.get("x-request-id");
         const metadata: LiveObservation = {
@@ -73,27 +71,10 @@ export function createOpenAiNarrationProvider(options: {
           await response.body?.cancel();
           throw new NarrationError(response.status === 429 ? "RATE_LIMITED" : "PROVIDER_FAILED");
         }
-        const reader = response.body?.getReader();
-        if (!reader) throw new NarrationError("OUTPUT_REJECTED");
-        const chunks: Uint8Array[] = [];
-        let size = 0;
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            size += value.byteLength;
-            if (size > MAX_NARRATION_BYTES * 2) {
-              await reader.cancel();
-              throw new NarrationError("OUTPUT_REJECTED");
-            }
-            chunks.push(value);
-          }
-        } finally {
-          reader.releaseLock();
-        }
+        if (!response.body) throw new NarrationError("OUTPUT_REJECTED");
         let raw: unknown;
         try {
-          raw = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
+          raw = JSON.parse(await readBoundedUtf8(webBytes(response.body), MAX_NARRATION_BYTES * 2));
         } catch {
           throw new NarrationError("OUTPUT_REJECTED");
         }
@@ -111,7 +92,7 @@ export function createOpenAiNarrationProvider(options: {
               }
             : {}),
         });
-        if (!matchesOpenAiModel(request.model, envelope.model))
+        if (!matchesOpenAiModel(request.modelId, envelope.model))
           throw new NarrationError("MODEL_MISMATCH");
         if (envelope.status === "incomplete") throw new NarrationError("INCOMPLETE");
         if (envelope.status !== "completed") throw new NarrationError("PROVIDER_FAILED");
@@ -120,7 +101,7 @@ export function createOpenAiNarrationProvider(options: {
         if (content.some((item) => item.type === "refusal")) throw new NarrationError("REFUSED");
         if (!envelope.usage) throw new NarrationError("USAGE_MISSING");
         if (
-          envelope.usage.output_tokens > request.max_output_tokens ||
+          envelope.usage.output_tokens > request.maxOutputTokens ||
           messages.some(
             (item) =>
               item.type !== "message" || item.role !== "assistant" || item.status !== "completed",

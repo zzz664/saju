@@ -118,7 +118,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
       result: { meta: { personaId: "synthetic-formal", personaVersion: "1.0.1" } },
     });
     const profile = JSON.parse(
-      generate.mock.calls[0][0].input[0].content.split("\n").at(-1)!,
+      generate.mock.calls[0][0].messages[0].content.split("\n").at(-1)!,
     ).persona;
     expect(profile.voice).toMatchObject({
       register: "hapsyo",

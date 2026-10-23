@@ -79,3 +79,7 @@ Vitest는 기본 Node 환경에서 실행하며 이후 순수 도메인 코어�
 설정 참고: [Next.js 설치](https://nextjs.org/docs/app/getting-started/installation),
 [Next.js의 Vitest 가이드](https://nextjs.org/docs/app/guides/testing/vitest),
 [Vitest 설정](https://vitest.dev/config/).
+
+## 코드리뷰 리팩터링
+
+[A~F 단계별 범위와 검증](docs/evaluations/core-review-refactor.md)을 참고한다. `npm run format:check`로 포맷을 검사하고 `npm run benchmark:core`로 외부 호출 없이 미상시각 계산의 전수/최적화 경로를 비교할 수 있다.

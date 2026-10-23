@@ -1,5 +1,7 @@
 > developer-json/narrateCore는 기존 Mock 비교 계약입니다. 현재 서버 실행 경로는 narratePersona와 승인형 페르소나 카탈로그를 사용합니다. 신규 제품 기능에 기존 비교 경로를 연결하지 않습니다.
 
+서술 요청은 `modelId/instructions/messages/output/maxOutputTokens`와 구조화된 `data/style`을 갖는 공급자 중립 계약이다. `infrastructure/openai/request.ts`만 Responses HTTP 본문의 `model/input/text/max_output_tokens/store/stream`을 조립한다. R01의 `store:false/stream:false`는 그 어댑터가 강제한다. Mock은 프롬프트 문자열을 다시 파싱하지 않고 검증된 `data/style`을 읽는다. 실제 모델은 서버 `OPENAI_MODEL` 설정에서 주입하며 날짜 접미사 응답 매칭은 OpenAI 인프라에 둔다.
+
 # WBS-23 — LLM provider·프롬프트·mock
 
 기존 코어의 확정·채택 기초 관찰을 설명하는 **개발자 내부 비스트리밍 JSON 평가 경로**다.

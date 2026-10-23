@@ -1,5 +1,7 @@
 # 충돌·불확실성 중재 — WBS-12
 
+구조 스키마는 `arbitration-schemas.ts`에 있다. 외부 중재 결과의 결정 재구성과 변조 검증은 `parseArbitrationResult`에서 한 번 수행한다. 내부 중재 생성은 구조 스키마 안에서 `resolve`를 재실행하지 않는다.
+
 `arbitration.ts`는 계산이나 전통 해석을 추가하지 않는 순수 중재 계층이다.
 `arbitrateBaseJudgments(evaluation)`는 WBS-11 평가를 검증하고 matched finding만
 중재 후보로 옮긴다. 미상 결과와 부분 근거의 원래 trace는 `uncertainties`에 남긴다.

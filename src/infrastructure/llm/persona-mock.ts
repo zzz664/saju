@@ -2,7 +2,6 @@ import { ManualPromptDataSchema } from "@/domain/core-export";
 import { FeatureNarrationSpecSchema, PersonaProfileSchema } from "@/domain/persona";
 import type { NarrationProvider } from "@/domain/narration";
 import { NarrationError } from "@/domain/narration";
-import { PERSONA_JSON_CONTRACT } from "@/domain/persona/prompt";
 
 /** Synthetic prose comparison only. Quotes source assertions rather than inventing interpretation. */
 export function createPersonaMockProvider(): NarrationProvider {
@@ -10,19 +9,10 @@ export function createPersonaMockProvider(): NarrationProvider {
     kind: "mock",
     async generate(request, { signal } = {}) {
       if (signal?.aborted) throw new NarrationError("CANCELLED");
-      const developer =
-        request.input.find((message) => message.role === "developer")?.content ?? "";
-      const prefix = PERSONA_JSON_CONTRACT + "\n";
-      if (!developer.startsWith(prefix)) throw new NarrationError("INPUT_REJECTED");
-      const style = JSON.parse(developer.slice(prefix.length));
-      const profile = PersonaProfileSchema.parse(style.persona);
-      const spec = FeatureNarrationSpecSchema.parse(style.spec);
-      const payload = JSON.parse(
-        request.input.find((message) => message.role === "user")?.content ?? "{}",
-      );
-      const { featureId: _feature, ...source } = payload; // The validated spec fixes the internal feature.
-      void _feature;
-      const data = ManualPromptDataSchema.parse(source);
+      if (!request.style) throw new NarrationError("INPUT_REJECTED");
+      const profile = PersonaProfileSchema.parse(request.style.persona);
+      const spec = FeatureNarrationSpecSchema.parse(request.style.spec);
+      const data = ManualPromptDataSchema.parse(request.data);
       const register = profile.voice.register;
       const intro =
         register === "hapsyo"

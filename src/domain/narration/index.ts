@@ -3,7 +3,7 @@ import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 import { buildManualPromptData, type ManualPromptData } from "@/domain/core-export";
 import { NARRATION_INSTRUCTIONS, NARRATION_PROMPT_VERSION } from "@/domain/narration/prompt";
-import { DEFAULT_OPENAI_MODEL, OpenAiModelIdSchema } from "@/domain/narration/model";
+import { DEFAULT_NARRATION_MODEL, ModelIdSchema } from "@/domain/narration/model";
 
 export const MAX_NARRATION_BYTES = 128 * 1024;
 export const NarrationDraftSchema = z
@@ -42,8 +42,8 @@ const messages = {
   USAGE_MISSING: "Narration usage is missing.",
 } as const;
 export class NarrationError extends defineCodedError("NarrationError", messages) {}
-export function createNarrationRequest(core: unknown, model = DEFAULT_OPENAI_MODEL) {
-  const modelId = OpenAiModelIdSchema.parse(model);
+export function createNarrationRequest(core: unknown, model = DEFAULT_NARRATION_MODEL) {
+  const modelId = ModelIdSchema.parse(model);
   let data: ManualPromptData;
   try {
     data = buildManualPromptData(core);
@@ -52,36 +52,25 @@ export function createNarrationRequest(core: unknown, model = DEFAULT_OPENAI_MOD
   }
   const content = escapeJsonForPrompt(data);
   return Object.freeze({
-    model: modelId,
-    store: false as const,
-    stream: false as const,
+    modelId,
+    data,
     instructions: NARRATION_INSTRUCTIONS,
-    input: Object.freeze([Object.freeze({ role: "user" as const, content })]),
-    text: {
-      format: {
-        type: "json_schema" as const,
-        name: "developer_narration",
-        strict: true as const,
-        schema: narrationJsonSchema(),
-      },
-    },
+    messages: Object.freeze([Object.freeze({ role: "user" as const, content })]),
+    output: { name: "developer_narration", jsonSchema: narrationJsonSchema() },
   });
 }
+/** Supplier-neutral prompt. Only infrastructure selects the HTTP representation. */
 export interface NarrationRequest {
-  readonly model: string;
-  readonly store: false;
-  readonly stream: false;
+  readonly modelId: string;
   readonly instructions: string;
-  readonly input: readonly { readonly role: "developer" | "user"; readonly content: string }[];
-  readonly text: {
-    readonly format: {
-      readonly type: "json_schema";
-      readonly name: string;
-      readonly strict: true;
-      readonly schema: z.core.JSONSchema.JSONSchema;
-    };
+  readonly messages: readonly { readonly role: "developer" | "user"; readonly content: string }[];
+  readonly output: { readonly name: string; readonly jsonSchema: z.core.JSONSchema.JSONSchema };
+  readonly maxOutputTokens?: number;
+  readonly data: ManualPromptData;
+  readonly style?: {
+    readonly persona: import("../persona/index").PersonaProfile;
+    readonly spec: import("../persona/index").FeatureNarrationSpec;
   };
-  readonly max_output_tokens?: number;
 }
 export interface NarrationProvider {
   readonly kind: "mock" | "openai";

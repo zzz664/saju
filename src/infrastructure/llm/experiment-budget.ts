@@ -72,14 +72,13 @@ export class MemoryExperimentBudgetStore implements ExperimentBudgetStore {
     this.#active++;
     this.#activePrincipals.set(access.principalId, 1);
     let released = false;
-    return {
-      release: () => {
-        if (released) return;
-        released = true;
-        this.#active--;
-        this.#activePrincipals.delete(access.principalId);
-      },
+    const settle = () => {
+      if (released) return;
+      released = true;
+      this.#active--;
+      this.#activePrincipals.delete(access.principalId);
     };
+    return { settle, release: settle };
   }
   /** Internal inspection for local tests; no raw prompt/input, no HTTP exposure. */
   inspect(now: number, access: ExperimentAccess) {

@@ -81,7 +81,7 @@ describe("local mock experiment admission guard", () => {
     const run = setup();
     expect((await run.runner.run(core)).sourceStatus).toBe("complete");
     expect(run.generate).toHaveBeenCalledTimes(1);
-    expect(run.generate.mock.calls[0][0].max_output_tokens).toBe(256);
+    expect(run.generate.mock.calls[0][0].maxOutputTokens).toBe(256);
     const usage = run.store.inspect(start, principal);
     expect(usage.daily).toEqual({ calls: 1, tokens: quote.tokens, microUsd: quote.microUsd });
     expect(usage.principal).toEqual(usage.daily);
@@ -458,10 +458,7 @@ describe("local mock experiment admission guard", () => {
 
   it("uses the full request byte boundary including the server output cap", async () => {
     const bytes = new TextEncoder().encode(
-      JSON.stringify({
-        ...createNarrationRequest(core),
-        max_output_tokens: policy.maxOutputTokens,
-      }),
+      JSON.stringify({ ...createNarrationRequest(core), maxOutputTokens: policy.maxOutputTokens }),
     ).byteLength;
     const exact = setup({ ...policy, maxRequestBytes: bytes });
     await exact.runner.run(core);

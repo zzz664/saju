@@ -1,6 +1,6 @@
 import { narratePersona } from "@/application/narration/persona";
-import { apiTestPolicy, type ApiTestLimits } from "@/application/dev-api-test";
-import { quoteExperimentRequest, ExperimentError } from "@/domain/experiment";
+import { type ApiTestLimits } from "@/application/dev-api-test";
+import { estimateNarrationTokens, ExperimentError } from "@/domain/experiment";
 import type { NarrationProvider } from "@/domain/narration";
 import {
   createOpenAiNarrationProvider,
@@ -39,10 +39,12 @@ export async function runLivePersona(options: {
     async generate(request, control) {
       if (!options.allowed()) throw new ExperimentError("ACCESS_DENIED");
       if (control?.signal?.aborted) throw new ExperimentError("ACCESS_DENIED");
-      const time = options.now(),
-        policy = apiTestPolicy(options.limits, time);
-      const limited = { ...request, max_output_tokens: options.limits.outputTokens };
-      const allocation = quoteExperimentRequest(limited, policy);
+      const time = options.now();
+      const limited = { ...request, maxOutputTokens: options.limits.outputTokens };
+      const allocation = estimateNarrationTokens(limited, {
+        maxRequestBytes: 131072,
+        maxOutputTokens: options.limits.outputTokens,
+      });
       const lease = options.budget.reserve({
         now: time,
         key: options.key,
@@ -54,7 +56,7 @@ export async function runLivePersona(options: {
       try {
         return await provider.generate(limited, control);
       } finally {
-        lease.finish(observation);
+        lease.settle(observation);
       }
     },
   };

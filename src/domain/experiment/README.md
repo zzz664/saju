@@ -1,5 +1,9 @@
 > developer-json/narrateCore는 기존 Mock 비교 계약입니다. 현재 서버 실행 경로는 narratePersona와 승인형 페르소나 카탈로그를 사용합니다. 신규 제품 기능에 기존 비교 경로를 연결하지 않습니다.
 
+현재 공통 계약은 `BudgetLedger.reserve → BudgetLease.settle`이다. Memory는 동시성만 해제하고 예약 금액은 환불하지 않으며, File은 검증된 실제 usage가 있을 때만 사용량을 정산한다. `release/finish`는 기존 호출자 호환 별칭이다. Live는 가짜 금액 정책을 만들지 않고 `estimateNarrationTokens`의 토큰 견적과 실제 로컬 호출/토큰 한도만 사용한다. Mock 금액 견적은 실과금 보장이 아니다.
+
+`neutral-utf8-envelope-plus-output-v2`는 구조화된 내부 문맥까지 포함하는 보수적인 바이트 견적이다. 예산 예약량은 실제 전송 토큰 수와 같지 않으며, 실제 usage 미확인 시 전체 예약을 유지한다. 단일 호스트 File ledger를 분산 운영 예산으로 사용하지 않는다.
+
 # WBS-24 — 예산 가드·실험 접근제어
 
 WBS-23의 **로컬 단일 프로세스 mock 평가**를 위한 서버 진입점이다. 원래 원국·판단과

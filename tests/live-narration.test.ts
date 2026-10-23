@@ -23,6 +23,8 @@ import {
   apiTestStyleIssueMessage,
   ApiTestRunSchema,
 } from "@/application/dev-api-test/index";
+import { toOpenAiResponsesBody } from "@/infrastructure/openai/request";
+import { promptFromWire } from "./helpers/openai-wire";
 
 const folders: string[] = [],
   secret = "synthetic-unlock-secret-for-tests-only-0001",
@@ -52,9 +54,10 @@ const context = preparePersonaNarration(catalog.core("synthetic-known"), {
   ...catalog,
   selection: { personaId: "synthetic-style", personaVersion: "1.0.0" },
 });
-const requestBody = { ...context.request, max_output_tokens: 1200 };
+const prompt = { ...context.request, maxOutputTokens: 1200 };
+const requestBody = toOpenAiResponsesBody(prompt);
 async function envelope(request = requestBody) {
-  const result = (await mock.generate(request)) as { outputText: string };
+  const result = (await mock.generate(promptFromWire(request))) as { outputText: string };
   return {
     id: "resp_synthetic",
     model: "gpt-4o-mini-2024-07-18",
@@ -503,7 +506,7 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
         apiKey,
         transport: network,
         observe: (value) => Object.assign(observation, value),
-      }).generate(requestBody),
+      }).generate(prompt),
     ).rejects.toMatchObject({ code: "PROVIDER_FAILED" });
     expect(network).toHaveBeenCalledTimes(1);
     const aborting: typeof fetch = async (_url, options) =>
@@ -518,16 +521,15 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
         transport: aborting,
         timeoutMs: 5,
         observe() {},
-      }).generate(requestBody),
+      }).generate(prompt),
     ).rejects.toMatchObject({ code: "TIMEOUT" });
     const controller = new AbortController();
     controller.abort();
     const spy = vi.fn(aborting);
     await expect(
-      createOpenAiNarrationProvider({ apiKey, transport: spy, observe() {} }).generate(
-        requestBody,
-        { signal: controller.signal },
-      ),
+      createOpenAiNarrationProvider({ apiKey, transport: spy, observe() {} }).generate(prompt, {
+        signal: controller.signal,
+      }),
     ).rejects.toMatchObject({ code: "CANCELLED" });
     expect(spy).not.toHaveBeenCalled();
   });

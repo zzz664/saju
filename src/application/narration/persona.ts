@@ -42,7 +42,7 @@ export async function narratePersona(
       personaVersion: context.profile.personaVersion,
       promptVersion: PERSONA_PROMPT_VERSION,
       commonPromptVersion: COMMON_SYSTEM_PROMPT_VERSION,
-      modelId: context.request.model,
+      modelId: context.request.modelId,
       providerKind: provider.kind,
       register: context.profile.voice.register,
       narrativeSpecId: context.spec.specId,

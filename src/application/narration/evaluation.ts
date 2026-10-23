@@ -19,7 +19,7 @@ import {
 } from "@/domain/persona";
 import { PersonaNarrationDraftSchema, preparePersonaNarration } from "@/domain/persona/narration";
 import { COMMON_SYSTEM_PROMPT_VERSION, PERSONA_PROMPT_VERSION } from "@/domain/persona/prompt";
-import { DEFAULT_OPENAI_MODEL, OpenAiModelIdSchema } from "@/domain/narration/model";
+import { DEFAULT_NARRATION_MODEL, ModelIdSchema } from "@/domain/narration/model";
 
 const Id = z
   .string()
@@ -88,7 +88,7 @@ export const PersonaEvaluationReportSchema = z.strictObject({
   suiteVersion: z.string(),
   repetitions: z.union([z.literal(2), z.literal(3)]),
   providerKind: z.literal("mock"),
-  modelId: OpenAiModelIdSchema,
+  modelId: ModelIdSchema,
   versions: z.strictObject({
     commonPromptVersion: z.string(),
     promptVersion: z.string(),
@@ -297,7 +297,7 @@ export async function evaluatePersonaMatrix(
     suiteVersion: suite.suiteVersion,
     repetitions: settings.repetitions,
     providerKind: "mock",
-    modelId: OpenAiModelIdSchema.parse(options.model ?? DEFAULT_OPENAI_MODEL),
+    modelId: ModelIdSchema.parse(options.model ?? DEFAULT_NARRATION_MODEL),
     versions: {
       commonPromptVersion: COMMON_SYSTEM_PROMPT_VERSION,
       promptVersion: PERSONA_PROMPT_VERSION,

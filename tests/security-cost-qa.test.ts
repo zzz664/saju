@@ -6,6 +6,7 @@ import { createApiTestHandler } from "@/server/api-test";
 import { createApiTestCatalog } from "@/server/api-test-catalog";
 import { createPersonaMockProvider } from "@/infrastructure/llm/persona-mock";
 import { FileLiveBudget } from "@/infrastructure/openai/live-budget";
+import { promptFromWire } from "./helpers/openai-wire";
 
 const secret = "synthetic-qa-session-secret-no-real-value-0001";
 const key = "synthetic-qa-api-key-no-real-value-0001";
@@ -60,7 +61,7 @@ const envelope = (text: string) => ({
 });
 async function complete(_url: Parameters<typeof fetch>[0], options?: RequestInit) {
   const requestBody = JSON.parse(String(options?.body));
-  const generated = (await mock.generate(requestBody)) as { outputText: string };
+  const generated = (await mock.generate(promptFromWire(requestBody))) as { outputText: string };
   return Response.json(envelope(generated.outputText));
 }
 function setup(response: typeof fetch = complete, extra: Record<string, string | undefined> = {}) {

@@ -1,3 +1,4 @@
+import type { BudgetLedger, BudgetLease } from "@/domain/budget-ledger";
 import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 import type { NarrationRequest } from "@/domain/narration";
@@ -55,17 +56,26 @@ export function experimentDay(now: number): string {
     throw new ExperimentError("CLOCK_INVALID");
   return new Date(now).toISOString().split("T")[0];
 }
+/** Conservative local envelope estimate; not a tokenizer or actual billing usage. */
+export function estimateNarrationTokens(
+  request: NarrationRequest,
+  policy: { maxRequestBytes: number; maxOutputTokens: number },
+) {
+  const bytes = new TextEncoder().encode(
+    JSON.stringify({ ...request, maxOutputTokens: policy.maxOutputTokens }),
+  ).byteLength;
+  if (bytes > policy.maxRequestBytes) throw new ExperimentError("REQUEST_TOO_LARGE");
+  const inputTokens = bytes + 256; // Explicit request-envelope allowance, versioned below.
+  const outputTokens = policy.maxOutputTokens;
+
+  return { inputTokens, outputTokens, tokens: inputTokens + outputTokens };
+}
 /** Mock admission estimate, not tokenizer usage or a billing measurement. */
 export function quoteExperimentRequest(
   request: NarrationRequest,
   policy: ExperimentPolicy,
 ): ExperimentBudget {
-  const bytes = new TextEncoder().encode(
-    JSON.stringify({ ...request, max_output_tokens: policy.maxOutputTokens }),
-  ).byteLength;
-  if (bytes > policy.maxRequestBytes) throw new ExperimentError("REQUEST_TOO_LARGE");
-  const inputTokens = bytes + 256; // Explicit request-envelope allowance, versioned below.
-  const outputTokens = policy.maxOutputTokens;
+  const { inputTokens, outputTokens } = estimateNarrationTokens(request, policy);
   const million = BigInt(1000000);
   const ceil = (tokens: number, rate: number) =>
     (BigInt(tokens) * BigInt(rate) + million - BigInt(1)) / million;
@@ -80,13 +90,14 @@ export function quoteExperimentRequest(
   if (!parsed.success) throw new ExperimentError("REQUEST_TOO_LARGE");
   return parsed.data;
 }
-export const EXPERIMENT_RESERVATION_POLICY = "utf8-envelope-plus-output-v1";
-export interface ExperimentBudgetStore {
+export const EXPERIMENT_RESERVATION_POLICY = "neutral-utf8-envelope-plus-output-v2";
+export interface ExperimentBudgetStore extends BudgetLedger<ExperimentReservation> {
   /** Atomic all-or-nothing admission; release frees concurrency, never spent allocation. */
-  reserve(input: {
-    readonly now: number;
-    readonly access: ExperimentAccess;
-    readonly allocation: ExperimentBudget;
-    readonly policy: ExperimentPolicy;
-  }): { release(): void };
+  reserve(input: ExperimentReservation): BudgetLease & { release(): void };
+}
+export interface ExperimentReservation {
+  readonly now: number;
+  readonly access: ExperimentAccess;
+  readonly allocation: ExperimentBudget;
+  readonly policy: ExperimentPolicy;
 }

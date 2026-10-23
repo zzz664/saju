@@ -29,7 +29,7 @@ describe("synthetic persona prompt consistency", () => {
         ...catalog,
         selection,
       });
-      const developer = JSON.parse(prepared.request.input[0].content.split("\n").at(-1)!);
+      const developer = JSON.parse(prepared.request.messages[0].content.split("\n").at(-1)!);
       expect(developer.persona).toMatchObject({
         personaId: id,
         personaVersion: version,

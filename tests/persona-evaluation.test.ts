@@ -49,13 +49,8 @@ describe("WBS-25 fixed R01 mock quality matrix", () => {
     expect(network).not.toHaveBeenCalled();
     expect(log).not.toHaveBeenCalled();
     for (const [request] of generate.mock.calls) {
-      expect(request).toMatchObject({
-        model: "gpt-4o-mini",
-        store: false,
-        stream: false,
-        max_output_tokens: 1024,
-      });
-      expect(request.input.map((message) => message.role)).toEqual(["developer", "user"]);
+      expect(request).toMatchObject({ modelId: "gpt-4o-mini", maxOutputTokens: 1024 });
+      expect(request.messages.map((message) => message.role)).toEqual(["developer", "user"]);
       expect(JSON.stringify(request)).not.toMatch(
         /"(?:birthDate|birthTime|timezoneId|longitudeDeg|latitudeDeg)"\s*:/,
       );
@@ -162,7 +157,7 @@ describe("WBS-25 evaluator failures, boundaries and adversarial cases", () => {
     );
     expect(report.modelId).toBe(options.model);
     expect(report.summary.contractPassed).toBe(true);
-    expect(generate.mock.calls.every(([request]) => request.model === options.model)).toBe(true);
+    expect(generate.mock.calls.every(([request]) => request.modelId === options.model)).toBe(true);
   });
   it.each([1, 4, 2.5])(
     "rejects unsupported repetition count %s before generation",

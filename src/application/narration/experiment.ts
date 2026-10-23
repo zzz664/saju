@@ -72,7 +72,7 @@ export function createExperimentRunner(
           let lease: ReturnType<ExperimentBudgetStore["reserve"]>;
           const limitedRequest = Object.freeze({
             ...request,
-            max_output_tokens: policy.maxOutputTokens,
+            maxOutputTokens: policy.maxOutputTokens,
           });
           try {
             const instant = checkEnvironment();
@@ -93,7 +93,7 @@ export function createExperimentRunner(
           try {
             return await options.provider.generate(limitedRequest, callOptions);
           } finally {
-            lease.release();
+            lease.settle();
           }
         },
       };

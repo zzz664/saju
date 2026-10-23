@@ -1,4 +1,3 @@
-import { ManualPromptDataSchema } from "@/domain/core-export";
 import { ExperimentError } from "@/domain/experiment";
 import {
   createNarrationRequest,
@@ -73,7 +72,7 @@ export async function narrateCore(
   if (signal?.aborted) throw new NarrationError("CANCELLED");
   if (provider.kind !== "mock") throw new NarrationError("LIVE_DISABLED");
   const request = createNarrationRequest(value, options.model);
-  const data = ManualPromptDataSchema.parse(JSON.parse(request.input[0].content));
+  const data = request.data;
   const draft = validateNarrationOutput(
     await receiveNarrationText(request, provider, signal),
     data,
@@ -83,6 +82,10 @@ export async function narrateCore(
     sourceStatus: data.status,
     sections: draft.sections,
     limitations: data.limitations,
-    meta: Object.freeze({ ...NARRATION_META, model: request.model, providerKind: "mock" as const }),
+    meta: Object.freeze({
+      ...NARRATION_META,
+      model: request.modelId,
+      providerKind: "mock" as const,
+    }),
   });
 }

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ExperimentPolicySchema } from "@/domain/experiment";
-import { OpenAiModelIdSchema } from "@/domain/narration/model";
+import { ModelIdSchema } from "@/domain/narration/model";
 
 export const ApiTestRequestSchema = z.strictObject({
   mode: z.enum(["mock", "live"]),
@@ -63,7 +63,7 @@ const Quota = z.strictObject({
 const Choice = z.strictObject({ id: z.string().min(1).max(64), label: z.string().min(1).max(100) });
 export const ApiTestConfigSchema = z.strictObject({
   defaultMode: z.literal("mock"),
-  modelId: OpenAiModelIdSchema,
+  modelId: ModelIdSchema,
   keyStatus: z.enum(["ready", "missing"]),
   liveAvailable: z.boolean(),
   liveStatus: z.enum(["LIVE_BLOCKED", "LIVE_NOT_RUN"]),
@@ -83,7 +83,7 @@ export const ApiTestRunSchema = z.strictObject({
   mode: z.enum(["mock", "live"]),
   scenario: z.literal("narration"),
   featureId: z.literal("core-base"),
-  modelId: OpenAiModelIdSchema,
+  modelId: ModelIdSchema,
   personaId: z.string().min(1).max(64),
   status: z.enum(["blocked", "running", "passed", "failed", "interrupted"]),
   personaVersion: z.string().min(1).max(32),
@@ -137,7 +137,7 @@ export const ApiTestRunSchema = z.strictObject({
         .max(8),
       styleEvaluation: z.object({ passed: z.boolean() }).passthrough(),
       meta: z
-        .object({ providerKind: z.enum(["mock", "openai"]), modelId: OpenAiModelIdSchema })
+        .object({ providerKind: z.enum(["mock", "openai"]), modelId: ModelIdSchema })
         .passthrough(),
     })
     .passthrough()

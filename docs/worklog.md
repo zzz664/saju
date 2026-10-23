@@ -982,3 +982,11 @@
 - 신규 17건: 14개 날짜/시간대/DST·태양시·경계 조합 및 음력 윤달의 비최적화 전수 결과와 완전 일치, 일반 날짜 실제 timezone resolve 1회/SDK projection 13회, 구간 내부 00:37 오류를 놓치지 않는 래퍼 fallback을 검증했다.
 - 검증: 초기 관련 3파일 73건 PASS. 내부 재파싱 최적화 후 5파일 99건 중 실제 CLI 1건이 Windows 샌드박스 프로세스 제한으로 실패→해당 파일 정상 환경 재실행 14건 PASS(나머지 85건 PASS). 타입/린트 PASS.
 - benchmark:core(합성 입력, 동일 코드/호스트): 전수 어댑터 692ms, scope 478/422/397ms. 초기 scope 구현의 757~805ms보다 개선. 시간은 환경 의존이며 호출 횟수와 전수 동등성 테스트를 회귀 기준으로 삼는다. 외부 API 0회.
+
+## 2026-10-24 코드리뷰 리팩터링 F — 공급자·예산 경계 및 최종 검증
+
+- 도메인 요청을 modelId/instructions/messages/output/maxOutputTokens 및 구조화 data/style로 변경. infrastructure/openai/request만 Responses body의 model/input/text/store/stream/max_output_tokens를 조립한다. 같은 공통 프롬프트·출력 스키마를 그대로 전송하고 store:false/stream:false·토큰 상한을 강제한다. 날짜 접미사 모델 매칭은 OpenAI 인프라로 이동하고 domain은 일반 ModelIdSchema를 사용한다.
+- Mock은 developer 문자열 접두사·user JSON을 재파싱하지 않고 승인된 구조화 data/style을 읽는다. BudgetLedger/BudgetLease의 reserve→settle를 Memory/File이 공유하며 기존 release/finish는 호환 별칭으로 유지했다. Live는 가짜 microUSD 정책 없이 공통 토큰 견적을 사용한다. 실제 usage 미확인 시 전체 예약 유지, 오류/재시작/멱등 안전 계약은 기존과 같다. 공급자 응답도 공통 bounded UTF-8 reader를 사용한다.
+- 검증: 관련 11파일 187건 및 신규 공급자 경계 2건 PASS. 타입·린트(경고 0)·포맷 PASS. 문서 50파일/79링크/0오류. 격리 QA 개발 E2E 22/22, 운영 E2E 4/4, 프로덕션 빌드·typegen·tsc PASS. 예상 외 외부 fetch 시도 0건(Next 버전 확인 1건은 기존 오프라인 stub). 실제 OpenAI 호출 0회/LIVE_NOT_RUN.
+- A→B→C→D→E를 검증 후 각각 커밋하고 F를 마지막으로 커밋한다. 전체 npm test를 일괄 실행하지 않고 단계별 관련 테스트만 실행했다. 전체 범위·유지한 호환 API·성능 수치는 docs/evaluations/core-review-refactor.md에 기록했다.
+- AGENTS.md, next-env.d.ts, 개인 cli-input.json은 사용자 변경 그대로 커밋에서 제외. .env 및 실제 .local 예산 파일을 읽거나 수정하지 않았다. CI·미래 WBS·DB·PG·라이브 API 실행 없음.
