@@ -53,9 +53,10 @@ export function calculateRelations(
   const relations = analysis.core.facts
     ? analyzeRelations(natalReferences(analysis.core.facts.sourcePillars))
     : null;
-  return RelationsCalculationResultSchema.parse({
+  const result = RelationsCalculationResultSchema.parse({
     status: relations?.status ?? "unavailable",
     analysis,
     relations,
   });
+  return Object.freeze({ ...result, analysis, relations });
 }

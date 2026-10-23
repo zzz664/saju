@@ -14,6 +14,7 @@ npm run --silent saju -- judge-facts < tests/fixtures/cli-input.json
 npm run --silent saju -- arbitrate-facts < tests/fixtures/cli-input.json
 npm run --silent saju -- diagnose-structure < tests/fixtures/cli-input.json
 npm run --silent saju -- diagnose-relations < tests/fixtures/cli-input.json
+npm run --silent saju -- diagnose-topic career < tests/fixtures/cli-input.json
 npm run --silent saju -- export-json < tests/fixtures/cli-input.json
 npm run --silent saju -- manual-prompt < tests/fixtures/cli-input.json
 npm run --silent saju -- export-schema
@@ -27,7 +28,7 @@ Get-Content -Raw -Encoding utf8 tests/fixtures/cli-input.json | npm.cmd run --si
 $LASTEXITCODE
 ```
 
-인자는 `validate`, `calculate`, `normalize-time`, `calculate-policy`, `derive-facts`, `judge-facts`, `arbitrate-facts`, `diagnose-structure`, `diagnose-relations`, `export-json`, `manual-prompt`, `hash-json`, `export-schema`, `--help` 중 하나다. 표준입력은 기존 `AnalysisInput` JSON
+인자는 `validate`, `calculate`, `normalize-time`, `calculate-policy`, `derive-facts`, `judge-facts`, `arbitrate-facts`, `diagnose-structure`, `diagnose-relations`, `diagnose-topic <topic>`, `export-json`, `manual-prompt`, `hash-json`, `export-schema`, `--help` 중 하나다. 표준입력은 기존 `AnalysisInput` JSON
 문서 한 개이며 인자에 생년월일을 넣지 않는다. `--silent`는 npm의 스크립트 안내만 숨겨
 stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다. stdout은 요청된 개발용
 결과이고, 입력 원문을 그대로 반사하거나 일반 로그에 기록하지 않는다.
@@ -47,6 +48,7 @@ stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다
 | `arbitrate-facts` partial/unavailable          | 미상·부분 근거/미해결 충돌과 원본 trace, resolution 또는 null                                 | 없음                                                                 | 2         |
 | `diagnose-structure` partial/unavailable       | 기존 core + 별도 M01 월령·통근·투출·강약/격국/용신 후보, 미해결 충돌/한계 또는 null           | 없음                                                                 | 2         |
 | `diagnose-relations` partial/unavailable       | 기존 core/M01 analysis + 별도 M02 관계 존재·출처·미해결 공존/합 상대와 미상/효과 미평가 한계  | 없음                                                                 | 2         |
+| `diagnose-topic <topic>` partial/unavailable   | 기존 core/M01/M02 analysis + 선택 주제의 M03 후보·보류·근거·한계 또는 null                    | 없음                                                                 | 2         |
 | `export-json` complete / partial·unavailable   | 검증된 CoreExport JSON, 원본 출생정보·시각 후보 제외                                          | 없음                                                                 | 0 / 2     |
 | `manual-prompt` complete / partial·unavailable | 고정 한국어 지시문 + 확정·채택 finding 및 제한 JSON 블록                                      | 없음                                                                 | 0 / 2     |
 | `export-schema`                                | 구조용 draft 2020-12 JSON Schema. stdin 읽지 않음                                             | 없음                                                                 | 0         |
@@ -65,6 +67,11 @@ stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다
 `diagnose-relations`는 [M02 간지 관계](../domain/judgment/relations/README.md) 검토 명령이다.
 확정 natal 기둥만 사용하며 관측된 관계와 미평가 강도/합화를 분리한다. 정상 출력도 종료 코드 2,
 전부 불가면 `relations: null`과 기존 계산 사유를 반환한다. M01 후보를 자동 재판정하지 않는다.
+
+`diagnose-topic <topic>`는 [M03 주제별 검토](../domain/judgment/topics/README.md) 명령이다.
+topic은 `temperament`, `strengths`, `career`, `wealth`, `romance`, `social` 중 하나를 필수로 지정한다.
+선택한 주제 팩만 평가하고 후보·보류 상태를 보존한다. 미지원 주제나 잘못된 인자는 stdin을
+기다리지 않고 USAGE로 종료한다. 실제 성격/능력/직업/재물/관계 결과를 확정하지 않는다.
 
 기존 `calculate` 연결 조건은 다음을 모두 만족해야 한다.
 

@@ -1,5 +1,6 @@
 import { parseDerivedNatalFacts, type DerivedNatalFacts } from "@/domain/natal-facts";
 import { defineCodedError } from "@/domain/utilities";
+import { deepEqualCanonical } from "@/domain/json";
 import { DEFAULT_STRUCTURE_RULE_SET, STRUCTURE_RULES } from "@/domain/judgment/structure/catalog";
 import {
   MethodSchema,
@@ -31,6 +32,24 @@ export class StructureError extends defineCodedError("StructureError", {
 type Element = NonNullable<StructureFacts["dayElement"]>;
 type Topic = StructureJudgment["topic"];
 type Value = StructureJudgment["value"];
+const verifiedStructures = new WeakMap<StructureDiagnosis, DerivedNatalFacts>();
+
+/** Trusted immutable results are reused; external JSON is checked against its original facts. */
+export function parseStructureDiagnosis(
+  facts: DerivedNatalFacts,
+  value: unknown,
+): StructureDiagnosis {
+  const original =
+    value && typeof value === "object"
+      ? verifiedStructures.get(value as StructureDiagnosis)
+      : undefined;
+  if (original && deepEqualCanonical(original, facts)) return value as StructureDiagnosis;
+  const parsed = StructureDiagnosisSchema.safeParse(value);
+  if (!parsed.success) throw new StructureError("INPUT_REJECTED");
+  const expected = diagnoseStructure(facts, parsed.data.ruleSet);
+  if (!deepEqualCanonical(parsed.data, expected)) throw new StructureError("INPUT_REJECTED");
+  return expected;
+}
 const generates: Record<Element, Element> = { 목: "화", 화: "토", 토: "금", 금: "수", 수: "목" };
 const controls: Record<Element, Element> = { 목: "토", 화: "금", 토: "수", 금: "목", 수: "화" };
 const seasonal: Record<NonNullable<StructureFacts["month"]>["branch"], Element> = {
@@ -400,5 +419,6 @@ export function diagnoseStructure(
     },
   });
   if (!output.success) throw new StructureError("OUTPUT_INVALID");
+  verifiedStructures.set(output.data, facts);
   return output.data;
 }

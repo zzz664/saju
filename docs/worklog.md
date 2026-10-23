@@ -1014,3 +1014,16 @@
 - 전체 npm test/전체 format:check/build/E2E는 미실행(관련 테스트만 실행, UI/웹 route 변경 없음). 기존 CRLF 체크아웃은 보존했다. 실제 API 0회/LIVE_NOT_RUN, .env/.local 실제 예산 파일 열람·변경 없음. DB/PG/시크릿/CI 변경 없음.
 - 변경 파일: README.md, docs/evaluations/WBS-28-relations.md, docs/worklog.md, src/application/relations/index.ts, src/domain/judgment/relations/{schemas.ts,catalog.ts,index.ts,README.md}, src/cli/{commands.ts,run.ts,README.md}, tests/{relations.test.ts,relations-tables.test.ts,relations-contract.test.ts,relations-service.test.ts}, tests/helpers/relation-input.ts.
 - AGENTS.md/next-env.d.ts/개인 cli-input.json 사용자 수정은 보존하고 커밋에서 제외한다. develop 대상 PR 한 건 생성 후 중지한다. 해당 PR은 [기능 브랜치 PR 조회](https://github.com/zzz664/saju/pulls?q=head%3Afeature%2FWBS-28-ganji-relations)와 최종 보고의 직접 URL로 확인한다.
+
+## 2026-10-24 WBS-29 — M03 주제별 판단 규칙
+
+- 직전/선행 WBS-28 PR #30 MERGED(develop, `e7deb19f16c0af3ff72d18142308b7b16728c0a8`)와 origin/develop 반영, 선행 WBS-27 PR #29(`4540093`) 포함을 확인했다. develop checkout/pull --ff-only 후 이전 기능 브랜치를 git branch -d로 안전 삭제하고 `feature/WBS-29-topic-judgments`를 만들었다. 실행순서 30의 WBS-29 한 건만 수행했다.
+- AGENTS/WBS/02/05/10을 읽고 docs/evaluations/WBS-29-topics.md에 완료 조건·정상/음성/경계/오류 검사를 먼저 정의했다. 모듈 부재 RED를 확인한 뒤 구현했다.
+- M03에 temperament/strengths/career/wealth/romance/social 6팩×3규칙을 추가했다. 서로 다른 십성군 또는 일지 관계+월지의 복합 관측으로 주제 검토 후보를 만들고, 구조 불확실성/관련 관계 공존을 우선 검토해 낮은 후보를 삭제하지 않고 보류한다. rule/source/version/priority·실제 근거 경로와 값·예외·상호 충돌 ID를 보존한다. 단일 십성·개수·성별별 고정관념으로 성향/능력/직업/재물/관계 결과를 확정하지 않는다.
+- 주제 문구와 결합 조건은 제한적 운영 정책이다. 삼명통회 권5 분류/복합 맥락·권2 관계 표지의 원문 대조는 현대 심리·적성 예측이나 명리 전문가 승인이 아니다. 원전의 성별 역할·숙명적 사건 단정은 제외했다. 미성립은 반대 성향/능력 부족을 뜻하지 않는다.
+- M03 경계에서 동일 원국/M01/네 natal 위치 M02를 검증한다. parseStructureDiagnosis/parseRelationAnalysis를 추가해 외부 JSON 변조를 거절하고 내부 불변 결과는 WeakMap/WeakSet으로 재사용한다. application/structure·relations의 기존 Zod 검증 후 자식 참조 동일성을 보존해 코어/모듈을 중복 산출하지 않는다. 기존 M01/M02 계산 규칙/버전·값은 유지했다.
+- application/topics와 `diagnose-topic <topic>` CLI를 추가했다. 원국/M01/M02 1회 산출과 기존 코어 JSON/해시·불가 사유를 유지한다. 선택 주제만 평가하며 정상 후보/보류도 partial/종료 2다. 잘못된 주제는 stdin/어댑터 호출 전에 거절한다. M09/F01~F11·사용자 UI/API·서술·기간/궁합 계산은 구현하지 않았다.
+- 검증: 신규 34건 포함 **관련 21파일 584건 PASS**. 타입(tsc --noEmit), lint(경고 0), 변경 파일 LF 포맷, 문서 링크 56파일/89링크/0오류, diff --check PASS. 중간 참조 순서 불일치 1건은 ID 정렬로 수정해 재검증했다. CLI는 알려진 Windows 샌드박스 tsx 제한을 피하는 정상 환경에서 검증했다. 상세 명령/한계는 평가 문서에 기록했다.
+- 전체 테스트/전체 format:check/build/E2E는 미실행(관련 검사만 수행, UI/웹 route 변경 없음). 기존 CRLF 체크아웃 보존. 실제 API 0회/LIVE_NOT_RUN, .env/.local 실제 예산 파일 열람·변경 없음. DB/PG/시크릿/CI 변경 없음. 후보/보류와 전문가 미승인·M01/M02 미평가 한계를 완료 검증과 구분한다.
+- 변경 파일: README.md, docs/evaluations/WBS-29-topics.md, docs/worklog.md, src/domain/judgment/topics/{schemas.ts,catalog.ts,context.ts,index.ts,README.md}, src/domain/judgment/{structure,relations}/index.ts, src/application/{topics,structure,relations}/index.ts, src/cli/{commands.ts,main.ts,run.ts,README.md}, tests/helpers/topic-context.ts, tests/{topics.test.ts,topics-policy.test.ts,topics-service.test.ts}.
+- AGENTS.md/next-env.d.ts/개인 cli-input.json 사용자 수정은 보존·커밋 제외한다. develop PR 한 건 생성 후 중지한다. PR은 [기능 브랜치 PR 조회](https://github.com/zzz664/saju/pulls?q=head%3Afeature%2FWBS-29-topic-judgments)와 최종 보고의 직접 URL로 확인한다.
