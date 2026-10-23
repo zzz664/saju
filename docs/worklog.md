@@ -938,3 +938,11 @@
 - 최종 `npm.cmd run test:e2e:security`: **exit 0, 개발 22/22 + production 4/4 PASS**, 격리 production build/route typegen/tsc PASS. 합성 키/Live=true/유효 서명 쿠키/CSRF/동의를 주어도 페이지 2개와 개발자 API 모든 메서드는 404/no-store였다. 실제 공개 HTML 및 정적 JS/CSS/JSON/map에서 합성 비밀이 없음을 확인했다. 예상치 않은 외부 fetch 시도 **0회**, Next 버전 조회 오프라인 503 **1회** 집계.
 - 최종 타입/lint PASS, lint 경고 0, 문서 **48개/76개 링크/문제 0건**, diff --check PASS. 원본 next.config.ts/lockfile/계산·페르소나/기존 평가 데이터 변경 없음. 다음 WBS-27은 시작하지 않는다.
 - 작업 도중 AGENTS.md의 관련 테스트 우선 지침 변경을 발견했다. 전체 회귀는 이 변경 전에 실행했으며 이후는 수정 helper의 관련 계약/정적 검사와 E2E만 실행했다. 해당 사용자 변경과 기존 next-env.d.ts/CLI 수정은 보존·PR 제외한다. 두 기존 파일 SHA256은 시작 시와 동일했다. 실제 .env/키/장부 변경 및 OpenAI 요청 0회/LIVE_NOT_RUN 유지.
+
+# 코드 리뷰 — 계산 엔진 코어 전반 (WBS 외 문서 작업)
+
+- 사용자 요청: develop(`d0f7379`)의 계산 엔진 코어에 대한 개발팀장 관점 코드 리뷰를 PR로 제출. 코드 변경 없이 리뷰 문서만 추가한다.
+- 산출물: `docs/reviews/2026-10-23_계산엔진_코어_코드리뷰.md` (P1 4건 / P2 6건 / P3 다수, 제안 WBS 분할안 포함).
+- 기준선: `npm test` **47파일/1101건 PASS**, `npm run typecheck` PASS, `npm run lint` 경고 0, `npm run check:docs` 문제 0건.
+- 측정(로컬, 리뷰 근거): 개발자 분석 1건 — 시각 있음 약 44 ms, 시각 미상 약 1.8 s, 요청당 `JudgmentEvaluationSchema` 파싱 15회. 측정 스크립트는 저장소에 남기지 않았다.
+- 미실행: build/E2E(코드 변경 없음), 실제 OpenAI 호출(`LIVE_NOT_RUN`). 리팩터링 착수는 사용자 리뷰·WBS 확정 후.
