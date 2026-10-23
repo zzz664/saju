@@ -4,7 +4,7 @@ import { prepareBirthTime } from "@/application/solar-time";
 import { runCli } from "@/cli/run";
 import { manseryeokCalendarAdapter, manseryeokCalendarConversionAdapter, manseryeokEquationOfTimeAdapter } from "@/infrastructure/manseryeok";
 import { temporalTimeZoneAdapter } from "@/infrastructure/timezone";
-import input from "./fixtures/cli-input.json";
+import input from "./fixtures/core-reference-input.json";
 
 const dependencies = { timeZone: temporalTimeZoneAdapter, calendar: manseryeokCalendarConversionAdapter, equationOfTime: manseryeokEquationOfTimeAdapter };
 const base = { ...input, birthInput: { ...input.birthInput, birthDate: "2024-01-01", birthTime: { status: "known", time: "12:00" }, timezoneId: "Asia/Seoul", longitudeDeg: 127.5 }, calculationPolicy: { ...input.calculationPolicy, solarTime: "mean-solar" } };

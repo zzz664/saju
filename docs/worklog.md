@@ -860,3 +860,38 @@
 - 사용자 .env/키/비밀값, `next-env.d.ts`, 개인 CLI fixture는 변경/커밋하지 않는다. 실제 모델 선택·접근 권한·Responses/구조화 출력 호환성·추론 토큰 상한의 적합성은 사용자가 확인한다. 추가 실 API 요청 **0회**, 이번 설정 변경의 실제 Live 회귀는 **LIVE_NOT_RUN**.
 - 최종 격리 검증: 개인 .env/fixture 제외, 커밋 fixture를 사용하는 임시 사본에서 `npm test -- --maxWorkers=1`: **42개 파일 1068/1068 PASS (91.21초)**. 이어 임시 .env=기본 모델, .env.local=비기본 모델을 만들어 실제 `npm run eval:persona`: **Mock 180/180 완료, 실패/문체 플래그 0**, 생성한 임시 보고서 modelId가 .env.local 값인지 확인했다. 원본 과거 평가 산출물은 수정하지 않았다. 임시 node_modules junction을 먼저 해제하고 검증한 임시 디렉터리만 정리했다.
 - 최종 사용자 두 수정 파일 SHA256 동일, 코드의 gpt-4o-mini 리터럴은 공통 DEFAULT_OPENAI_MODEL 한 곳에만 남음. 같은 PR #24에 커밋·푸시 후 대기한다.
+
+# WBS-17 — 명리 계산/LLM 품질 QA 및 코어 문서 검증
+
+## 선행 확인과 완료 조건
+
+- 직전 PR #24는 GitHub **MERGED**, 대상 develop, merge `b5293423c0d149b3176acc84e2a78768a3b711bb`(2026-10-23T11:29:45Z). 선행 WBS-16/#21, WBS-25/#22도 MERGED이며 세 merge commit이 origin/develop ancestor임을 확인했다.
+- develop 체크아웃 및 `git pull --ff-only origin develop` 후 병합된 `feature/WBS-66-live-narration`을 `git branch -d`로 안전 삭제했다. 최신 develop에서 `feature/WBS-17-core-quality-qa` 한 개만 생성했다.
+- AGENTS/WBS/05/02/06/08, 독립 골든 검토표와 WBS-25 품질 기록을 읽었다. WBS-17은 실행순서 26, 선행 WBS-16/25, 완료 기준 P0 결함 0건/평가기록이다. 정상·오류·경계 및 P0 판정 범위를 구현 전에 [QA 계획](evaluations/WBS-17-core-qa.md)에 정의했다.
+
+## 변경 파일과 조치
+
+- `tests/fixtures/core-reference-input.json`, `tests/fixtures/README.md`, 기존 13개 테스트(`arbitration-service`, `calendar-service`, `cli`, `core-export-service`, `core-export`, `judgment-service`, `natal-facts-service`, `normalize-time-cli`, `policy-calendar-errors`, `policy-cli`, `policy-saju`, `solar-time-application`, `time-normalization`): 자동 회귀가 개인 편집용 CLI 입력을 읽던 문제를 수정했다. 고정 입력은 develop에 이미 커밋된 예시에서 복사했으며 기존 계산 기대값/독립 골든은 변경하지 않았다. 수동 입력 파일은 읽거나 복원하지 않았다.
+- `scripts/check-doc-links.mjs`, `scripts/check-doc-links.d.mts`, `tests/document-links.test.ts`, `package.json`: 네트워크 없이 로컬 Markdown 대상 존재 여부/저장소 경계/잘못된 인코딩을 확인하는 명령과 6개 검증 추가. 외부 URL·앵커 내용·참조형 링크는 대상이 아니다. 최초 타입 검사에서 JS 모듈 선언/Mock 인자 타입 오류를 발견해 선언 파일과 타입을 수정한 뒤 재검증했다.
+- `scripts/developer-e2e.mjs`, `playwright.config.ts`, `package.json`: 기존 계산/테스트 화면을 같은 격리 사본에서 검증하는 `test:e2e:core-qa` 추가. 모든 하위 검사/빌드 프로세스에 키 빈 값/Live false를 고정하며 기존 사용자 서버와 생성 파일은 건드리지 않는다.
+- `README.md`, `docs/02_기술설계서.md`, `docs/06_검증_체크리스트.md`, `docs/08_OpenAI_실험_비용_및_보안.md`, `docs/문서_정합성_검증.md`, `docs/evaluations/WBS-25-persona-quality.md`: 현재 코어와 미래 설계, 공통 OPENAI_MODEL 설정, Mock 전용 CLI와 보호된 수동 Live, 과거 평가와 현재 검증의 범위를 구분했다.
+- `docs/evaluations/WBS-17-core-qa.md`, `docs/evaluations/WBS-17-mock-quality-summary.json`, 본 worklog: 실제 자동 검사 결과와 미평가/잔여 문제를 기록했다. 기존 WBS-25 JSON/샘플/사람 평가 및 WBS-16 승인 기록은 변경하지 않았다.
+
+## 실제 검증 결과
+
+- 환경: Windows PowerShell, Node 24.12.0/npm 11.6.2/ICU 77.1/tzdb 2025b. 실행 정책을 변경하지 않고 `npm.cmd` 사용.
+- 원래 작업 트리 `npm.cmd test -- --maxWorkers=1`: **43개 파일, 1074/1074 PASS**, 종료 0(114.34초). 개인 CLI 파일이 수정된 상태에서도 고정 회귀 입력 분리 후 통과한다. 중간 전체 검사 1068/1068, 새 문서 검사 6/6, 골든/해시/페르소나 관련 91/91도 통과했다. 실패 무시/skip은 사용하지 않았다.
+- 독립 골든 **30/30**(역법 8/일주 6/절입 4/타임존 4/태양시 4/시주 4), 20개 판단 규칙/중재/불확실성 및 100회 동일 해시 검사를 포함한다. 기존 출처/오차/사용자 승인 범위를 유지하며 새 수동 검토를 주장하지 않는다.
+- `npm.cmd run test:e2e:core-qa`: **exit 0, 개발 22/22 + production 차단 2/2 PASS**, 격리 production build/route typegen/tsc PASS. 320/390/768/1440px, 실제 로컬 POST, 오류/복사/인증/기본 Mock 및 명시 실행 UI를 검사했다. Live 응답/usage 화면은 가짜 브라우저 응답으로 확인하며 실제 OpenAI 요청 증빙이 아니다.
+- `npm.cmd run check:docs`, `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`: **PASS**, lint 경고 0. 문서 링크는 이번 보고서 포함 **46개 문서/64개 링크/문제 0건**이며 로컬 파일만 검사한다.
+- WBS CSV 재검사: ID 고유/선행 존재/필수 선행 순서 **PASS**, 필수 68건 + 별도 승인 선택 CI 1건(WBS-19). 읽기 전용 보조 명령의 최초 숫자 변환에서 `선택` 값 오류가 나와 선택 행을 분리한 후 재검사했다. CSV 자체는 변경하지 않았다.
+- 개인 .env/입력을 제외한 임시 사본에서 실제 `npm run eval:persona` 실행: 현재 prompt 1.0.1, Mock **180/180 완료, 실패/문체 플래그 0**, 60/60 반복 그룹 동일. 비식별 집계만 새 WBS-17 산출물로 저장했다. 임시 의존성 junction을 먼저 해제하고 경로 검증 후 해당 사본만 정리했다.
+
+## 판정과 제약
+
+- 검사한 현재 구현 코어의 **관측된 P0 0건**. Mock 성공은 의미/자연스러움이나 실제 모델 품질 인증이 아니다. 사람 평가 **0/60**, 평균 null, **NOT_PERFORMED**. 각 문체는 대표 30개 중 도입문 28개가 반복돼 Mock 템플릿 한계도 남는다.
+- 합성 합쇼체 프로필이 해요체 예시/표현을 상속하는 지시 불일치 **P1 잔여**, OUTPUT_REJECTED의 상세 원인 구분 **P2 잔여**를 명시했다. 승인된 프로필의 불변 버전을 임의 수정하거나 검사 기준을 완화하지 않았다.
+- 추가 실제 OpenAI 호출 **0회 / LIVE_NOT_RUN**. 과거 사용자 보고 completed/문체 실패는 LIVE_FAILED 유지. 새 프롬프트·모델 설정의 실제 서술 품질 회귀는 미실행이다.
+- WBS-26 이후, 명리 11개 기능 확장, P06/R02/R03, OAuth/DB/RLS/PG/배포 QA는 이번 완료 범위가 아니다. CI 구축·키/실제 장부 변경·실 PG·DB 상태 변경·제품명 확정 없음. WBS.csv TODO를 임의 일괄 변경하지 않았다.
+- 사용자 수정 `next-env.d.ts`, `tests/fixtures/cli-input.json` 및 .env는 보존하고 PR에서 제외한다. 두 수정 파일의 최종 SHA256이 시작 시 기록한 값과 동일함을 확인했다. 기존 WBS-25 JSON/샘플, 독립 골든 JSON/승인표도 diff 없음.
+- develop 대상 PR 한 건을 생성한 직후 중지한다. 다음 WBS를 시작하거나 자동 병합하지 않는다.

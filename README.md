@@ -1,14 +1,15 @@
 # 개발 환경
 
-WBS-18의 npm 개발 환경, WBS-02의 출생 입력 계약, WBS-01의 지정 만세력 패키지 어댑터를 포함한다. 제품명은 미정이다.
+현재 코어는 출생 입력·역법/시간 정책·기초 판단/중재·JSON/해시·개발자 검증 UI와 R01 개발자 Mock/Live 서술을 포함한다. 제품명은 미정이다. 전체 제품 구조는 설계 문서의 향후 기능과 구분한다.
 WBS-03의 CLI·어댑터 포트 사용법과 현재 지원 범위는 [CLI 문서](src/cli/README.md)를 참고한다.
 기능 개발 순서는 `docs/WBS.csv`의 `실행순서`와 실제 `develop` 병합 상태를 따른다.
-OpenAI 실험 전 수동 점검은 [WBS-22 조직 설정 체크리스트](docs/checklists/WBS-22-openai-account-review.md)를 따른다. 계정 확인과 실호출 승인은 아직 수행하지 않았다.
-WBS-23의 [LLM provider·프롬프트·mock](src/domain/narration/README.md)은 기존 확정 판단의 내부 JSON 검증용이다. 실 API·P06·스트리밍에는 연결하지 않는다.
-WBS-24의 [실험 접근·예산·동시성 가드](src/domain/experiment/README.md)는 서버가 허용한 로컬 mock에 일/사용자/세션 예약 한도를 적용한다. 실 API는 계속 차단한다.
+OpenAI 실험 전 수동 점검은 [WBS-22 조직 설정 체크리스트](docs/checklists/WBS-22-openai-account-review.md)를 따른다. 계정/무료 혜택 점검과 실호출 증빙은 별도 상태로 관리한다.
+WBS-23의 [LLM provider·프롬프트·mock](src/domain/narration/README.md)은 기존 확정 판단의 내부 JSON 검증용이다. 오프라인 진입점은 Mock 전용이며, 실제 호출은 WBS-65/66의 보호된 서버 경로에서만 허용한다. P06 스트리밍 경로와 구분한다.
+WBS-24의 [실험 접근·예산·동시성 가드](src/domain/experiment/README.md)는 서버가 허용한 로컬 Mock에 일/사용자/세션 예약 한도를 적용한다. WBS-66 Live는 별도의 파일 영속 예산 장부를 사용한다.
 WBS-47의 [승인형 R01 페르소나](src/domain/persona/README.md)는 세 계층 프롬프트·내부 서술 JSON·문체/근거·캐시 키를 mock으로 검증한다. 제품 캐릭터나 P06 스트리밍에 연결하지 않는다.
 WBS-25의 [반복 품질 평가](docs/evaluations/WBS-25-persona-quality.md)는 `npm run eval:persona`로 30사례 × 합성 문체 2종 × 3회 Mock 결과와 읽기용 샘플을 생성한다. 사람 점수와 실 모델 평가는 별도다.
-WBS-65의 [개발자 API 테스트 설정](src/app/dev/api-test/README.md)은 `npm run dev:api-test`로 시작한 로컬 서버의 `/dev/api-test`에서 잠금해제 후 공통 R01 Mock 문장을 확인한다. 실제 Live 호출은 WBS-66에서 연결한다.
+WBS-65/66의 [개발자 API 테스트 설정](src/app/dev/api-test/README.md)은 `npm run dev:api-test`로 시작한 로컬 서버의 `/dev/api-test`에서 잠금해제 후 공통 R01 Mock/Live를 실행한다. 기본 Mock이며 Live는 서버 키/플래그·비용 동의·명시 실행·예산 예약이 필요하다. 모델은 서버 `OPENAI_MODEL` 공통 설정(기본 `gpt-4o-mini`)을 사용한다.
+WBS-17의 [코어 QA 기록](docs/evaluations/WBS-17-core-qa.md)은 계산/Mock/화면·문서 검증 범위, 발견 사항과 Live/사람 평가 잔여 항목을 구분한다.
 
 입력 계약과 범위는 [src/domain/input/README.md](src/domain/input/README.md)를 참고한다.
 Zod 검증과 입력 한계 판정은 Next.js/외부 서비스 없이 실행할 수 있다.
@@ -54,6 +55,7 @@ PowerShell에서 `npm.ps1` 실행이 제한되면 실행 정책을 변경하지 
 
 ```sh
 npm test
+npm run check:docs
 npm run --silent saju -- --help
 npm run typecheck
 npm run lint
@@ -66,6 +68,8 @@ npm start
 Vitest는 기본 Node 환경에서 실행하며 이후 순수 도메인 코어도 웹 서버 없이 검증한다.
 테스트는 입력 계약, 실제 만세력 패키지 호출/독립 일진 대조,
 루트 TSX/한국어 레이아웃의 서버 렌더링을 확인한다.
+회귀 테스트는 [고정 입력](tests/fixtures/core-reference-input.json)을 사용한다. 개인 수동 입력인 `tests/fixtures/cli-input.json`을 편집해도 자동 테스트의 기대값은 바뀌지 않는다. [fixture 구분](tests/fixtures/README.md)을 참고한다.
+`npm run check:docs`는 README/AGENTS/docs/src 문서의 로컬 인라인 링크 파일 존재와 저장소 밖 경로를 검사하며 외부 URL/앵커 내용은 검증하지 않는다.
 프로덕션 기동 확인은 빌드 후 `npm start`에서 `/`의 200 응답과 없는 경로의 404 응답으로 수행한다.
 
 환경파일·빌드 산출물·의존성 폴더는 Git에서 제외한다. `docs/examples/.env.example`은 보존한다.

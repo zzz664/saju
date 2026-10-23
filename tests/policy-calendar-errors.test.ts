@@ -7,7 +7,7 @@ import { CalendarAdapterError } from "@/domain/calendar";
 import { type PolicyCalendarAdapter } from "@/domain/policy-calendar";
 import { temporalTimeZoneAdapter } from "@/infrastructure/timezone";
 import { manseryeokCalendarConversionAdapter } from "@/infrastructure/manseryeok";
-import input from "./fixtures/cli-input.json";
+import input from "./fixtures/core-reference-input.json";
 
 const request = { instant: "2024-02-04T08:27:15Z", policyClock: "2024-02-04T16:59:59.999", dayBoundary: "zi-start" } as const;
 const pillars = { year: { heavenlyStem: "갑", earthlyBranch: "진" }, month: { heavenlyStem: "병", earthlyBranch: "인" }, day: { heavenlyStem: "무", earthlyBranch: "술" }, hour: { heavenlyStem: "경", earthlyBranch: "신" } } as const;

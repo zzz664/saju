@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { runCli } from "@/cli/run";
 import { MAX_STDIN_BYTES, readUtf8Input } from "@/cli/input";
 import { manseryeokCalendarAdapter } from "@/infrastructure/manseryeok";
-import input from "./fixtures/cli-input.json";
+import input from "./fixtures/core-reference-input.json";
 
 const json = JSON.stringify(input);
 
