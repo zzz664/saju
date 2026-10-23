@@ -90,6 +90,47 @@ describe("interpretation collector helpers (offline)", () => {
     expect(candidateLines(text, "七月己土")).toEqual(["四五六月己土，雜氣財官。"]);
     expect(candidateLines(text, "論印綬")).toEqual([]);
   });
+  it("reads the terse forms inside a season section and joins every paragraph naming the month", () => {
+    const text = `=== 三春甲木 ===
+春月之木，漸有生長之象。
+正月甲木，初春尚有餘寒。
+正二月甲木，素無取從才之理。
+時日月年
+庚甲戊庚
+申寅寅申
+二月甲木，庚金得所。
+=== 三夏丁火 ===
+五月丁火，時歸建祿。
+六月之丁，陰柔退氣。
+=== 三冬戊土 ===
+十月戊土，時值小陽。
+十一二月嚴寒冰凍，丙火為專。
+=== 三冬乙木 ===
+十月乙木，木不受氣。
+十一月乙木，花木寒凍。
+冬月之木，雖取戊制水。`;
+    // Named-month paragraphs win over the season opener and are joined in order; charts are dropped.
+    expect(extractSection(text, "正月甲木")).toBe(
+      "正月甲木，初春尚有餘寒。\n\n正二月甲木，素無取從才之理。",
+    );
+    expect(extractSection(text, "二月甲木")).toBe(
+      "正二月甲木，素無取從才之理。\n\n二月甲木，庚金得所。",
+    );
+    expect(extractSection(text, "三月甲木")).toBe("春月之木，漸有生長之象。");
+    expect(extractSection(text, "六月丁火")).toBe("六月之丁，陰柔退氣。");
+    expect(extractSection(text, "五月丁火")).toBe("五月丁火，時歸建祿。");
+    expect(extractSection(text, "十一月戊土")).toBe("十一二月嚴寒冰凍，丙火為專。");
+    expect(extractSection(text, "十二月戊土")).toBe("十一二月嚴寒冰凍，丙火為專。");
+    expect(extractSection(text, "十月戊土")).toBe("十月戊土，時值小陽。");
+    expect(locate(text, "十二月乙木")).toEqual({
+      passage: "冬月之木，雖取戊制水。",
+      locator: "十二月乙木",
+      via: "paragraph",
+    });
+    expect(extractSection(text, "十一月乙木")).toBe("十一月乙木，花木寒凍。");
+    // Terse forms are read only inside the subject's own season section.
+    expect(extractSection("十一二月嚴寒冰凍。", "十一月戊土")).toBeNull();
+  });
   it("keeps a month block with its 或… elaborations and falls back to the season section", () => {
     const text = `== 三春乙木 ==
 三春乙木，為芝蘭蒿草之物。

@@ -96,7 +96,8 @@ const FAMILY_LOCATOR: Record<
   authority: { locator: "論正官", volume: "卷五", topics: ["career", "social", "strengths"] },
   wealth: { locator: "論正財", volume: "卷六", topics: ["wealth", "career"] },
   // `|` lists alternatives the collector tries in order; the matched one is recorded with the passage.
-  peer: { locator: "論比肩|論劫財|論比劫", volume: "卷六", topics: ["social", "temperament"] },
+  // 三命通會 has no 論比肩 chapter: the month-branch 比肩 is treated under 論建祿 (卷六).
+  peer: { locator: "論比肩|論建祿", volume: "卷六", topics: ["social", "temperament"] },
 };
 const SMTH = (volume: string) => WIKISOURCE + encodeURIComponent(`三命通會/${volume}`);
 const FAMILY_PAIRS: readonly {
