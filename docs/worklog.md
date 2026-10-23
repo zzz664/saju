@@ -1002,3 +1002,15 @@
 - 기본 format:check는 기존 CRLF 체크아웃과 LF 설정 차이로 실패했다. 이번 문서 포맷은 수정했고 기존 파일은 보존했다. index LF/working CRLF 확인 및 전체 `format:check -- --end-of-line auto` PASS. 기본 검사 실패를 숨기거나 설정을 변경하지 않았다. UI/웹 route 변경 없음으로 build/E2E 미실행, 실제 API 호출 0회/LIVE_NOT_RUN.
 - 변경 파일: README.md, docs/evaluations/WBS-27-structure.md, docs/worklog.md, src/application/structure/index.ts, src/domain/judgment/structure/{schemas.ts,catalog.ts,index.ts,README.md}, src/cli/{commands.ts,run.ts,README.md}, tests/{structure.test.ts,structure-policy.test.ts,structure-service.test.ts}.
 - AGENTS.md/next-env.d.ts/개인 cli-input.json 사용자 수정은 그대로 보존하고 커밋에서 제외했다. .env/.local 실제 예산 파일 열람·변경 없음. develop 대상 PR 한 건 생성 후 중지하며 다음 WBS로 진행하지 않는다.
+
+## 2026-10-24 WBS-28 — M02 천간·지지 관계
+
+- 직전이자 직접 선행 WBS-27 PR #29의 실제 MERGED(develop, `4540093174233c915579689dd40a4241be3391dd`)와 origin/develop 조상 관계를 확인했다. develop checkout/pull --ff-only 후 `feature/WBS-27-natal-structure`를 git branch -d로 안전 삭제하고 `feature/WBS-28-ganji-relations`를 만들었다. WBS.csv 실행순서 29의 WBS-28 한 건만 진행했다. 문서의 기존 TODO를 실제 미병합 증거로 사용하지 않았다.
+- AGENTS/WBS/02/05/10을 읽고 완료 조건·양성/음성/경계/오류 검사를 docs/evaluations/WBS-28-relations.md에 먼저 정의했다. 모듈 부재로 초기 RED를 확인한 뒤 구현했다.
+- 순수 M02에서 천간 오합/사충, 지지 육합/삼합/방합/충/형/자형/파/해의 출처별 버전 대응표를 추가했다. 형 pairwise/full-group과 천간충 미채택 정책을 구분한다. 미상 기둥·누락된 세 번째 글자·동일 참조 재사용으로 관계를 만들지 않는다. 입력 순서 독립 ID/정렬과 중복 방지, 다른 위치의 같은 글자 보존, 합/대립 공존 및 복수 합 상대의 미해결 검토 항목을 추가했다.
+- 관계 존재는 confirmed로 기록하고 강도·합화·위치 인접성·해석 효과는 미평가로 분리한다. 오행 연관값은 실제 변환이 아니다. 출처 전사/검색 색인의 확인 범위와 파 대응의 육임 원전 맥락을 명시했으며 전문가 승인이나 사건·길흉 예측으로 표시하지 않는다. 입력은 비식별 source/context/position을 포함한 1~32개 기둥 참조이며 기간 계산·소유권 검증은 담당하지 않는다.
+- application/relations와 diagnose-relations CLI는 기존 코어/M01을 1회 계산한 뒤 확정 natal만 사용한다. 기존 코어 JSON/해시·M01 판단/한계를 유지한다. 정상 출력도 효과 미평가로 partial/종료 2, 계산 불가면 relations:null과 기존 사유를 유지한다. 일반 사용자 API/UI·M03/M09·후속 WBS는 구현하지 않았다.
+- 검증: 신규 161건 포함 **관련 18파일 550건 PASS**. npx tsc --noEmit, lint(경고 0), 변경 TS/모듈·CLI 문서 LF 포맷, 문서 링크 54파일/86링크/0오류, diff --check PASS. 초기 타입 오류 2건은 리터럴/콜백 타입을 명시해 수정했다. 실제 CLI는 알려진 샌드박스 tsx/uv_os_get_passwd 제한을 피하는 정상 프로세스에서 검증했다. 명령과 표의 독립 출처는 평가 문서에 기록했다.
+- 전체 npm test/전체 format:check/build/E2E는 미실행(관련 테스트만 실행, UI/웹 route 변경 없음). 기존 CRLF 체크아웃은 보존했다. 실제 API 0회/LIVE_NOT_RUN, .env/.local 실제 예산 파일 열람·변경 없음. DB/PG/시크릿/CI 변경 없음.
+- 변경 파일: README.md, docs/evaluations/WBS-28-relations.md, docs/worklog.md, src/application/relations/index.ts, src/domain/judgment/relations/{schemas.ts,catalog.ts,index.ts,README.md}, src/cli/{commands.ts,run.ts,README.md}, tests/{relations.test.ts,relations-tables.test.ts,relations-contract.test.ts,relations-service.test.ts}, tests/helpers/relation-input.ts.
+- AGENTS.md/next-env.d.ts/개인 cli-input.json 사용자 수정은 보존하고 커밋에서 제외한다. develop 대상 PR 한 건 생성 후 중지한다. 해당 PR은 [기능 브랜치 PR 조회](https://github.com/zzz664/saju/pulls?q=head%3Afeature%2FWBS-28-ganji-relations)와 최종 보고의 직접 URL로 확인한다.
