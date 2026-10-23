@@ -96,8 +96,9 @@ verifiedFindings가 비어 있으면 설명 가능한 확정 판단이 없다는
 
 `;
 
-/** Copy-only artifact: no API, persona, streaming, UI, or provider dependency. */
-export function buildManualPrompt(value: unknown): string {
+export type ManualPromptData = z.infer<typeof ManualPromptDataSchema>;
+/** Shared projection: accepted confirmed findings only, without raw birth input. */
+export function buildManualPromptData(value: unknown): ManualPromptData {
   const core = document(value);
   const findings = core.resolution?.arbitration.findings ?? [];
   const verified = findings.filter((finding) => finding.precision === "confirmed");
@@ -110,6 +111,12 @@ export function buildManualPrompt(value: unknown): string {
       arbitration: core.resolution?.arbitration.limitations ?? [],
     }, judgmentProvenance: core.evaluation?.provenance ?? null, arbitrationProvenance: core.resolution?.arbitration.provenance ?? null,
   });
+  return data;
+}
+
+/** Copy-only artifact: no API, persona, streaming, UI, or provider dependency. */
+export function buildManualPrompt(value: unknown): string {
+  const data = buildManualPromptData(value);
   // Escape markup boundaries without changing JSON values on copy/parse.
   const json = JSON.stringify(data, null, 2).replace(/[<>&\u2028\u2029]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
   return MANUAL_INSTRUCTIONS + "<analysis_data>\n" + json + "\n</analysis_data>\n";

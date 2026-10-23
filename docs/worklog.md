@@ -1,5 +1,34 @@
 # 작업 기록
 
+## 2026-10-23 — WBS-23: LLM provider·프롬프트·mock
+
+### 선행 확인과 구현 전 완료 조건
+
+- 직전 PR #17(WBS-22)의 GitHub 실제 상태 MERGED, 대상 develop, 병합 시각 2026-10-23 14:19:44 KST 및 merge commit `94e3480b78750df0523bbf08424a3e5a4556fd22`를 확인했다. origin/develop 원격 hash 일치, fetch 후 ancestor 확인. 직접 선행 WBS-13(PR #14)도 develop MERGED 및 ancestor 확인. WBS.csv 실행순서 19의 WBS-23 한 건만 진행했다.
+- develop checkout/ff-only pull 후 `git branch -d feature/WBS-22-openai-consent-environment-checklist` 안전 삭제 성공. 최신 develop에서 `feature/WBS-23-llm-provider-prompt-mock` 한 개를 생성했다. AGENTS/WBS/02/05/06/08, 관련 11/12/20·비스트리밍 참고 예제 및 기존 core-export 계약을 읽었다. 11의 캐릭터 승인과 20의 실제 SSE는 이번 범위로 구현하지 않는다.
+- 완료 조건: 기존 코어에서 확정·채택 판단만 추출하는 provider 포트, 버전 있는 상위 지시/하위 데이터와 내부 JSON 스키마, 결정적 mock, 구조/근거 연결 및 오류 검증. 실제 OpenAI 호출·키/환경 설정 변경·P06/SSE/DB·예산 가드는 제외하며 실연동은 BLOCKED로 기록한다.
+- 정상/오류/경계 테스트를 먼저 작성했다: 기존 복사 투영/원국 불변성, 지시/데이터 분리·JSON 전용 내부 모드·고정 모델, 결정적 mock/무네트워크·로그, 시각 미상(midnight/zi-start)·unavailable, 거절·중단·실패, 손상/과대/버전/추가 필드/알 수 없는·중복·누락 ID, 원본 검증 전 호출 차단, 공급자 예외·취소. 첫 실행은 서비스 모듈 부재로 종료 1을 확인했다.
+
+### 구현과 검증 결과
+
+- 기존 buildManualPrompt의 투영만 `buildManualPromptData`로 추출했다. 기존 CoreExport 전체 의미 검증과 중재에서 채택된 confirmed 선별을 공유하며 수동 프롬프트 문구/형식/버전은 유지한다. 이름·원본 날짜/시각/좌표를 새로 전달하지 않는다. 부분/억제/보류 판단은 제외하고 원래 입력·계산·중재 제한을 보존한다.
+- 순수 도메인의 NarrationProvider와 고정 gpt-4o-mini/store:false/stream:false 요청 조립을 추가했다. docs/12의 공통 명리·안전·한국어 정책을 바탕으로 별도 내부 JSON 출력 지시를 사용한다. 사용자 역할 JSON은 지시와 분리하고 markup/줄 구분자를 이스케이프한다. R01 PersonaProfile 예시·R02/R03 지시를 조립하지 않는다. 프롬프트/서술 스키마 버전은 각각 1.0.0이다.
+- 공급자 응답 completed/refused/incomplete/failed를 strict하게 구분한다. completed의 JSON은 버전/필드/0~20섹션/공백 제거 후 1~1500자/실제 UTF-8 128 KiB 한도를 확인하고 모든 허용 findingId가 정확히 한 번 존재해야 한다. 위조·중복·누락을 거절하고 원래 근거 순서로 정렬한다. sourceStatus·limitations·mock/모델/버전 메타는 서버 스냅샷에서 붙인다. 공급자 completed는 DB report.completed 의미가 아니다.
+- 실제 동작은 명시적으로 주입한 mock만 허용하며 kind=openai는 generate 이전 LIVE_DISABLED로 거절한다. 환경변수나 키로 자동 전환하지 않고 SDK/HTTP 구현을 추가하지 않았다. Mock은 확정 assertion에 검증용 접두어만 붙이며 결정적이다. 토큰/청구량·모델 품질을 만들어 기록하지 않는다. 거절/중단/실패 모드를 제공하고 자동 재시도·성공 fallback은 없다.
+- 시작 전/대기 중/늦게 완료한 공급자의 취소를 처리한다. signal을 전달하고 취소 뒤 결과를 채택하지 않으며 이벤트 리스너를 정리한다. 내부 공급자 작업을 강제로 종료한다고 보장하지 않는다. 공급자 예외 전문/원문을 외부 오류나 일반 로그로 노출하지 않는다.
+- 초기 신규 25건과 타입 검사가 통과한 뒤 실호출 차단·UTF-8 정확한 한도/1바이트 초과·문장/섹션 상한·요청별 스키마 독립·끝나지 않는 공급자 대기 중 취소를 보강했다. 최종 `npm.cmd test -- tests/narration.test.ts tests/developer-analysis-api.test.ts`: 종료 0, 관련 2파일/40건 통과(신규 30건 + 기존 API 10건). 기존 P17의 코어/해시/수동 프롬프트 응답과 미상 계약을 회귀 확인했다.
+- `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`: 모두 종료 0, 린트 경고 0개. 변경 문서의 로컬 링크 16개와 Git 공백 검사도 통과했다. 새 라우트/의존성/Next 설정 변경이 없어 전체 빌드/E2E/설치·전체 회귀는 반복하지 않았다. 테스트는 별도 합성 입력만 사용하며 사용자 개인 cli-input.json을 가져오거나 값을 로그에 출력하지 않았다.
+- OpenAI Docs 스킬로 공식 [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs), [Prompt engineering](https://developers.openai.com/api/docs/guides/prompt-engineering), [GPT-4o mini](https://developers.openai.com/api/docs/models/gpt-4o-mini)를 검색 후 열어 형식·거절/불완전 처리·지시 우선순위를 확인했다. 최신 예시의 다른 모델로 치환하지 않았다. 모델 가용성/지원 종료와 조직 혜택/동의/환경 분리는 WBS-22의 실제 수동 확인이 남아 있다.
+
+### 변경 파일과 제약
+
+- `src/domain/core-export/index.ts`, `README.md`: 기존 수동 프롬프트의 데이터 투영 재사용과 사용법. 실제 코어 계산·판단·버전·해시 정책은 변경하지 않는다.
+- `src/domain/narration/index.ts`, `prompt.ts`, `README.md`: provider/응답·JSON 스키마, 근거 연결/한도/고정 오류, 지시/데이터·버전과 내부 개발 범위.
+- `src/application/narration/index.ts`, `src/infrastructure/llm/mock.ts`: mock 전용 조합·취소/오류 검증과 결정적 테스트 공급자.
+- `tests/narration.test.ts`, 루트 `README.md`, `docs/worklog.md`: 정상/오류/경계·회귀, 사용법/결과. 총 10개 작업 파일만 커밋한다.
+- 구조/근거 ID 일치 검사는 문장의 의미·환각/안전·자연스러운 한국어 품질을 보장하지 않는다. 결과는 개발자 내부 평가용이며 UI/API/저장에는 연결하지 않는다. 승인형 캐릭터는 WBS-47, 예산·실험 접근제어는 WBS-24, 실제 SSE/대화/DB 완료는 해당 후속 WBS 범위다. 실연동은 계정/동의·환경과 실 API 승인 미확인 및 어댑터 미구현으로 **BLOCKED**다. Mock/계약 구현 완료를 실 API·과금/무료 토큰·LLM 품질 검증 성공으로 표시하지 않는다.
+- 기존 사용자 수정 AGENTS.md/작업지시 문서/next-env.d.ts/cli-input.json의 SHA-256 동일을 확인하고 커밋에서 제외한다. WBS.csv 상태·의존성·만세력/고전/11개 기능·P06/report.completed/OAuth/DB/PG/키/배포/CI 및 다음 WBS는 변경하지 않는다. develop 대상 PR 한 건 생성 후 즉시 중지한다.
+
 ## 2026-10-23 — WBS-22: OpenAI 혜택·동의·환경 분리 체크
 
 ### 선행 확인과 완료 조건
