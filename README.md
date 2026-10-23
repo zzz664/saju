@@ -29,6 +29,8 @@ WBS-13의 [JSON·수동 ChatGPT 내보내기](src/domain/core-export/README.md)�
 `export-json`, `manual-prompt`, `export-schema`로 실행한다. 확정·채택 판단만 설명 대상으로 전달한다.
 WBS-14의 [결정성·버전·해시](src/domain/core-fingerprint/README.md)는 `hash-json`으로 실행한다.
 검증된 코어 문서에 실제 버전 manifest와 정규화된 SHA-256 체크섬을 붙인다.
+WBS-20의 [개발자 검증 화면과 API](src/app/dev/validation/README.md)는
+로컬 개발 서버의 `/dev/validation`에서 입력·미상·원국·근거·JSON/프롬프트 복사를 확인한다.
 
 - Node.js 24.x, npm 11.x (초기 검증: Node 24.12.0 / npm 11.6.2).
 - Next.js App Router / TypeScript / Vitest. 직접 의존성과 잠금 파일을 함께 고정한다.

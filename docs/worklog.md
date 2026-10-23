@@ -1,5 +1,38 @@
 # 작업 기록
 
+## 2026-10-23 — WBS-20: 개발자 검증 UI 및 서버 API
+
+### 선행 확인과 구현 전 완료 조건
+
+- 직전 PR #15(WBS-14)가 develop에 MERGED(2026-10-23 00:55:28 KST)임을 GitHub에서 확인했다. merge commit `280034e6f05239056bc2dd14571d799be8565cb0`와 origin/develop 원격 hash 일치 및 fetch 후 ancestor 확인. WBS.csv 실행순서 17, 직접 선행 WBS-09(PR #10)/13(PR #14)/18(PR #1)의 develop 병합도 확인했다. 작업 재개 후에도 PR #15 MERGED와 열린 PR 0건을 재확인했다.
+- develop checkout/ff-only pull 후 `git branch -d feature/WBS-14-deterministic-versioned-hash` 안전 삭제 성공. 해당 develop에서 만든 `feature/WBS-20-developer-analysis-ui-api` 한 개에서 중단 지점부터 계속했다. AGENTS/WBS/02/05/06/08, 관련 명리·UI·P17/API 상세(10/13/14/18)와 기존 계산/내보내기/해시 계약을 읽었다.
+- 구현 전 완료 조건: 개발환경 전용 P17 `/dev/validation`, 서버 Zod 입력 검증을 거치는 `POST /api/analysis`, 기존 계산 한 번으로 원국·기초 판단/근거·정책/실제 버전·미상·해시·복사 JSON/프롬프트 제공. production에서는 화면과 API 모두 404. 사용자 원본 입력·예제·개발 서버·생성 타입을 보존한다.
+- 먼저 정의한 정상 검증: 실제 어댑터로 입력→POST→JSON/원국/근거/해시 표시 및 클립보드 왕복. 오류: 스키마/UTF-8/JSON/본문 한도·콘텐츠 타입/메서드/Origin·공급자 실패, 잘못된 응답과 이전 결과 잔류 방지. 경계: 시각 미상/자시 정책, 경도 미상의 진태양시, 320~1440px, 환경/호스트 차단과 실제 프로덕션 빌드/기동. API 테스트는 미구현 모듈 실패를 확인한 뒤 연결했다. 검토 중 발견한 음력 말일·윤달 E2E도 보강했다.
+
+### 구현과 검증 결과
+
+- AnalysisInput을 검증한 개발용 서비스가 기존 calculateHashedCoreExport를 한 번 호출하고 같은 document의 WBS-13 수동 프롬프트를 반환한다. DeveloperAnalysisResponseSchema로 코어/해시 형식·프롬프트 연결을 검증한다. 원래 complete/partial/unavailable과 판단·중재·버전 계약을 보존한다. 해시를 DB 완료나 출처 인증으로 사용하지 않는다.
+- 서버 게이트는 development + 로컬 Host + 같은 Origin(프로토콜/호스트/포트)이며 입력을 읽기 전에 환경/호스트를 거절한다. JSON만 허용하고 선언 길이와 실제 스트림 수신 바이트를 64 KiB로 제한한다. 고정 오류와 no-store/noindex 헤더를 반환하며 원본 입력·공급자 예외를 반사하거나 일반 로그에 출력하지 않는다. production에서 GET/POST/PUT/PATCH/DELETE/OPTIONS/HEAD 모두 404다.
+- 모바일 P17은 양음력·윤달·시각 미상·명시적 시간대/좌표/순역 기준·계산 정책 입력, 원국/기초 판단 근거/미상/충돌/버전·체크섬과 JSON/프롬프트 복사를 제공한다. 입력 변경/재요청/실패 시 오래된 결과를 지우고 계산 중 입력을 잠근다. 원본 입력은 POST 본문으로만 전송하고 브라우저 저장소·DB에는 저장하지 않는다. 고객 루트/P06·일러스트·제품명을 추가하지 않았다.
+- 실제 Next 실행에서 Temporal 패키지 버전 파일 조회가 번들러에 의해 잘못 변환되는 문제를 발견했다. native createRequire.resolve와 경로 기반 파일 조회, serverExternalPackages로 실제 manifest를 보존했다. 시간대 계산·골든·정책은 변경하지 않았으며 관련 역사 DST/오류 테스트를 함께 확인했다. Next가 URL을 localhost로 정규화하는 경우에는 검증된 Host를 기준으로 Origin을 비교하도록 수정하고 회귀 테스트를 추가했다.
+- 브라우저 검사 중 접근성 레이블의 select 옵션 포함/Next 자체 alert 중복을 확인해 명시적 label과 오류 이름을 사용했다. Windows 클립보드 CRLF와 textarea LF의 차이만 정규화해 전체 복사 문자열이 같은지 검사한다. 합성 자료 외의 출생정보를 테스트나 오류 로그에 사용하지 않았다. 양력 date 입력기가 음력 2월 30일을 차단하는 문제는 달력별 Zod 검증을 적용하는 문자열 날짜 입력으로 수정했다.
+- 최종 `npm.cmd test -- tests/developer-analysis-api.test.ts tests/bootstrap.test.tsx tests/timezone.test.ts tests/timezone-errors.test.ts`: 종료 0, 관련 4파일/56건 통과(API 신규 10건). `npm.cmd run lint`: 종료 0, 경고 0개.
+- 최종 `npm.cmd run test:e2e`: 종료 0. 설치된 Chrome에서 실제 기본 Turbopack 개발 서버의 13건 통과(정상, 시각 미상, 경도 미상, 음력 말일·윤달, 입력/서버 오류·손상 응답, 실제 JSON/프롬프트 클립보드, 320/390/768/1440px 가로 넘침). 정상/미상 계산은 mock 없이 실제 로컬 어댑터를 호출했다. 320px 전체 화면 스크린샷도 확인했다.
+- 같은 E2E 명령이 격리 작업공간에서 기본 `next build`(Turbopack), `next typegen`, `tsc --noEmit`를 모두 종료 0으로 실행했다. 실제 `next start`에서 P17 404/본문 부재 및 API 7개 메서드의 404·no-store를 확인하는 프로덕션 E2E 1건도 통과했다. 합계 브라우저 14건이다. 진단 단계 Webpack 검사 후 최종 검증은 기본 Turbopack으로 수행했고 root dev/build 스크립트는 유지했다.
+- E2E 실행기는 임시 폴더에 소스/의존성을 실제 복사한다(Turbopack 프로젝트 경계 보존). 환경파일·개인 cli-input·사용자 AGENTS/next-env는 복사하지 않는다. 임의 포트의 검증 서버만 기동/종료하고 경로 확인 후 자체 임시 폴더만 정리한다. 기존 개발 서버/.next는 사용하거나 종료하지 않았다. CI/실패 무시/skip은 추가하지 않았다.
+- `@playwright/test@1.64.1`을 정확한 개발 의존성으로 추가했다. npm 설치는 종료 0이며 잠금 파일에 테스트 런타임을 기록했다. npm이 제거한 기존 선택 플랫폼 peer 메타데이터 2개는 원래 값으로 보존했으며 기존 의존성 버전 변경은 없다. 설치가 보고한 기존 개발 의존성 high 5건은 해결 완료로 표시하지 않았으며 감사 강제 수정은 하지 않았다. 전체 릴리스 회귀/공급자 실연동 검증은 이번 범위가 아니다.
+
+### 변경 파일과 제약
+
+- `src/server/developer-analysis.ts`, `src/app/api/analysis/route.ts`: 개발환경/로컬/Origin·입력 게이트, 고정 오류·캐시 금지, 실제 계산 어댑터 연결.
+- `src/domain/developer-analysis/index.ts`, `src/application/developer-analysis/index.ts`: 기존 분석/해시와 수동 프롬프트를 묶은 응답 계약·단일 계산.
+- `src/app/dev/validation/page.tsx`, `validation-form.tsx`, `validation.module.css`, `README.md`: P17 접근 차단, 반응형 검증·복사와 사용법/제약.
+- `next.config.ts`, `src/infrastructure/timezone/index.ts`: Node 전용 계산 패키지와 실제 Temporal 버전 조회의 번들링 호환.
+- `tests/developer-analysis-api.test.ts`, `tests/e2e/developer-analysis.spec.ts`, `developer-production.spec.ts`: API 계약·실제 브라우저·프로덕션 차단 검증.
+- `playwright.config.ts`, `scripts/developer-e2e.mjs`, `package.json`, `package-lock.json`, `.gitignore`: 고정 테스트 도구·격리 실행·산출물 제외. 루트 `README.md`, `docs/worklog.md`: 경로/검증/범위 기록.
+- Host/Origin 제한은 원격 계정 인증이 아니다. 개발 서버는 `--hostname 127.0.0.1`로 로컬에만 바인딩한다. production 화면/API는 차단하며 OAuth/소유권/DB·저장 조회 API는 후속 WBS 범위다. 원본 날짜를 제거해도 원국·파생 분석은 민감할 수 있다. E2E는 설치된 Chrome(또는 환경변수로 지정한 Edge)과 의존성 복사 공간이 필요하다.
+- WBS.csv 상태는 임의로 완료 처리하지 않았다. 기존 사용자 수정 AGENTS.md/작업지시 문서/next-env.d.ts/cli-input.json의 SHA-256 동일을 확인하고 커밋에서 제외한다. 명리 규칙/11개 기능·R01/P06/SSE/report.completed/OAuth/DB/PG/OpenAI 호출·키/배포/CI 및 이후 WBS는 변경하지 않았다. develop 대상 PR 한 건을 생성하고 즉시 중지한다.
+
 ## 2026-10-23 — WBS-14: 결정성·버전·해시
 
 ### 선행 확인과 구현 전 완료 조건
