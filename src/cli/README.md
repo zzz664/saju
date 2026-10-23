@@ -75,7 +75,8 @@ topic은 `temperament`, `strengths`, `career`, `wealth`, `romance`, `social` 중
 
 `feature-json`은 [M09 기능 조합](../application/saju/features/README.md) 검토 명령이다.
 기존 입력에 featureId를 더하고 F08~F10의 target 또는 F11의 상대 출생정보/별도 정책을 지정한다.
-현재 미구현 모듈/실행기는 partial/unavailable(종료 2)로 표시하며 F01~F11 풀이 완료가 아니다.
+현재 미구현 모듈/실행기는 partial/unavailable(종료 2)로 표시한다. WBS-31의 F03 실행기는 등록했으며
+관측 사실·조건부 점검 질문과 미확정 후보를 구분한다. F03도 해석 한계로 partial이며 나머지 기능 완료를 뜻하지 않는다.
 complete에만 종료 0을 사용하며 오류는 기존과 같이 stderr로 구분한다.
 
 ```powershell

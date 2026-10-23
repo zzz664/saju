@@ -13,6 +13,7 @@ import type { createApiTestCatalog } from "@/server/api-test-catalog";
 export async function runLivePersona(options: {
   catalog: ReturnType<typeof createApiTestCatalog>;
   fixtureId: string;
+  featureId: "core-base" | "F03";
   selection: { personaId: string; personaVersion: string };
   limits: ApiTestLimits;
   key: string;
@@ -61,9 +62,14 @@ export async function runLivePersona(options: {
     },
   };
   return narratePersona(
-    options.catalog.core(options.fixtureId),
+    options.catalog.source(options.fixtureId, options.featureId),
     guarded,
-    { ...options.catalog, model: options.model, selection: options.selection },
+    {
+      ...options.catalog,
+      spec: options.catalog.specFor(options.featureId),
+      model: options.model,
+      selection: options.selection,
+    },
     { signal: options.signal },
   );
 }

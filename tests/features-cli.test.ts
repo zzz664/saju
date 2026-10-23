@@ -23,7 +23,8 @@ describe("M09 developer CLI and port boundaries", () => {
     expect(result.stderr).toBe("");
     const parsed = FeatureResultSchema.parse(JSON.parse(result.stdout));
     expect(parsed.featureId).toBe("F03");
-    expect(parsed.limitations).toContain("EXECUTOR_NOT_IMPLEMENTED");
+    expect(parsed.limitations).not.toContain("EXECUTOR_NOT_IMPLEMENTED");
+    expect(parsed.components[0].implementation).toBe("registered");
     expect(result.stdout.trim().split("\n")).toHaveLength(1);
     expect(result.stdout).not.toContain("2024-02-10");
   });
@@ -68,7 +69,7 @@ describe("M09 developer CLI and port boundaries", () => {
           execute: (context) => ({
             status: "complete",
             judgmentIds: context.availableJudgments
-              .filter((j) => j.originModule === "M03")
+              .filter((j) => j.originModule === "M03" && j.ruleId.startsWith("m03."))
               .map((j) => j.judgmentId),
           }),
         },

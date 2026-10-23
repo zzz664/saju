@@ -82,7 +82,7 @@ export const FeatureNarrationSpecSchema = z
   .strictObject({
     specId: Id,
     specVersion: Version,
-    featureId: z.literal("core-base"),
+    featureId: z.enum(["core-base", "F03"]),
     sections: z
       .array(
         z

@@ -66,7 +66,7 @@ export interface NarrationRequest {
   readonly messages: readonly { readonly role: "developer" | "user"; readonly content: string }[];
   readonly output: { readonly name: string; readonly jsonSchema: z.core.JSONSchema.JSONSchema };
   readonly maxOutputTokens?: number;
-  readonly data: ManualPromptData;
+  readonly data: ManualPromptData | import("../persona/data").PersonaNarrationData;
   readonly style?: {
     readonly persona: import("../persona/index").PersonaProfile;
     readonly spec: import("../persona/index").FeatureNarrationSpec;

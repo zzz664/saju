@@ -231,6 +231,7 @@ export function createApiTestHandler(options: {
         },
         fixtures: options.catalog.fixtures,
         personas: options.catalog.personas,
+        features: options.catalog.features,
       };
       return json(ApiTestConfigSchema.parse(config));
     }
@@ -253,7 +254,10 @@ export function createApiTestHandler(options: {
       !options.catalog.personas.some((item) => item.id === input.personaId)
     )
       return error(422, "SELECTION_REJECTED");
-    if (input.scenario !== "narration" || input.featureId !== "core-base")
+    if (
+      input.scenario !== "narration" ||
+      (input.featureId !== "core-base" && input.featureId !== "F03")
+    )
       return error(409, "FEATURE_NOT_READY");
     if (input.mode === "live" && (!input.acknowledgedCost || liveReason !== "READY"))
       return error(403, !input.acknowledgedCost ? "COST_ACK_REQUIRED" : liveReason, "LIVE_BLOCKED");
@@ -278,7 +282,7 @@ export function createApiTestHandler(options: {
           testRunId: id,
           mode: input.mode,
           scenario: "narration",
-          featureId: "core-base",
+          featureId: input.featureId,
           modelId,
           personaId: input.personaId,
           personaVersion: selection.personaVersion,
@@ -300,6 +304,7 @@ export function createApiTestHandler(options: {
           ? await runLivePersona({
               catalog: options.catalog,
               fixtureId: input.fixtureId,
+              featureId: input.featureId,
               selection,
               limits,
               model: modelId,
@@ -326,6 +331,7 @@ export function createApiTestHandler(options: {
             })
           : await createPersonaExperiment({
               ...options.catalog,
+              spec: options.catalog.specFor(input.featureId),
               model: modelId,
               selection,
               provider: options.provider,
@@ -335,7 +341,9 @@ export function createApiTestHandler(options: {
               environment: () =>
                 apiTestLocalEnvironment(options.environment()) ? "development" : undefined,
               resolveAccess: async () => access,
-            }).run(options.catalog.core(input.fixtureId), { signal: request.signal });
+            }).run(options.catalog.source(input.fixtureId, input.featureId), {
+              signal: request.signal,
+            });
       run.value = {
         ...run.value,
         status: result.styleEvaluation.passed ? "passed" : "failed",

@@ -193,6 +193,11 @@ WBS-65 착수 시 기존 R01은 내부 개발자용 `core-base`만 구현되어 
 
 ## 11. 참고 공식 문서
 
+WBS-31부터 F03은 구현된 선택지다. 공통 FeatureResult의 검증된 관측만 R01에 연결하며,
+core-base와 같은 잠금/환경/동의/예산/Provider/출력 검증을 적용한다. F03 정상 입력도 해석 한계로
+partial이며 조건부 강점 활용·보완점 점검을 설명한다. 그 외 Fxx와 report_stream/follow_up은 계속 미준비다.
+사용법과 자동 검증/실제 Live 상태의 구분은 [개발자 테스트 안내](../src/app/dev/api-test/README.md)를 따른다.
+
 - OpenAI Responses API 스트리밍 이벤트: https://platform.openai.com/docs/api-reference/responses-streaming
 - OpenAI Streaming 가이드: https://platform.openai.com/docs/guides/streaming-responses
 - OpenAI API 보안/개발 운영: https://platform.openai.com/docs/guides/production-best-practices

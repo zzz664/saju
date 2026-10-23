@@ -71,6 +71,56 @@ beforeEach(() => {
 });
 
 describe("WBS-65 protected local API settings and Mock runs", () => {
+  it.each(["synthetic-known", "synthetic-unknown", "synthetic-unavailable"])(
+    "routes F03 %s through protected Mock R01 and idempotent retrieval",
+    async (fixtureId) => {
+      const { handler, generate } = make(),
+        { cookie, config } = await unlock(handler);
+      expect(config.features.map((item: { id: string }) => item.id)).toEqual(["core-base", "F03"]);
+      expect(generate).not.toHaveBeenCalled();
+      const input = { ...body(), featureId: "F03", fixtureId },
+        response = await handler(request("runs", input, cookie, config.csrfToken));
+      const run = await response.json();
+      expect(response.status).toBe(200);
+      expect(run).toMatchObject({
+        featureId: "F03",
+        evidence: "MOCK_PASS",
+        result: {
+          featureId: "F03",
+          sourceStatus: fixtureId === "synthetic-unavailable" ? "unavailable" : "partial",
+        },
+      });
+      expect(generate).toHaveBeenCalledTimes(1);
+      expect(
+        await (await handler(request("runs", input, cookie, config.csrfToken))).json(),
+      ).toEqual(run);
+      expect(generate).toHaveBeenCalledTimes(1);
+      expect(
+        await (await handler(request("runs/" + run.testRunId, undefined, cookie))).json(),
+      ).toEqual(run);
+      expect(JSON.stringify(run)).not.toMatch(/birthDate|birthTime|2024-02-10/);
+      expect(
+        (
+          await handler(
+            request(
+              "runs",
+              { ...input, featureId: "F02", requestId: crypto.randomUUID() },
+              cookie,
+              config.csrfToken,
+            ),
+          )
+        ).status,
+      ).toBe(409);
+      expect(
+        (
+          await handler(
+            request("runs", { ...input, requestId: crypto.randomUUID() }, cookie, "invalid"),
+          )
+        ).status,
+      ).toBe(403);
+      expect(generate).toHaveBeenCalledTimes(1);
+    },
+  );
   it("lists more than ten approved personas through the same configuration endpoint without provider calls", async () => {
     const source = createApiTestCatalog(),
       base = source.registry.load(source.selection("synthetic-style"));

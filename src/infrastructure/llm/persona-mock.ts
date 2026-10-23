@@ -1,4 +1,4 @@
-import { ManualPromptDataSchema } from "@/domain/core-export";
+import { PersonaNarrationDataSchema } from "@/domain/persona/data";
 import { FeatureNarrationSpecSchema, PersonaProfileSchema } from "@/domain/persona";
 import type { NarrationProvider } from "@/domain/narration";
 import { NarrationError } from "@/domain/narration";
@@ -12,7 +12,7 @@ export function createPersonaMockProvider(): NarrationProvider {
       if (!request.style) throw new NarrationError("INPUT_REJECTED");
       const profile = PersonaProfileSchema.parse(request.style.persona);
       const spec = FeatureNarrationSpecSchema.parse(request.style.spec);
-      const data = ManualPromptDataSchema.parse(request.data);
+      const data = PersonaNarrationDataSchema.parse(request.data);
       const register = profile.voice.register;
       const intro =
         register === "hapsyo"
@@ -44,11 +44,17 @@ export function createPersonaMockProvider(): NarrationProvider {
             ? findings
             : data.verifiedFindings.slice(0, Math.max(1, section.minFindings));
           const paragraph = selected.length
-            ? intro +
+            ? (spec.featureId === "F03" ? section.purpose + ": " : "") +
+              intro +
               " " +
-              selected.map((finding) => `“${finding.assertion}”`).join(" ") +
+              selected
+                .map(
+                  (finding) =>
+                    `“${spec.featureId === "F03" ? finding.assertion.split(/(?<=[.!?])\s/)[0] : finding.assertion}”`,
+                )
+                .join(" ") +
               (data.status !== "complete" ? " " + limitation : "")
-            : empty;
+            : (spec.featureId === "F03" ? section.purpose + ": " : "") + empty;
           return {
             sectionId: section.id,
             title: section.purpose,

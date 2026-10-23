@@ -24,6 +24,8 @@ import {
 import { CoverageStatusSchema } from "@/domain/contracts";
 import { defineCodedError, compareText } from "@/domain/utilities";
 import { getProfile, planFeature, MODULE_DEPENDENCIES } from "@/application/saju/features/registry";
+import { observeStrengths } from "@/domain/features/strengths";
+import { strengthsExecutor } from "@/application/saju/features/profiles/strengths";
 import type { FeatureDependencies, FeatureEngine } from "@/application/saju/features/ports";
 export * from "@/application/saju/features/ports";
 export { getProfile, planFeature, FEATURE_PROFILES } from "@/application/saju/features/registry";
@@ -186,6 +188,7 @@ export function executeFeature(value: unknown, deps: FeatureDependencies): Featu
         data = result;
         payload = { status: result.status, judgments: [], limitations: ["UPSTREAM_PARTIAL"] };
       } else if (moduleId === "M03" && topic) {
+        if (topic === "strengths") version = "1.1.0";
         const structure = load("M01", subject).data as StructureDiagnosis | null;
         const relations = load("M02", subject).data as RelationAnalysis | null;
         if (!structure || !relations)
@@ -196,26 +199,31 @@ export function executeFeature(value: unknown, deps: FeatureDependencies): Featu
           };
         else {
           const result = evaluateTopic({ facts, structure, relations }, topic);
+          const observations = topic === "strengths" ? observeStrengths(facts, subject) : [];
           data = result;
           payload = {
-            status: result.status,
+            status:
+              observations.length && result.status === "unavailable" ? "partial" : result.status,
             limitations: ["UPSTREAM_PARTIAL"],
-            judgments: result.findings.map((j) => ({
-              judgmentId: `${subject}:M03:${j.findingId}`,
-              originModule: "M03",
-              subject,
-              topic,
-              assertion: j.assertion,
-              status: "partial",
-              precision: j.precision,
-              disposition: j.disposition,
-              ruleId: j.ruleId,
-              ruleVersion: j.ruleVersion,
-              sourceRefs: j.sourceRefs,
-              evidence: j.evidence,
-              caveats: j.caveats,
-              exceptionsApplied: j.exceptionsApplied,
-            })),
+            judgments: [
+              ...result.findings.map((j) => ({
+                judgmentId: `${subject}:M03:${j.findingId}`,
+                originModule: "M03",
+                subject,
+                topic,
+                assertion: j.assertion,
+                status: "partial",
+                precision: j.precision,
+                disposition: j.disposition,
+                ruleId: j.ruleId,
+                ruleVersion: j.ruleVersion,
+                sourceRefs: j.sourceRefs,
+                evidence: j.evidence,
+                caveats: j.caveats,
+                exceptionsApplied: j.exceptionsApplied,
+              })),
+              ...observations,
+            ],
           };
         }
       } else {
@@ -275,7 +283,7 @@ export function executeFeature(value: unknown, deps: FeatureDependencies): Featu
       const limitations: FeatureLimitation[] = [];
       let ids: readonly string[] = [],
         declared: z.infer<typeof CoverageStatusSchema> = "complete";
-      const port = deps.featureExecutors?.[id];
+      const port = deps.featureExecutors?.[id] ?? (id === "F03" ? strengthsExecutor : undefined);
       const implementation = children.length ? "aggregate" : port ? "registered" : "missing";
       if (core.status === "unavailable" || otherCore?.status === "unavailable")
         limitations.push("CORE_UNAVAILABLE");

@@ -80,6 +80,10 @@ describe("M09 routing, sharing and composition", () => {
     (id) => {
       const result = executeFeature(featureRequest(id), deps);
       expect(result.status).not.toBe("complete");
+      if (id === "F03" || id === "F01") {
+        expect(result.judgments.some((j) => j.ruleId.startsWith("f03.observation."))).toBe(true);
+        return;
+      }
       expect(result.judgments).toEqual([]);
       expect(
         result.limitations.some((code) =>

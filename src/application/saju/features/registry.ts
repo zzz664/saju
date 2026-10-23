@@ -39,7 +39,7 @@ export const FEATURE_PROFILES = z
       modules,
       topics,
       children,
-      version: "1.0.0",
+      version: featureId === "F03" ? "1.1.0" : "1.0.0",
     })),
   );
 export const MODULE_DEPENDENCIES: Readonly<Record<ModuleId, readonly ModuleId[]>> = Object.freeze({

@@ -30,6 +30,7 @@ export default function ApiTestForm() {
     [ack, setAck] = useState(false);
   const [fixture, setFixture] = useState("synthetic-known"),
     [persona, setPersona] = useState("synthetic-style");
+  const [feature, setFeature] = useState("core-base");
   const [busy, setBusy] = useState(false),
     [notice, setNotice] = useState("잠금 상태를 확인하고 있습니다."),
     [run, setRun] = useState<ApiTestRun | null>(null);
@@ -105,7 +106,7 @@ export default function ApiTestForm() {
           mode,
           scenario: "narration",
           fixtureId: fixture,
-          featureId: "core-base",
+          featureId: feature,
           personaId: persona,
           acknowledgedCost: ack,
           requestId: crypto.randomUUID(),
@@ -252,10 +253,29 @@ export default function ApiTestForm() {
             ))}
           </select>
           <label htmlFor="feature">기능</label>
-          <select id="feature" disabled>
-            <option>기초 관찰 (core-base)</option>
-            <option disabled>F01~F11: 후속 구현 필요</option>
+          <select
+            id="feature"
+            value={feature}
+            onChange={(event) => {
+              setFeature(event.target.value);
+              setRun(null);
+              setAck(false);
+            }}
+            disabled={busy}
+          >
+            {config.features.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+            <option disabled>그 외 기능: 후속 구현 필요</option>
           </select>
+          {feature === "F03" && (
+            <p>
+              관측 사실을 바탕으로 강점 활용·보완점을 점검하는 부분 해석입니다. 실제
+              성격·능력·약점을 확정하지 않습니다.
+            </p>
+          )}
           <label htmlFor="scenario">단계</label>
           <select id="scenario" disabled>
             <option>기본 서술</option>
@@ -302,6 +322,12 @@ export default function ApiTestForm() {
         >
           <h2>{apiTestRunHeading(run)}</h2>
           <p>종합 검증 결과: {run.evidence ?? run.status}</p>
+          {run.featureId === "F03" && (
+            <p>
+              F03 · 판단 상태: {String(run.result?.sourceStatus ?? "미확인")} · 검증 통과는 실제
+              강점·약점의 확정을 뜻하지 않습니다.
+            </p>
+          )}
           {run.mode === "live" &&
             run.providerStatus === "completed" &&
             run.verdict?.styleHeuristicPassed === false && (
