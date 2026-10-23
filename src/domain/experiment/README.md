@@ -40,14 +40,14 @@ kind=openai는 기존 LIVE_DISABLED로 계속 차단한다. 키·무료 혜택·
 
 모든 설정은 필수이며 암묵적인 무료 토큰·단가·무제한 기본값은 없다.
 
-|필드|의미|
-|---|---|
-|enabled / expiresAt / allowedPrincipalIds|mock 실험 활성 여부·만료 epoch ms·허용 서버 principal(최대 50명)|
-|maxRequestBytes|실제 조립된 요청 JSON UTF-8 한도, 1~1 MiB|
-|maxOutputTokens|서버가 요청에 덮어쓰는 max_output_tokens, 1~16,384|
-|rates|입력/출력 각각 100만 예산 토큰당 microUSD 양의 정수 단가. 자동 실가격 조회 없음|
-|daily / perPrincipalDaily / perSession|각 범위의 calls·tokens·microUsd 상한, 0이면 해당 예산 차단|
-|maxConcurrent|원장 전체 동시 공급자 실행 수, 1~32. principal별 동시 실행은 항상 1개|
+| 필드                                      | 의미                                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------------------- |
+| enabled / expiresAt / allowedPrincipalIds | mock 실험 활성 여부·만료 epoch ms·허용 서버 principal(최대 50명)                |
+| maxRequestBytes                           | 실제 조립된 요청 JSON UTF-8 한도, 1~1 MiB                                       |
+| maxOutputTokens                           | 서버가 요청에 덮어쓰는 max_output_tokens, 1~16,384                              |
+| rates                                     | 입력/출력 각각 100만 예산 토큰당 microUSD 양의 정수 단가. 자동 실가격 조회 없음 |
+| daily / perPrincipalDaily / perSession    | 각 범위의 calls·tokens·microUsd 상한, 0이면 해당 예산 차단                      |
+| maxConcurrent                             | 원장 전체 동시 공급자 실행 수, 1~32. principal별 동시 실행은 항상 1개           |
 
 예산 수치는 0~10^12의 정수다. 단가는 1~10^12이며 무료 단가를 추정해 0으로 넣지 않는다.
 음수/소수/NaN/Infinity·추가 필드·중복 principal을 거절한다.
@@ -85,15 +85,15 @@ MemoryExperimentBudgetStore는 한 프로세스 안에서 공유해야 한다. �
 실서비스 원장은 DB 트랜잭션 등 공유 저장소에서 별도 구현/검증해야 한다.
 inspect는 로컬 내부 검사 전용으로 합계만 반환하며 HTTP·일반 로그에 공개하지 않는다.
 
-|상황|고정 오류|
-|---|---|
-|정책 형식 오류|POLICY_REJECTED|
-|환경·허용 목록·인증·기한 불충족|ACCESS_DENIED|
-|요청 크기/예약 산정 범위 초과|REQUEST_TOO_LARGE|
-|어느 범위든 호출/토큰/금액 상한 초과|BUDGET_EXCEEDED|
-|전체 또는 사용자 동시성 초과|CONCURRENCY_LIMIT|
-|잘못된 시각·시계 역행|CLOCK_INVALID|
-|저장소 오류·메모리 기록 한도|STORE_UNAVAILABLE|
+| 상황                                 | 고정 오류         |
+| ------------------------------------ | ----------------- |
+| 정책 형식 오류                       | POLICY_REJECTED   |
+| 환경·허용 목록·인증·기한 불충족      | ACCESS_DENIED     |
+| 요청 크기/예약 산정 범위 초과        | REQUEST_TOO_LARGE |
+| 어느 범위든 호출/토큰/금액 상한 초과 | BUDGET_EXCEEDED   |
+| 전체 또는 사용자 동시성 초과         | CONCURRENCY_LIMIT |
+| 잘못된 시각·시계 역행                | CLOCK_INVALID     |
+| 저장소 오류·메모리 기록 한도         | STORE_UNAVAILABLE |
 
 설정/인증/저장소 예외의 비밀 메시지는 노출하지 않는다. 다른 공급자 오류·취소는
 기존 NarrationError를 유지한다. 권한 확인 실패·invalid core·시작 전 취소는 예약 없이 끝난다.

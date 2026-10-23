@@ -1,28 +1,31 @@
 import { z } from "zod";
 
-import type { AnalysisInput } from "./schemas";
+import type { AnalysisInput } from "@/domain/input/schemas";
 
-const UnknownFieldSchema = z.enum([
-  "birthTime", "longitudeDeg", "latitudeDeg", "directionBasis",
-]);
+const UnknownFieldSchema = z.enum(["birthTime", "longitudeDeg", "latitudeDeg", "directionBasis"]);
 
-const LimitationSchema = z.strictObject({
-  code: z.enum([
-    "BIRTH_TIME_UNKNOWN",
-    "SOLAR_TIME_INPUT_MISSING",
-    "LUCK_DIRECTION_BASIS_UNKNOWN",
-  ]),
-  inputPaths: z.array(z.enum([
-    "birthInput.birthTime",
-    "birthInput.longitudeDeg",
-    "birthInput.directionBasis",
-  ])).min(1).readonly(),
-}).readonly();
+const LimitationSchema = z
+  .strictObject({
+    code: z.enum([
+      "BIRTH_TIME_UNKNOWN",
+      "SOLAR_TIME_INPUT_MISSING",
+      "LUCK_DIRECTION_BASIS_UNKNOWN",
+    ]),
+    inputPaths: z
+      .array(
+        z.enum(["birthInput.birthTime", "birthInput.longitudeDeg", "birthInput.directionBasis"]),
+      )
+      .min(1)
+      .readonly(),
+  })
+  .readonly();
 
-export const InputInformationSchema = z.strictObject({
-  unknownFields: z.array(UnknownFieldSchema).readonly(),
-  limitations: z.array(LimitationSchema).readonly(),
-}).readonly();
+export const InputInformationSchema = z
+  .strictObject({
+    unknownFields: z.array(UnknownFieldSchema).readonly(),
+    limitations: z.array(LimitationSchema).readonly(),
+  })
+  .readonly();
 
 export type InputInformation = z.infer<typeof InputInformationSchema>;
 type UnknownField = z.infer<typeof UnknownFieldSchema>;
@@ -42,7 +45,10 @@ export function getInputInformation(input: AnalysisInput): InputInformation {
   if (birthInput.latitudeDeg === null) unknownFields.push("latitudeDeg");
   if (birthInput.directionBasis === "unspecified") {
     unknownFields.push("directionBasis");
-    limitations.push({ code: "LUCK_DIRECTION_BASIS_UNKNOWN", inputPaths: ["birthInput.directionBasis"] });
+    limitations.push({
+      code: "LUCK_DIRECTION_BASIS_UNKNOWN",
+      inputPaths: ["birthInput.directionBasis"],
+    });
   }
 
   if (calculationPolicy.solarTime !== "standard") {

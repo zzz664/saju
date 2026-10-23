@@ -26,6 +26,9 @@ export async function readUtf8Input(stream: AsyncIterable<Uint8Array>): Promise<
     if (error instanceof CliInputError) throw error;
     throw new CliInputError("STDIN_ERROR");
   }
-  try { return new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)); }
-  catch { throw new CliInputError("INVALID_UTF8"); }
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks));
+  } catch {
+    throw new CliInputError("INVALID_UTF8");
+  }
 }

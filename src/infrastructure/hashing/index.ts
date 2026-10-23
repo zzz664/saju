@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Sha256Adapter } from "../../domain/core-fingerprint/index";
+import type { Sha256Adapter } from "@/domain/core-fingerprint";
 
 /** Local UTF-8 SHA-256; no keys, external services, files, clocks or randomness. */
 export const nodeSha256Adapter: Sha256Adapter = Object.freeze({

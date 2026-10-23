@@ -30,28 +30,28 @@ $LASTEXITCODE
 stdout을 JSON으로 유지하며 실패/종료 코드를 무시하지 않는다. stdout은 요청된 개발용
 결과이고, 입력 원문을 그대로 반사하거나 일반 로그에 기록하지 않는다.
 
-| 명령/상태 | stdout | stderr | 종료 코드 |
-| --- | --- | --- | --- |
-| `validate` 성공 | `status: valid`, 미상/한계 메타데이터 | 없음 | 0 |
-| `calculate` 성공 | `status: calculated`, 4개 기둥 snapshot/출처/미상 정보 | 없음 | 0 |
-| `normalize-time` 성공 | `status: normalized`, 현지 시각·UTC·오프셋 및 `solarTime` 정책 시계/보정량/EoT/버전·미상 정보 | 없음 | 0 |
-| `calculate-policy` known 성공 | `status: calculated`, 실제 UTC/정책 시계 기준의 4기둥 및 버전 | 없음 | 0 |
-| `calculate-policy` 시각 미상 | `status: partial`, 입력 분 구간별 후보와 공통 기둥, 확정 hour는 null | 없음 | 2 |
-| `derive-facts` complete | `calculation` 및 `facts`(십성/지장간/분리 오행 개수/근거 버전) | 없음 | 0 |
-| `derive-facts` partial/unavailable | 확정 범위의 facts 또는 null, 미상 한계와 기존 calculation | 없음 | 2 |
-| `judge-facts` complete | 기존 analysis 및 20개 기초 규칙 평가/근거 finding | 없음 | 0 |
-| `judge-facts` partial/unavailable | 기존 미상 범위 유지, 평가 가능한 관찰만 finding, evaluation 또는 null | 없음 | 2 |
-| `arbitrate-facts` complete | 원래 judgment 및 충돌의 채택/억제/보류·근거를 담은 resolution | 없음 | 0 |
-| `arbitrate-facts` partial/unavailable | 미상·부분 근거/미해결 충돌과 원본 trace, resolution 또는 null | 없음 | 2 |
-| `export-json` complete / partial·unavailable | 검증된 CoreExport JSON, 원본 출생정보·시각 후보 제외 | 없음 | 0 / 2 |
-| `manual-prompt` complete / partial·unavailable | 고정 한국어 지시문 + 확정·채택 finding 및 제한 JSON 블록 | 없음 | 0 / 2 |
-| `export-schema` | 구조용 draft 2020-12 JSON Schema. stdin 읽지 않음 | 없음 | 0 |
-| `hash-json` complete / partial·unavailable | 기존 document + 실제 버전 manifest·SHA-256 fingerprint | 없음 | 0 / 2 |
-| 시간 정규화 거절/미상·범위 미지원 | `status: rejected`(fold/gap, resolved 없음) 또는 `unavailable`(reasons) | 없음 | 2 |
-| 계산 미지원/실제 달력 입력 거절 | `status: unavailable`, reasons/미상 정보. snapshot 없음 | 없음 | 2 |
-| 잘못된 인자/JSON/입력/UTF-8/크기 초과 | 없음 | 고정 코드/메시지의 error JSON | 2 |
-| 어댑터/입출력 실패 | 없음 | 고정 코드/메시지의 error JSON(출력 파이프 자체가 닫혔으면 출력 불가) | 1 |
-| `--help` | 사용법 텍스트. stdin 읽지 않음 | 없음 | 0 |
+| 명령/상태                                      | stdout                                                                                        | stderr                                                               | 종료 코드 |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | --------- |
+| `validate` 성공                                | `status: valid`, 미상/한계 메타데이터                                                         | 없음                                                                 | 0         |
+| `calculate` 성공                               | `status: calculated`, 4개 기둥 snapshot/출처/미상 정보                                        | 없음                                                                 | 0         |
+| `normalize-time` 성공                          | `status: normalized`, 현지 시각·UTC·오프셋 및 `solarTime` 정책 시계/보정량/EoT/버전·미상 정보 | 없음                                                                 | 0         |
+| `calculate-policy` known 성공                  | `status: calculated`, 실제 UTC/정책 시계 기준의 4기둥 및 버전                                 | 없음                                                                 | 0         |
+| `calculate-policy` 시각 미상                   | `status: partial`, 입력 분 구간별 후보와 공통 기둥, 확정 hour는 null                          | 없음                                                                 | 2         |
+| `derive-facts` complete                        | `calculation` 및 `facts`(십성/지장간/분리 오행 개수/근거 버전)                                | 없음                                                                 | 0         |
+| `derive-facts` partial/unavailable             | 확정 범위의 facts 또는 null, 미상 한계와 기존 calculation                                     | 없음                                                                 | 2         |
+| `judge-facts` complete                         | 기존 analysis 및 20개 기초 규칙 평가/근거 finding                                             | 없음                                                                 | 0         |
+| `judge-facts` partial/unavailable              | 기존 미상 범위 유지, 평가 가능한 관찰만 finding, evaluation 또는 null                         | 없음                                                                 | 2         |
+| `arbitrate-facts` complete                     | 원래 judgment 및 충돌의 채택/억제/보류·근거를 담은 resolution                                 | 없음                                                                 | 0         |
+| `arbitrate-facts` partial/unavailable          | 미상·부분 근거/미해결 충돌과 원본 trace, resolution 또는 null                                 | 없음                                                                 | 2         |
+| `export-json` complete / partial·unavailable   | 검증된 CoreExport JSON, 원본 출생정보·시각 후보 제외                                          | 없음                                                                 | 0 / 2     |
+| `manual-prompt` complete / partial·unavailable | 고정 한국어 지시문 + 확정·채택 finding 및 제한 JSON 블록                                      | 없음                                                                 | 0 / 2     |
+| `export-schema`                                | 구조용 draft 2020-12 JSON Schema. stdin 읽지 않음                                             | 없음                                                                 | 0         |
+| `hash-json` complete / partial·unavailable     | 기존 document + 실제 버전 manifest·SHA-256 fingerprint                                        | 없음                                                                 | 0 / 2     |
+| 시간 정규화 거절/미상·범위 미지원              | `status: rejected`(fold/gap, resolved 없음) 또는 `unavailable`(reasons)                       | 없음                                                                 | 2         |
+| 계산 미지원/실제 달력 입력 거절                | `status: unavailable`, reasons/미상 정보. snapshot 없음                                       | 없음                                                                 | 2         |
+| 잘못된 인자/JSON/입력/UTF-8/크기 초과          | 없음                                                                                          | 고정 코드/메시지의 error JSON                                        | 2         |
+| 어댑터/입출력 실패                             | 없음                                                                                          | 고정 코드/메시지의 error JSON(출력 파이프 자체가 닫혔으면 출력 불가) | 1         |
+| `--help`                                       | 사용법 텍스트. stdin 읽지 않음                                                                | 없음                                                                 | 0         |
 
 기존 `calculate` 연결 조건은 다음을 모두 만족해야 한다.
 

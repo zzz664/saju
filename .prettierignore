@@ -1,0 +1,10 @@
+.next/
+node_modules/
+test-results/
+playwright-report/
+coverage/
+.local/
+.env*
+next-env.d.ts
+docs/
+tests/fixtures/

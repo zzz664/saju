@@ -63,14 +63,14 @@ sections 0~20개, paragraph는 공백 제거 후 1~1500자, outputText는 실제
 승격하지 않는다. 이 검사는 문장의 의미·환각·안전성·한국어 품질을 입증하지 않는다.
 실제 서술의 의미 평가와 캐릭터/스트리밍 검증은 후속 작업이 필요하다.
 
-|상황|고정 오류 코드|
-|---|---|
-|코어 입력 검증 실패|INPUT_REJECTED|
-|라이브 provider 선택|LIVE_DISABLED|
-|거절/잘림·중단/실패 응답|REFUSED / INCOMPLETE / PROVIDER_FAILED|
-|응답 구조·바이트·근거 ID 검증 실패|OUTPUT_REJECTED|
-|외부 예외|PROVIDER_FAILED, 원문 미노출|
-|시작 전·대기 중·종료 후 취소|CANCELLED|
+| 상황                               | 고정 오류 코드                         |
+| ---------------------------------- | -------------------------------------- |
+| 코어 입력 검증 실패                | INPUT_REJECTED                         |
+| 라이브 provider 선택               | LIVE_DISABLED                          |
+| 거절/잘림·중단/실패 응답           | REFUSED / INCOMPLETE / PROVIDER_FAILED |
+| 응답 구조·바이트·근거 ID 검증 실패 | OUTPUT_REJECTED                        |
+| 외부 예외                          | PROVIDER_FAILED, 원문 미노출           |
+| 시작 전·대기 중·종료 후 취소       | CANCELLED                              |
 
 자동 재시도나 성공 fallback은 없다. signal은 공급자에 전달하며 대기 중 취소 시 기다림을
 끝내고 늦은 결과를 채택하지 않는다. 실제 공급자의 내부 작업 중지는 그 어댑터의 책임이다.

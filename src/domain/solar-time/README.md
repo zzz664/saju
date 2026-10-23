@@ -4,11 +4,11 @@
 `standard/mean-solar/true-solar`와 `longitudeDeg`를 적용한다. Next/Node/SDK 없이
 사용하는 순수 도메인이며 진태양시에만 별도 `EquationOfTimeAdapter`를 주입한다.
 
-| 모드 | 정책 시계 | 필요한 값 |
-| --- | --- | --- |
-| standard | 해결된 IANA 법정 현지 시각 유지(DST 포함) | 알려진 시각 |
-| mean-solar | UTC + 경도 × 240초 | 시각, 명시적 경도 |
-| true-solar | UTC + 경도 × 240초 + EoT × 60초 | 시각, 명시적 경도, EoT(분) |
+| 모드       | 정책 시계                                 | 필요한 값                  |
+| ---------- | ----------------------------------------- | -------------------------- |
+| standard   | 해결된 IANA 법정 현지 시각 유지(DST 포함) | 알려진 시각                |
+| mean-solar | UTC + 경도 × 240초                        | 시각, 명시적 경도          |
+| true-solar | UTC + 경도 × 240초 + EoT × 60초           | 시각, 명시적 경도, EoT(분) |
 
 동경이 양수이며 경도 1도는 4분이다. 0도는 유효하고 ±180도는 날짜가 하루 차이 난다.
 경도·시간대·표준 자오선을 서로 추정하지 않는다. standard의 경도 출력은 사용하지
@@ -31,10 +31,14 @@ EoT는 **겉보기 태양시 − 평균 태양시**이며 양수이면 진태양
 ```ts
 import { prepareBirthTime } from "@/application/solar-time";
 import { temporalTimeZoneAdapter } from "@/infrastructure/timezone";
-import { manseryeokCalendarConversionAdapter, manseryeokEquationOfTimeAdapter } from "@/infrastructure/manseryeok";
+import {
+  manseryeokCalendarConversionAdapter,
+  manseryeokEquationOfTimeAdapter,
+} from "@/infrastructure/manseryeok";
 
 const result = prepareBirthTime(analysisInput, {
-  timeZone: temporalTimeZoneAdapter, calendar: manseryeokCalendarConversionAdapter,
+  timeZone: temporalTimeZoneAdapter,
+  calendar: manseryeokCalendarConversionAdapter,
   equationOfTime: manseryeokEquationOfTimeAdapter,
 });
 // 서울 2024-01-01 12:00 / 경도 127.5 / mean-solar:

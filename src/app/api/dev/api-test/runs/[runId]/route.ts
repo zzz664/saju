@@ -1,4 +1,4 @@
-import { apiTestHandler } from "../../../../../../server/api-test-runtime";
+import { apiTestHandler } from "@/server/api-test-runtime";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const GET = apiTestHandler;

@@ -27,13 +27,13 @@ npm.cmd run --silent saju -- export-schema
 
 JSON 계약은 `schemaVersion: 1.0.0`, `scope: base-structural-observations`다.
 
-| 필드 | 내용 |
-| --- | --- |
-| status | complete / partial / unavailable |
+| 필드        | 내용                                                                              |
+| ----------- | --------------------------------------------------------------------------------- |
+| status      | complete / partial / unavailable                                                  |
 | calculation | 계산 상태, 선택 정책, 입력 누락 메타데이터, 제한 사유 코드, 실제 계산/정규화 버전 |
-| facts | 확정 기둥·십성·지장간·분리 오행 개수·근거, 또는 null |
-| evaluation | 기존 규칙 20개의 평가·원문 finding·출처/규칙 버전, 또는 null |
-| resolution | 채택/억제/보류·원래 후보 전체·충돌·미상 trace, 또는 null |
+| facts       | 확정 기둥·십성·지장간·분리 오행 개수·근거, 또는 null                              |
+| evaluation  | 기존 규칙 20개의 평가·원문 finding·출처/규칙 버전, 또는 null                      |
+| resolution  | 채택/억제/보류·원래 후보 전체·충돌·미상 trace, 또는 null                          |
 
 원본 생년월일·출생시각·시간대 ID·좌표·성별 기준값, UTC/현지/정책 시계와 1,440분 후보는
 내보내지 않는다. 기둥과 파생 분석 자체도 민감할 수 있으므로 익명화된 데이터라고 보장하지 않는다.

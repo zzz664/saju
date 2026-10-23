@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import "./globals.css";
+import "@/app/globals.css";
 
 export const metadata: Metadata = {
   title: "준비 중",

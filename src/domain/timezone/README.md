@@ -10,7 +10,8 @@
 import { temporalTimeZoneAdapter } from "@/infrastructure/timezone";
 
 const result = temporalTimeZoneAdapter.resolve({
-  localDateTime: "1988-10-09T02:30", timezoneId: "Asia/Seoul",
+  localDateTime: "1988-10-09T02:30",
+  timezoneId: "Asia/Seoul",
   disambiguation: "later",
 });
 // status: resolved, kind: fold
@@ -18,11 +19,11 @@ const result = temporalTimeZoneAdapter.resolve({
 //   localDateTime: "1988-10-09T02:30:00", offsetSeconds: 32400 }
 ```
 
-| kind | reject | earlier / later |
-| --- | --- | --- |
-| unique | UTC 한 개 반환 | 같은 UTC, 요청한 정책은 보존 |
-| fold(반복된 현지 시각) | rejected / AMBIGUOUS_LOCAL_TIME, resolved 없음 | 이른/늦은 UTC 선택, 현지 시각은 유지 |
-| gap(생략된 현지 시각) | rejected / NONEXISTENT_LOCAL_TIME, resolved 없음 | 전환 폭만큼 이전/이후의 유효한 현지 시각으로 이동 |
+| kind                   | reject                                           | earlier / later                                   |
+| ---------------------- | ------------------------------------------------ | ------------------------------------------------- |
+| unique                 | UTC 한 개 반환                                   | 같은 UTC, 요청한 정책은 보존                      |
+| fold(반복된 현지 시각) | rejected / AMBIGUOUS_LOCAL_TIME, resolved 없음   | 이른/늦은 UTC 선택, 현지 시각은 유지              |
+| gap(생략된 현지 시각)  | rejected / NONEXISTENT_LOCAL_TIME, resolved 없음 | 전환 폭만큼 이전/이후의 유효한 현지 시각으로 이동 |
 
 정책은 [Temporal의 모호성 처리](https://tc39.es/proposal-temporal/docs/timezone.html)를 따른다.
 gap에서 원래 현지 시각이 유효해졌다고 표시하지 않는다. request와 resolved를 함께

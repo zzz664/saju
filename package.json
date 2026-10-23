@@ -9,6 +9,8 @@
     "npm": ">=11 <12"
   },
   "scripts": {
+    "format": "prettier --write src scripts tests --log-level warn",
+    "format:check": "prettier --check src scripts tests --log-level warn",
     "saju": "node --import tsx src/cli/main.ts",
     "dev": "next dev",
     "dev:api-test": "node scripts/api-test-dev.mjs",
@@ -40,6 +42,7 @@
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.2",
+    "prettier": "3.9.10",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
     "vitest": "5.0.5"

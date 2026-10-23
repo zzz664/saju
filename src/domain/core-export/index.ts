@@ -1,49 +1,126 @@
 import { z } from "zod";
-import { CalculationPolicySchema, InputInformationSchema } from "../input/index";
-import { DerivedNatalFactsSchema } from "../natal-facts/index";
-import { PolicyPillarsProvenanceSchema } from "../policy-calendar/index";
-import { ResolvedTimeSchema } from "../timezone/index";
-import { evaluateBaseJudgments, JudgmentEvaluationSchema } from "../judgment/index";
-import { arbitrationMatchesEvaluation, BaseArbitrationSchema, ArbitrationResultSchema } from "../judgment/arbitration";
-import { EvaluationBaseSchema, JudgmentFindingSchema, ExceptionSchema } from "../judgment/schemas";
+import { CalculationPolicySchema, InputInformationSchema } from "@/domain/input";
+import { DerivedNatalFactsSchema } from "@/domain/natal-facts";
+import { PolicyPillarsProvenanceSchema } from "@/domain/policy-calendar";
+import { ResolvedTimeSchema } from "@/domain/timezone";
+import { evaluateBaseJudgments, JudgmentEvaluationSchema } from "@/domain/judgment";
+import {
+  arbitrationMatchesEvaluation,
+  BaseArbitrationSchema,
+  ArbitrationResultSchema,
+} from "@/domain/judgment/arbitration";
+import {
+  EvaluationBaseSchema,
+  JudgmentFindingSchema,
+  ExceptionSchema,
+} from "@/domain/judgment/schemas";
 
 const Status = z.enum(["complete", "partial", "unavailable"]);
-export const CalculationReasonSchema = z.enum(["BIRTH_TIME_UNKNOWN", "LONGITUDE_UNKNOWN", "CALENDAR_RANGE_UNSUPPORTED", "CALENDAR_INPUT_REJECTED", "TIME_RANGE_UNSUPPORTED", "TIMEZONE_INPUT_REJECTED", "PILLAR_RANGE_UNSUPPORTED", "NO_RESOLVED_CANDIDATES", "AMBIGUOUS_LOCAL_TIME", "NONEXISTENT_LOCAL_TIME"]);
-export const CoreExportSchema = z.strictObject({
-  schemaVersion: z.literal("1.0.0"), scope: z.literal("base-structural-observations"), status: Status,
-  calculation: z.strictObject({
-    status: z.enum(["calculated", "partial", "rejected", "unavailable"]),
-    policy: CalculationPolicySchema, information: InputInformationSchema,
-    reasons: z.array(CalculationReasonSchema).max(10).readonly(),
-    library: PolicyPillarsProvenanceSchema.nullable(),
-    normalization: ResolvedTimeSchema.unwrap().shape.provenance.nullable(),
-  }).readonly(),
-  facts: DerivedNatalFactsSchema.nullable(), evaluation: JudgmentEvaluationSchema.nullable(), resolution: BaseArbitrationSchema.nullable(),
-}).refine(({ status, calculation, facts, evaluation, resolution }) => {
-  const { reasons } = calculation;
-  if (new Set(reasons).size !== reasons.length) return false;
-  if (calculation.status === "rejected" || calculation.status === "unavailable") {
-    const rejected = reasons.length === 1 && (reasons[0] === "AMBIGUOUS_LOCAL_TIME" || reasons[0] === "NONEXISTENT_LOCAL_TIME");
-    return status === "unavailable" && facts === null && evaluation === null && resolution === null && calculation.library === null
-      && (calculation.status === "rejected" ? rejected && calculation.normalization !== null
-        : reasons.length > 0 && !reasons.some((reason) => reason === "AMBIGUOUS_LOCAL_TIME" || reason === "NONEXISTENT_LOCAL_TIME") && calculation.normalization === null);
-  }
-  if (!facts || !evaluation || !resolution || !calculation.library || !calculation.normalization) return false;
-  const unknown = calculation.information.unknownFields.includes("birthTime");
-  if (calculation.status === "calculated" ? reasons.length !== 0 || facts.status !== "complete" || unknown
-    : JSON.stringify(reasons) !== JSON.stringify(["BIRTH_TIME_UNKNOWN"]) || !unknown || facts.sourcePillars.hour !== null) return false;
-  if (calculation.status === "partial" && calculation.policy.dayBoundary === "zi-start" && facts.sourcePillars.day !== null) return false;
-  try {
-    if (JSON.stringify(evaluation) !== JSON.stringify(evaluateBaseJudgments(facts)) || !arbitrationMatchesEvaluation(evaluation, resolution)) return false;
-  } catch { return false; } // Nested semantic rejections must remain schema failures, not escaped exceptions.
-  const states = [calculation.status === "calculated" ? "complete" : "partial", resolution.arbitration.status];
-  return status === (states.includes("unavailable") ? "unavailable" : states.includes("partial") ? "partial" : "complete");
-}).readonly();
+export const CalculationReasonSchema = z.enum([
+  "BIRTH_TIME_UNKNOWN",
+  "LONGITUDE_UNKNOWN",
+  "CALENDAR_RANGE_UNSUPPORTED",
+  "CALENDAR_INPUT_REJECTED",
+  "TIME_RANGE_UNSUPPORTED",
+  "TIMEZONE_INPUT_REJECTED",
+  "PILLAR_RANGE_UNSUPPORTED",
+  "NO_RESOLVED_CANDIDATES",
+  "AMBIGUOUS_LOCAL_TIME",
+  "NONEXISTENT_LOCAL_TIME",
+]);
+export const CoreExportSchema = z
+  .strictObject({
+    schemaVersion: z.literal("1.0.0"),
+    scope: z.literal("base-structural-observations"),
+    status: Status,
+    calculation: z
+      .strictObject({
+        status: z.enum(["calculated", "partial", "rejected", "unavailable"]),
+        policy: CalculationPolicySchema,
+        information: InputInformationSchema,
+        reasons: z.array(CalculationReasonSchema).max(10).readonly(),
+        library: PolicyPillarsProvenanceSchema.nullable(),
+        normalization: ResolvedTimeSchema.unwrap().shape.provenance.nullable(),
+      })
+      .readonly(),
+    facts: DerivedNatalFactsSchema.nullable(),
+    evaluation: JudgmentEvaluationSchema.nullable(),
+    resolution: BaseArbitrationSchema.nullable(),
+  })
+  .refine(({ status, calculation, facts, evaluation, resolution }) => {
+    const { reasons } = calculation;
+    if (new Set(reasons).size !== reasons.length) return false;
+    if (calculation.status === "rejected" || calculation.status === "unavailable") {
+      const rejected =
+        reasons.length === 1 &&
+        (reasons[0] === "AMBIGUOUS_LOCAL_TIME" || reasons[0] === "NONEXISTENT_LOCAL_TIME");
+      return (
+        status === "unavailable" &&
+        facts === null &&
+        evaluation === null &&
+        resolution === null &&
+        calculation.library === null &&
+        (calculation.status === "rejected"
+          ? rejected && calculation.normalization !== null
+          : reasons.length > 0 &&
+            !reasons.some(
+              (reason) => reason === "AMBIGUOUS_LOCAL_TIME" || reason === "NONEXISTENT_LOCAL_TIME",
+            ) &&
+            calculation.normalization === null)
+      );
+    }
+    if (!facts || !evaluation || !resolution || !calculation.library || !calculation.normalization)
+      return false;
+    const unknown = calculation.information.unknownFields.includes("birthTime");
+    if (
+      calculation.status === "calculated"
+        ? reasons.length !== 0 || facts.status !== "complete" || unknown
+        : JSON.stringify(reasons) !== JSON.stringify(["BIRTH_TIME_UNKNOWN"]) ||
+          !unknown ||
+          facts.sourcePillars.hour !== null
+    )
+      return false;
+    if (
+      calculation.status === "partial" &&
+      calculation.policy.dayBoundary === "zi-start" &&
+      facts.sourcePillars.day !== null
+    )
+      return false;
+    try {
+      if (
+        JSON.stringify(evaluation) !== JSON.stringify(evaluateBaseJudgments(facts)) ||
+        !arbitrationMatchesEvaluation(evaluation, resolution)
+      )
+        return false;
+    } catch {
+      return false;
+    } // Nested semantic rejections must remain schema failures, not escaped exceptions.
+    const states = [
+      calculation.status === "calculated" ? "complete" : "partial",
+      resolution.arbitration.status,
+    ];
+    return (
+      status ===
+      (states.includes("unavailable")
+        ? "unavailable"
+        : states.includes("partial")
+          ? "partial"
+          : "complete")
+    );
+  })
+  .readonly();
 export type CoreExport = z.infer<typeof CoreExportSchema>;
 
-const messages = { DOCUMENT_REJECTED: "Core export document was rejected.", JSON_REJECTED: "Core export JSON was rejected.", TOO_LARGE: "Core export JSON exceeds 1 MiB." } as const;
+const messages = {
+  DOCUMENT_REJECTED: "Core export document was rejected.",
+  JSON_REJECTED: "Core export JSON was rejected.",
+  TOO_LARGE: "Core export JSON exceeds 1 MiB.",
+} as const;
 export class CoreExportError extends Error {
-  constructor(readonly code: keyof typeof messages) { super(messages[code]); this.name = "CoreExportError"; }
+  constructor(readonly code: keyof typeof messages) {
+    super(messages[code]);
+    this.name = "CoreExportError";
+  }
 }
 function document(value: unknown): CoreExport {
   const parsed = CoreExportSchema.safeParse(value);
@@ -56,10 +133,14 @@ export function serializeCoreExport(value: unknown): string {
 }
 export function parseCoreExport(value: unknown): CoreExport {
   if (typeof value !== "string") throw new CoreExportError("JSON_REJECTED");
-  if (new TextEncoder().encode(value).byteLength > MAX_CORE_JSON_BYTES) throw new CoreExportError("TOO_LARGE");
+  if (new TextEncoder().encode(value).byteLength > MAX_CORE_JSON_BYTES)
+    throw new CoreExportError("TOO_LARGE");
   let raw: unknown;
-  try { raw = JSON.parse(value.replace(/^\uFEFF/, "")); }
-  catch { throw new CoreExportError("JSON_REJECTED"); }
+  try {
+    raw = JSON.parse(value.replace(/^\uFEFF/, ""));
+  } catch {
+    throw new CoreExportError("JSON_REJECTED");
+  }
   return document(raw);
 }
 /** Structural interchange schema. Runtime refinements still require CoreExportSchema. */
@@ -67,22 +148,45 @@ export function coreExportJsonSchema() {
   return z.toJSONSchema(CoreExportSchema, { target: "draft-2020-12" });
 }
 
-const VerifiedFindingSchema = JudgmentFindingSchema.unwrap().extend({
-  precision: z.literal("confirmed"), exceptionsApplied: z.array(ExceptionSchema).length(0).readonly(),
-  evidence: JudgmentFindingSchema.unwrap().shape.evidence.unwrap().min(1).readonly(),
-}).readonly();
-export const ManualPromptDataSchema = z.strictObject({
-  schemaVersion: z.literal("1.0.0"), promptVersion: z.literal("1.0.0"), scope: z.literal("base-structural-observations"), status: Status,
-  verifiedFindings: z.array(VerifiedFindingSchema).max(20).readonly(),
-  limitations: z.strictObject({
-    input: InputInformationSchema, calculationReasons: z.array(CalculationReasonSchema).max(10).readonly(),
-    uncertainties: z.array(z.strictObject({ ruleId: z.string().min(1), coverage: z.enum(["partial", "none"]), exceptionsApplied: z.array(ExceptionSchema).min(1).readonly() }).readonly()).max(20).readonly(),
-    excludedFindingIds: z.array(z.string().min(1)).max(20).readonly(),
-    arbitration: ArbitrationResultSchema.unwrap().shape.limitations,
-  }).readonly(),
-  judgmentProvenance: EvaluationBaseSchema.unwrap().shape.provenance.nullable(),
-  arbitrationProvenance: ArbitrationResultSchema.unwrap().shape.provenance.nullable(),
-}).refine((value) => value.status !== "unavailable" || value.verifiedFindings.length === 0).readonly();
+const VerifiedFindingSchema = JudgmentFindingSchema.unwrap()
+  .extend({
+    precision: z.literal("confirmed"),
+    exceptionsApplied: z.array(ExceptionSchema).length(0).readonly(),
+    evidence: JudgmentFindingSchema.unwrap().shape.evidence.unwrap().min(1).readonly(),
+  })
+  .readonly();
+export const ManualPromptDataSchema = z
+  .strictObject({
+    schemaVersion: z.literal("1.0.0"),
+    promptVersion: z.literal("1.0.0"),
+    scope: z.literal("base-structural-observations"),
+    status: Status,
+    verifiedFindings: z.array(VerifiedFindingSchema).max(20).readonly(),
+    limitations: z
+      .strictObject({
+        input: InputInformationSchema,
+        calculationReasons: z.array(CalculationReasonSchema).max(10).readonly(),
+        uncertainties: z
+          .array(
+            z
+              .strictObject({
+                ruleId: z.string().min(1),
+                coverage: z.enum(["partial", "none"]),
+                exceptionsApplied: z.array(ExceptionSchema).min(1).readonly(),
+              })
+              .readonly(),
+          )
+          .max(20)
+          .readonly(),
+        excludedFindingIds: z.array(z.string().min(1)).max(20).readonly(),
+        arbitration: ArbitrationResultSchema.unwrap().shape.limitations,
+      })
+      .readonly(),
+    judgmentProvenance: EvaluationBaseSchema.unwrap().shape.provenance.nullable(),
+    arbitrationProvenance: ArbitrationResultSchema.unwrap().shape.provenance.nullable(),
+  })
+  .refine((value) => value.status !== "unavailable" || value.verifiedFindings.length === 0)
+  .readonly();
 
 const MANUAL_INSTRUCTIONS = `# 수동 ChatGPT 설명 요청
 이 요청은 개발자용 기초 관찰 설명입니다. 아래 verifiedFindings에 있는 확정·채택 판단만 자연스러운 한국어로 짧게 풀어 주세요.
@@ -103,13 +207,26 @@ export function buildManualPromptData(value: unknown): ManualPromptData {
   const findings = core.resolution?.arbitration.findings ?? [];
   const verified = findings.filter((finding) => finding.precision === "confirmed");
   const ids = new Set(verified.map((finding) => finding.findingId));
-  const data = ManualPromptDataSchema.parse({ schemaVersion: core.schemaVersion, promptVersion: "1.0.0", scope: core.scope, status: core.status,
+  const data = ManualPromptDataSchema.parse({
+    schemaVersion: core.schemaVersion,
+    promptVersion: "1.0.0",
+    scope: core.scope,
+    status: core.status,
     verifiedFindings: verified,
-    limitations: { input: core.calculation.information, calculationReasons: core.calculation.reasons,
-      uncertainties: (core.resolution?.uncertainties ?? []).map(({ ruleId, coverage, exceptionsApplied }) => ({ ruleId, coverage, exceptionsApplied })),
-      excludedFindingIds: (core.evaluation?.findings ?? []).filter((finding) => !ids.has(finding.findingId)).map((finding) => finding.findingId).sort(),
+    limitations: {
+      input: core.calculation.information,
+      calculationReasons: core.calculation.reasons,
+      uncertainties: (core.resolution?.uncertainties ?? []).map(
+        ({ ruleId, coverage, exceptionsApplied }) => ({ ruleId, coverage, exceptionsApplied }),
+      ),
+      excludedFindingIds: (core.evaluation?.findings ?? [])
+        .filter((finding) => !ids.has(finding.findingId))
+        .map((finding) => finding.findingId)
+        .sort(),
       arbitration: core.resolution?.arbitration.limitations ?? [],
-    }, judgmentProvenance: core.evaluation?.provenance ?? null, arbitrationProvenance: core.resolution?.arbitration.provenance ?? null,
+    },
+    judgmentProvenance: core.evaluation?.provenance ?? null,
+    arbitrationProvenance: core.resolution?.arbitration.provenance ?? null,
   });
   return data;
 }
@@ -118,6 +235,9 @@ export function buildManualPromptData(value: unknown): ManualPromptData {
 export function buildManualPrompt(value: unknown): string {
   const data = buildManualPromptData(value);
   // Escape markup boundaries without changing JSON values on copy/parse.
-  const json = JSON.stringify(data, null, 2).replace(/[<>&\u2028\u2029]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
+  const json = JSON.stringify(data, null, 2).replace(
+    /[<>&\u2028\u2029]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
   return MANUAL_INSTRUCTIONS + "<analysis_data>\n" + json + "\n</analysis_data>\n";
 }

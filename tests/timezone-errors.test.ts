@@ -3,15 +3,23 @@ import { Temporal } from "@js-temporal/polyfill";
 import { TimeZoneAdapterError, TimeZoneResultSchema } from "@/domain/timezone";
 import { temporalTimeZoneAdapter } from "@/infrastructure/timezone";
 
-const request = { localDateTime: "2024-01-01T00:00", timezoneId: "Asia/Seoul", disambiguation: "reject" } as const;
+const request = {
+  localDateTime: "2024-01-01T00:00",
+  timezoneId: "Asia/Seoul",
+  disambiguation: "reject",
+} as const;
 
 describe("timezone trust boundaries", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("sanitizes unexpected Temporal exceptions", () => {
-    vi.spyOn(Temporal.PlainDateTime, "from").mockImplementation(() => { throw new Error("private 2024-01-01"); });
-    try { temporalTimeZoneAdapter.resolve(request); expect.fail("Expected failure"); }
-    catch (error) {
+    vi.spyOn(Temporal.PlainDateTime, "from").mockImplementation(() => {
+      throw new Error("private 2024-01-01");
+    });
+    try {
+      temporalTimeZoneAdapter.resolve(request);
+      expect.fail("Expected failure");
+    } catch (error) {
       expect(error).toBeInstanceOf(TimeZoneAdapterError);
       expect(error).toMatchObject({ code: "RESOLUTION_FAILED" });
       expect(error).not.toHaveProperty("cause");
@@ -21,12 +29,17 @@ describe("timezone trust boundaries", () => {
 
   it("blocks malformed provider output without leaking schema or date parser exceptions", () => {
     const damaged = {
-      epochNanoseconds: BigInt(0), offsetNanoseconds: 0,
+      epochNanoseconds: BigInt(0),
+      offsetNanoseconds: 0,
       toInstant: () => ({ toString: () => "not-an-instant" }),
       toPlainDateTime: () => ({ toString: () => "2024-01-01T00:00:00" }),
     };
-    vi.spyOn(Temporal.PlainDateTime, "from").mockReturnValue({ toZonedDateTime: () => damaged } as unknown as Temporal.PlainDateTime);
-    expect(() => temporalTimeZoneAdapter.resolve(request)).toThrow(expect.objectContaining({ code: "OUTPUT_INVALID" }));
+    vi.spyOn(Temporal.PlainDateTime, "from").mockReturnValue({
+      toZonedDateTime: () => damaged,
+    } as unknown as Temporal.PlainDateTime);
+    expect(() => temporalTimeZoneAdapter.resolve(request)).toThrow(
+      expect.objectContaining({ code: "OUTPUT_INVALID" }),
+    );
   });
 
   it("validates output version, UTC arithmetic and ambiguity policy", () => {
@@ -39,8 +52,15 @@ describe("timezone trust boundaries", () => {
       { ...good, provenance: { ...good.provenance, engineVersion: "future" } },
       { ...good, kind: "fold" },
       { ...good, kind: "gap" },
-    ]) expect(TimeZoneResultSchema.safeParse(value).success).toBe(false);
-    const rejected = temporalTimeZoneAdapter.resolve({ ...request, timezoneId: "America/New_York", localDateTime: "2024-11-03T01:30" });
-    expect(TimeZoneResultSchema.safeParse({ ...rejected, reason: "NONEXISTENT_LOCAL_TIME" }).success).toBe(false);
+    ])
+      expect(TimeZoneResultSchema.safeParse(value).success).toBe(false);
+    const rejected = temporalTimeZoneAdapter.resolve({
+      ...request,
+      timezoneId: "America/New_York",
+      localDateTime: "2024-11-03T01:30",
+    });
+    expect(
+      TimeZoneResultSchema.safeParse({ ...rejected, reason: "NONEXISTENT_LOCAL_TIME" }).success,
+    ).toBe(false);
   });
 });

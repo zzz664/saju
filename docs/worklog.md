@@ -946,3 +946,10 @@
 - 기준선: `npm test` **47파일/1101건 PASS**, `npm run typecheck` PASS, `npm run lint` 경고 0, `npm run check:docs` 문제 0건.
 - 측정(로컬, 리뷰 근거): 개발자 분석 1건 — 시각 있음 약 44 ms, 시각 미상 약 1.8 s, 요청당 `JudgmentEvaluationSchema` 파싱 15회. 측정 스크립트는 저장소에 남기지 않았다.
 - 미실행: build/E2E(코드 변경 없음), 실제 OpenAI 호출(`LIVE_NOT_RUN`). 리팩터링 착수는 사용자 리뷰·WBS 확정 후.
+
+## 2026-10-24 코드리뷰 리팩터링 A — 포맷·import 규칙
+
+- PR #26 MERGED 및 origin/develop 포함 확인 후 develop을 cafbf27까지 fast-forward. 이전 기능 브랜치는 git branch -d로 안전 삭제. 리뷰는 docs/reviews의 계산엔진 리뷰이며 사용자 지시로 A~F를 순차 커밋하고 최종 PR 한 건을 만든다.
+- A: Prettier 3.9.10 고정/lockfile, format/format:check, src·scripts·TS 테스트 포맷. 소스 import를 @/로 통일하고 domain→application/infrastructure/server 및 상대 import를 ESLint로 제한. 출력 계약·계산 규칙 변경 없음.
+- 검증: tsc --noEmit PASS, lint PASS, 관련 CLI/정책 CLI/내보내기/페르소나 카탈로그 4파일 35건 PASS. 첫 샌드박스 실행 7건은 Windows uv_os_get_passwd ENOMEM으로 실패했고 동일 명령을 승인된 정상 프로세스에서 재실행해 통과했다. 실패 무시·skip 없음.
+- AGENTS.md, next-env.d.ts, tests/fixtures/cli-input.json 사용자 수정은 보존/커밋 제외. .env 열람·변경 및 실제 API 호출 없음(LIVE_NOT_RUN).

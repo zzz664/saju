@@ -13,9 +13,13 @@ function isGregorianDate(date: { year: number; month: number; day: number }): bo
   return date.day <= (days[date.month - 1] ?? 0);
 }
 
-const SolarDateSchema = z.strictObject(dateFields).refine(isGregorianDate, {
-  path: ["day"], message: "A real Gregorian date is required.",
-}).readonly();
+const SolarDateSchema = z
+  .strictObject(dateFields)
+  .refine(isGregorianDate, {
+    path: ["day"],
+    message: "A real Gregorian date is required.",
+  })
+  .readonly();
 
 const lunarFields = {
   ...dateFields,
@@ -27,25 +31,36 @@ const lunarFields = {
 const LunarDateSchema = z.strictObject(lunarFields).readonly();
 
 /** The provider validates the exact solar interval and real lunar dates. */
-export const CalendarConversionRequestSchema = z.discriminatedUnion("calendarType", [
-  z.strictObject({
-    ...dateFields, calendarType: z.literal("solar"), isLeapMonth: z.literal(false),
-  }).refine(isGregorianDate, {
-    path: ["day"], message: "A real Gregorian date is required.",
-  }),
-  z.strictObject({ ...lunarFields, calendarType: z.literal("lunar") }),
-]).readonly();
+export const CalendarConversionRequestSchema = z
+  .discriminatedUnion("calendarType", [
+    z
+      .strictObject({
+        ...dateFields,
+        calendarType: z.literal("solar"),
+        isLeapMonth: z.literal(false),
+      })
+      .refine(isGregorianDate, {
+        path: ["day"],
+        message: "A real Gregorian date is required.",
+      }),
+    z.strictObject({ ...lunarFields, calendarType: z.literal("lunar") }),
+  ])
+  .readonly();
 
-export const CalendarConversionSnapshotSchema = z.strictObject({
-  solar: SolarDateSchema,
-  lunar: LunarDateSchema,
-  provenance: z.strictObject({
-    libraryName: z.literal("manseryeok"),
-    libraryVersion: z.literal("2.0.0"),
-    ruleId: z.literal("calendar.solar-lunar-conversion"),
-    ruleVersion: z.literal("1.0.0"),
-  }).readonly(),
-}).readonly();
+export const CalendarConversionSnapshotSchema = z
+  .strictObject({
+    solar: SolarDateSchema,
+    lunar: LunarDateSchema,
+    provenance: z
+      .strictObject({
+        libraryName: z.literal("manseryeok"),
+        libraryVersion: z.literal("2.0.0"),
+        ruleId: z.literal("calendar.solar-lunar-conversion"),
+        ruleVersion: z.literal("1.0.0"),
+      })
+      .readonly(),
+  })
+  .readonly();
 
 export type CalendarConversionRequest = z.infer<typeof CalendarConversionRequestSchema>;
 export type CalendarConversionSnapshot = z.infer<typeof CalendarConversionSnapshotSchema>;

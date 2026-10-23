@@ -11,15 +11,23 @@ import {
   type SolarCalendarAdapter,
   type SolarTermsRequest,
 } from "@/domain/calendar";
-import { manseryeokCalendarAdapter } from "./port";
+import { manseryeokCalendarAdapter } from "@/infrastructure/manseryeok/port";
 
-const SdkTermsSchema = z.array(z.object({
-  index: z.number().int(), name: z.string(), date: z.date(),
-})).length(24);
+const SdkTermsSchema = z
+  .array(
+    z.object({
+      index: z.number().int(),
+      name: z.string(),
+      date: z.date(),
+    }),
+  )
+  .length(24);
 
 const provenance = {
-  libraryName: packageInfo.name, libraryVersion: packageInfo.version,
-  precision: "minute", ruleVersion: "1.0.0",
+  libraryName: packageInfo.name,
+  libraryVersion: packageInfo.version,
+  precision: "minute",
+  ruleVersion: "1.0.0",
 } as const;
 
 export const manseryeokSolarCalendarAdapter: SolarCalendarAdapter = Object.freeze({
@@ -30,14 +38,18 @@ export const manseryeokSolarCalendarAdapter: SolarCalendarAdapter = Object.freez
     try {
       raw = getSolarTermsOfYear(request.data.year);
     } catch (error) {
-      throw new CalendarAdapterError(error instanceof RangeError ? "INPUT_REJECTED" : "CALCULATION_FAILED");
+      throw new CalendarAdapterError(
+        error instanceof RangeError ? "INPUT_REJECTED" : "CALCULATION_FAILED",
+      );
     }
     const terms = SdkTermsSchema.safeParse(raw);
     if (!terms.success) throw new CalendarAdapterError("OUTPUT_INVALID");
     const result = SolarTermsSnapshotSchema.safeParse({
       year: request.data.year,
       terms: terms.data.map((term) => ({
-        index: term.index, name: term.name, startsAt: term.date.toISOString(),
+        index: term.index,
+        name: term.name,
+        startsAt: term.date.toISOString(),
         isMonthBoundary: term.index % 2 === 0,
       })),
       provenance: { ...provenance, ruleId: "calendar.solar-terms" },
@@ -51,9 +63,12 @@ export const manseryeokSolarCalendarAdapter: SolarCalendarAdapter = Object.freez
     const result = YearMonthSnapshotSchema.safeParse({
       pillars: { year: snapshot.pillars.year, month: snapshot.pillars.month },
       provenance: {
-        ...provenance, timeReference: snapshot.provenance.timeReference,
-        yearBoundary: "lichun", monthBoundary: "12-jeol",
-        boundaryInclusion: "start-inclusive", ruleId: "calendar.year-month-pillars",
+        ...provenance,
+        timeReference: snapshot.provenance.timeReference,
+        yearBoundary: "lichun",
+        monthBoundary: "12-jeol",
+        boundaryInclusion: "start-inclusive",
+        ruleId: "calendar.year-month-pillars",
       },
     });
     if (!result.success) throw new CalendarAdapterError("OUTPUT_INVALID");

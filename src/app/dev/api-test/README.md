@@ -60,12 +60,12 @@ npm run dev:api-test
 
 ## 현재 엔드포인트
 
-|메서드/경로|기능|
-|---|---|
-|POST `/api/dev/api-test/unlock`|로컬 잠금해제, Origin·시도 상한·서버 비밀 검증|
-|GET `/api/dev/api-test/config`|잠금해제 후 모델/키 ready·missing/한도/CSRF/서버 목록|
-|POST `/api/dev/api-test/runs`|기존 공통 R01 Mock 실행, 멱등·예산·취소 검증|
-|GET `/api/dev/api-test/runs/[runId]`|같은 잠금해제 세션의 실행 결과만 조회|
+| 메서드/경로                          | 기능                                                  |
+| ------------------------------------ | ----------------------------------------------------- |
+| POST `/api/dev/api-test/unlock`      | 로컬 잠금해제, Origin·시도 상한·서버 비밀 검증        |
+| GET `/api/dev/api-test/config`       | 잠금해제 후 모델/키 ready·missing/한도/CSRF/서버 목록 |
+| POST `/api/dev/api-test/runs`        | 기존 공통 R01 Mock 실행, 멱등·예산·취소 검증          |
+| GET `/api/dev/api-test/runs/[runId]` | 같은 잠금해제 세션의 실행 결과만 조회                 |
 
 현재 기존 R01이 지원하는 `core-base`를 명시적으로 사용한다. 아직 없는 F01~F11 결과나 R02/R03 스트리밍을 만들어 표시하지 않는다. 화면에서 후속 기능은 비활성화하고 서버도 409로 거절한다. 공통 프롬프트를 줄이거나 별도 명리 규칙을 만들지 않는다.
 

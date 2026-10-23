@@ -9,9 +9,15 @@ npm `manseryeok@2.0.0`의 package.json, dist/index.d.ts, dist/types.d.ts 및 실
 import { calculateManseryeokSnapshot } from "@/infrastructure/manseryeok";
 
 const snapshot = calculateManseryeokSnapshot({
-  year: 1992, month: 10, day: 24, hour: 5, minute: 30,
-  calendarType: "solar", isLeapMonth: false,
-  timeReference: "fixed-utc+09:00", dayBoundary: "midnight",
+  year: 1992,
+  month: 10,
+  day: 24,
+  hour: 5,
+  minute: 30,
+  calendarType: "solar",
+  isLeapMonth: false,
+  timeReference: "fixed-utc+09:00",
+  dayBoundary: "midnight",
 });
 ```
 
@@ -65,12 +71,18 @@ OpenAI·PG 등 외부 공급자 호출이나 API 키는 필요하지 않다.
 import { manseryeokCalendarConversionAdapter } from "@/infrastructure/manseryeok";
 
 const dates = manseryeokCalendarConversionAdapter.convert({
-  year: 2023, month: 2, day: 1, calendarType: "lunar", isLeapMonth: true,
+  year: 2023,
+  month: 2,
+  day: 1,
+  calendarType: "lunar",
+  isLeapMonth: true,
 });
 // dates.solar: { year: 2023, month: 3, day: 22 }
 // dates.lunar: { year: 2023, month: 2, day: 1, isLeapMonth: true }
 const same = manseryeokCalendarConversionAdapter.convert({
-  ...dates.solar, calendarType: "solar", isLeapMonth: false,
+  ...dates.solar,
+  calendarType: "solar",
+  isLeapMonth: false,
 });
 ```
 
@@ -114,9 +126,15 @@ import { manseryeokSolarCalendarAdapter } from "@/infrastructure/manseryeok";
 const schedule = manseryeokSolarCalendarAdapter.getSolarTerms({ year: 2024 });
 // schedule.terms[2].startsAt === "2024-02-04T08:27:00.000Z"
 const result = manseryeokSolarCalendarAdapter.calculateYearMonth({
-  year: 2024, month: 2, day: 4, hour: 17, minute: 27,
-  calendarType: "solar", isLeapMonth: false,
-  timeReference: "fixed-utc+09:00", dayBoundary: "midnight",
+  year: 2024,
+  month: 2,
+  day: 4,
+  hour: 17,
+  minute: 27,
+  calendarType: "solar",
+  isLeapMonth: false,
+  timeReference: "fixed-utc+09:00",
+  dayBoundary: "midnight",
 });
 // result.pillars.year: 갑진, month: 병인. 1분 전에는 계묘/을축.
 ```
@@ -164,9 +182,15 @@ ruleId=`calendar.day-pillar`, ruleVersion=`1.0.0`, timeReference, dayBoundary를
 import { manseryeokDayCalendarAdapter } from "@/infrastructure/manseryeok";
 
 const snapshot = manseryeokDayCalendarAdapter.calculateDay({
-  year: 2024, month: 2, day: 10, hour: 0, minute: 0,
-  calendarType: "solar", isLeapMonth: false,
-  timeReference: "fixed-utc+09:00", dayBoundary: "midnight",
+  year: 2024,
+  month: 2,
+  day: 10,
+  hour: 0,
+  minute: 0,
+  calendarType: "solar",
+  isLeapMonth: false,
+  timeReference: "fixed-utc+09:00",
+  dayBoundary: "midnight",
 });
 // snapshot.pillars.day: { heavenlyStem: "갑", earthlyBranch: "진" }
 ```
