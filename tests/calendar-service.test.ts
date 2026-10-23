@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { calculateSajuSnapshot } from "@/application/saju";
 import { CalendarAdapterError, type CalendarAdapter } from "@/domain/calendar";
 import { calculateManseryeokSnapshot, manseryeokCalendarAdapter } from "@/infrastructure/manseryeok";
-import input from "./fixtures/cli-input.json";
+import input from "./fixtures/core-reference-input.json";
 
 const snapshot = calculateManseryeokSnapshot({ year: 1992, month: 10, day: 24, hour: 5, minute: 30, calendarType: "solar", isLeapMonth: false, timeReference: "fixed-utc+09:00", dayBoundary: "midnight" });
 

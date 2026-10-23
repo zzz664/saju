@@ -174,7 +174,10 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
     expect(apiTestStyleIssueMessage("REGISTER", failed.expectedRegister)).toContain("해요체");
     expect(transport).toHaveBeenCalledTimes(1); expect(budget.inspect(now)).toEqual({ calls: 1, tokens: 160 });
     const formal = await (await handler(req("runs", { ...input(), personaId: "synthetic-formal" }, cookie, config.csrfToken))).json();
-    expect(formal).toMatchObject({ evidence: "LIVE_PASS", expectedRegister: "hapsyo", styleIssues: [] });
+    expect(formal).toMatchObject({ evidence: "LIVE_PASS", expectedRegister: "hapsyo", styleIssues: [], personaVersion: "1.0.1", result: { meta: { personaVersion: "1.0.1" } } });
+    const formalSent = JSON.parse(String(transport.mock.calls[1][1]!.body));
+    const formalProfile = JSON.parse(formalSent.input[0].content.split("\n").at(-1)).persona;
+    expect(formalProfile).toMatchObject({ personaVersion: "1.0.1", voice: { register: "hapsyo", preferredExpressions: ["먼저 살펴보겠습니다"] }, examples: [{ prefer: "제공된 근거만으로 확정할 수는 없습니다." }] });
     const sent = JSON.parse(String(transport.mock.calls[0][1]!.body));
     expect(sent.input[0].content).toContain("haeyo이면 해요체"); expect(sent.input[0].content).toContain("sentencesPerParagraph");
     expect(failed.promptVersion).toBe("1.0.1");

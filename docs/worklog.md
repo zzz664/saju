@@ -860,3 +860,63 @@
 - 사용자 .env/키/비밀값, `next-env.d.ts`, 개인 CLI fixture는 변경/커밋하지 않는다. 실제 모델 선택·접근 권한·Responses/구조화 출력 호환성·추론 토큰 상한의 적합성은 사용자가 확인한다. 추가 실 API 요청 **0회**, 이번 설정 변경의 실제 Live 회귀는 **LIVE_NOT_RUN**.
 - 최종 격리 검증: 개인 .env/fixture 제외, 커밋 fixture를 사용하는 임시 사본에서 `npm test -- --maxWorkers=1`: **42개 파일 1068/1068 PASS (91.21초)**. 이어 임시 .env=기본 모델, .env.local=비기본 모델을 만들어 실제 `npm run eval:persona`: **Mock 180/180 완료, 실패/문체 플래그 0**, 생성한 임시 보고서 modelId가 .env.local 값인지 확인했다. 원본 과거 평가 산출물은 수정하지 않았다. 임시 node_modules junction을 먼저 해제하고 검증한 임시 디렉터리만 정리했다.
 - 최종 사용자 두 수정 파일 SHA256 동일, 코드의 gpt-4o-mini 리터럴은 공통 DEFAULT_OPENAI_MODEL 한 곳에만 남음. 같은 PR #24에 커밋·푸시 후 대기한다.
+
+# WBS-17 — 명리 계산/LLM 품질 QA 및 코어 문서 검증
+
+## 선행 확인과 완료 조건
+
+- 직전 PR #24는 GitHub **MERGED**, 대상 develop, merge `b5293423c0d149b3176acc84e2a78768a3b711bb`(2026-10-23T11:29:45Z). 선행 WBS-16/#21, WBS-25/#22도 MERGED이며 세 merge commit이 origin/develop ancestor임을 확인했다.
+- develop 체크아웃 및 `git pull --ff-only origin develop` 후 병합된 `feature/WBS-66-live-narration`을 `git branch -d`로 안전 삭제했다. 최신 develop에서 `feature/WBS-17-core-quality-qa` 한 개만 생성했다.
+- AGENTS/WBS/05/02/06/08, 독립 골든 검토표와 WBS-25 품질 기록을 읽었다. WBS-17은 실행순서 26, 선행 WBS-16/25, 완료 기준 P0 결함 0건/평가기록이다. 정상·오류·경계 및 P0 판정 범위를 구현 전에 [QA 계획](evaluations/WBS-17-core-qa.md)에 정의했다.
+
+## 변경 파일과 조치
+
+- `tests/fixtures/core-reference-input.json`, `tests/fixtures/README.md`, 기존 13개 테스트(`arbitration-service`, `calendar-service`, `cli`, `core-export-service`, `core-export`, `judgment-service`, `natal-facts-service`, `normalize-time-cli`, `policy-calendar-errors`, `policy-cli`, `policy-saju`, `solar-time-application`, `time-normalization`): 자동 회귀가 개인 편집용 CLI 입력을 읽던 문제를 수정했다. 고정 입력은 develop에 이미 커밋된 예시에서 복사했으며 기존 계산 기대값/독립 골든은 변경하지 않았다. 수동 입력 파일은 읽거나 복원하지 않았다.
+- `scripts/check-doc-links.mjs`, `scripts/check-doc-links.d.mts`, `tests/document-links.test.ts`, `package.json`: 네트워크 없이 로컬 Markdown 대상 존재 여부/저장소 경계/잘못된 인코딩을 확인하는 명령과 6개 검증 추가. 외부 URL·앵커 내용·참조형 링크는 대상이 아니다. 최초 타입 검사에서 JS 모듈 선언/Mock 인자 타입 오류를 발견해 선언 파일과 타입을 수정한 뒤 재검증했다.
+- `scripts/developer-e2e.mjs`, `playwright.config.ts`, `package.json`: 기존 계산/테스트 화면을 같은 격리 사본에서 검증하는 `test:e2e:core-qa` 추가. 모든 하위 검사/빌드 프로세스에 키 빈 값/Live false를 고정하며 기존 사용자 서버와 생성 파일은 건드리지 않는다.
+- `README.md`, `docs/02_기술설계서.md`, `docs/06_검증_체크리스트.md`, `docs/08_OpenAI_실험_비용_및_보안.md`, `docs/문서_정합성_검증.md`, `docs/evaluations/WBS-25-persona-quality.md`: 현재 코어와 미래 설계, 공통 OPENAI_MODEL 설정, Mock 전용 CLI와 보호된 수동 Live, 과거 평가와 현재 검증의 범위를 구분했다.
+- `docs/evaluations/WBS-17-core-qa.md`, `docs/evaluations/WBS-17-mock-quality-summary.json`, 본 worklog: 실제 자동 검사 결과와 미평가/잔여 문제를 기록했다. 기존 WBS-25 JSON/샘플/사람 평가 및 WBS-16 승인 기록은 변경하지 않았다.
+
+## 실제 검증 결과
+
+- 환경: Windows PowerShell, Node 24.12.0/npm 11.6.2/ICU 77.1/tzdb 2025b. 실행 정책을 변경하지 않고 `npm.cmd` 사용.
+- 원래 작업 트리 `npm.cmd test -- --maxWorkers=1`: **43개 파일, 1074/1074 PASS**, 종료 0(114.34초). 개인 CLI 파일이 수정된 상태에서도 고정 회귀 입력 분리 후 통과한다. 중간 전체 검사 1068/1068, 새 문서 검사 6/6, 골든/해시/페르소나 관련 91/91도 통과했다. 실패 무시/skip은 사용하지 않았다.
+- 독립 골든 **30/30**(역법 8/일주 6/절입 4/타임존 4/태양시 4/시주 4), 20개 판단 규칙/중재/불확실성 및 100회 동일 해시 검사를 포함한다. 기존 출처/오차/사용자 승인 범위를 유지하며 새 수동 검토를 주장하지 않는다.
+- `npm.cmd run test:e2e:core-qa`: **exit 0, 개발 22/22 + production 차단 2/2 PASS**, 격리 production build/route typegen/tsc PASS. 320/390/768/1440px, 실제 로컬 POST, 오류/복사/인증/기본 Mock 및 명시 실행 UI를 검사했다. Live 응답/usage 화면은 가짜 브라우저 응답으로 확인하며 실제 OpenAI 요청 증빙이 아니다.
+- `npm.cmd run check:docs`, `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`: **PASS**, lint 경고 0. 문서 링크는 이번 보고서 포함 **46개 문서/64개 링크/문제 0건**이며 로컬 파일만 검사한다.
+- WBS CSV 재검사: ID 고유/선행 존재/필수 선행 순서 **PASS**, 필수 68건 + 별도 승인 선택 CI 1건(WBS-19). 읽기 전용 보조 명령의 최초 숫자 변환에서 `선택` 값 오류가 나와 선택 행을 분리한 후 재검사했다. CSV 자체는 변경하지 않았다.
+- 개인 .env/입력을 제외한 임시 사본에서 실제 `npm run eval:persona` 실행: 현재 prompt 1.0.1, Mock **180/180 완료, 실패/문체 플래그 0**, 60/60 반복 그룹 동일. 비식별 집계만 새 WBS-17 산출물로 저장했다. 임시 의존성 junction을 먼저 해제하고 경로 검증 후 해당 사본만 정리했다.
+
+## 판정과 제약
+
+- 검사한 현재 구현 코어의 **관측된 P0 0건**. Mock 성공은 의미/자연스러움이나 실제 모델 품질 인증이 아니다. 사람 평가 **0/60**, 평균 null, **NOT_PERFORMED**. 각 문체는 대표 30개 중 도입문 28개가 반복돼 Mock 템플릿 한계도 남는다.
+- 합성 합쇼체 프로필이 해요체 예시/표현을 상속하는 지시 불일치 **P1 잔여**, OUTPUT_REJECTED의 상세 원인 구분 **P2 잔여**를 명시했다. 승인된 프로필의 불변 버전을 임의 수정하거나 검사 기준을 완화하지 않았다.
+- 추가 실제 OpenAI 호출 **0회 / LIVE_NOT_RUN**. 과거 사용자 보고 completed/문체 실패는 LIVE_FAILED 유지. 새 프롬프트·모델 설정의 실제 서술 품질 회귀는 미실행이다.
+- WBS-26 이후, 명리 11개 기능 확장, P06/R02/R03, OAuth/DB/RLS/PG/배포 QA는 이번 완료 범위가 아니다. CI 구축·키/실제 장부 변경·실 PG·DB 상태 변경·제품명 확정 없음. WBS.csv TODO를 임의 일괄 변경하지 않았다.
+- 사용자 수정 `next-env.d.ts`, `tests/fixtures/cli-input.json` 및 .env는 보존하고 PR에서 제외한다. 두 수정 파일의 최종 SHA256이 시작 시 기록한 값과 동일함을 확인했다. 기존 WBS-25 JSON/샘플, 독립 골든 JSON/승인표도 diff 없음.
+- develop 대상 PR 한 건을 생성한 직후 중지한다. 다음 WBS를 시작하거나 자동 병합하지 않는다.
+
+## PR #25 리뷰 수정 — 합쇼체 프로필의 해요체 예시 상속 제거
+
+- 사용자 지적에 따라 QA-05 잔여 문제를 이번 PR에서 수정한다. PR #25 OPEN/develop 대상 확인 후 같은 브랜치에서만 진행하며 새 WBS/브랜치/PR은 만들지 않는다.
+- 완료 조건: 해요체/합쇼체 각각의 register·선호 표현·긍정 예시가 일치하고, API/평가 코드가 같은 수정 합쇼체 프로필을 사용해야 한다. 합쇼체는 불변 버전 1.0.0을 덮어쓰지 않고 1.0.1로 구분한다.
+- 정상 검사: 실제 조립된 developer 메시지와 Mock/가짜 Live transport에 선택 프로필/버전 전달, 실행 증빙 버전 일치. 오류/경계: 미승인 ID/과거 합쇼체 버전 거절, 두 문체 선택 시 계산 근거/analysisKey 불변 및 narrationKey 분리. 기존 기대값·검사기를 완화하지 않는다.
+- 검증 계획: 신규 회귀 및 관련 API/Live/페르소나 평가 테스트, 전체 npm test, 타입/린트/문서 검사, 변경된 합쇼체의 브라우저 Mock 경로. 실제 API 호출/키/실제 장부 변경은 하지 않는다.
+- 구현: `src/domain/persona/synthetic-formal.ts`에 해요체에서 파생하지 않는 합쇼체 프로필 1.0.1을 독립 정의했다. `src/server/api-test-catalog.ts`, `tests/evaluation/persona-fixtures.ts`가 공유한다. `src/server/api-test.ts`, `api-test-live.ts`는 승인 카탈로그의 버전을 선택/전달/기록해 기존 1.0.0 하드코딩을 제거했다. 해요체 프로필 1.0.0, 프롬프트/문체 검사 기준 및 코어 계산은 유지한다.
+- 회귀: `tests/api-test-catalog.test.ts` 4건 추가, `tests/api-test.test.ts`의 Mock 요청/증빙 검증 1건 추가, `tests/live-narration.test.ts`의 가짜 HTTP 본문/메타 검증 및 `tests/persona-evaluation.test.ts`, `tests/e2e/api-test.spec.ts`의 선택 버전 기대값을 정정했다. QA 보고서에서 QA-05는 수정으로 전환하고 수정 전 JSON 집계는 기준 기록으로 보존했다.
+- 최초 신규 회귀 4건 FAIL(선택 버전 조회 미구현)을 확인한 뒤 구현했다. `npm.cmd test -- tests/api-test-catalog.test.ts tests/api-test.test.ts tests/live-narration.test.ts tests/persona-evaluation.test.ts`: **4파일/76건 PASS**, 현재 합쇼체 1.0.1로 Mock **180/180 완료/실패·문체 플래그 0** 행렬 검사 포함.
+- 원래 작업 트리 전체 `npm.cmd test -- --maxWorkers=1`: **44개 파일/1079건 PASS**, exit 0(127.39초). 타입 검사/lint/로컬 문서 검사도 PASS, 경고 0. 사용자 두 수정 파일 SHA256 동일, 과거 평가 JSON/독립 골든 기대값 diff 없음. 실제 OpenAI 요청 **0회 / LIVE_NOT_RUN**.
+- 최종 `npm.cmd run test:e2e:api-test`: **exit 0, 개발 9/9 + production 차단 1/1 PASS**, 격리 production build/route typegen/tsc PASS. 실제 로컬 합쇼체 Mock 실행/partial 상태/최상위 및 결과 내부 personaVersion=1.0.1을 확인했다. 서버 키 빈 값/Live false 유지. 같은 PR #25를 업데이트하고 대기한다.
+
+## PR #25 추가 리뷰 — 다중 페르소나 JSON 구조 일관성
+
+- 사용자 요청: 합쇼체만 TS 파일로 분리하고 해요체를 API에 남긴 비일관성을 수정하고 향후 여러 페르소나 추가 구조를 고려한다. PR #25 OPEN 확인, 같은 기능 브랜치에서 리뷰 수정만 진행한다.
+- 문서 11의 서버 관리 JSON/Zod/불변 버전 및 05의 열린 PR 수정 규칙을 따른다. 정상: 두 프로필 원문/버전을 유지한 JSON 이동, API/평가의 완전 동일 프로필, 세 번째 페르소나를 데이터/활성 목록만으로 추가. 오류/경계: 미승인/누락 버전/중복 활성 ID/위조 경로 거절, 과거 승인 버전 유지 및 명시 활성 버전만 선택, 10개 초과 목록/무자동호출/분석 불변을 먼저 테스트로 정의했다.
+- 최초 회귀는 공통 카탈로그 부재 및 API/평가 해요체 메타 차이로 FAIL을 확인했다. 과거 평가용 해요체 fixture는 그대로 보존하고 현재 품질 평가는 런타임 승인 JSON을 사용하도록 통합한다.
+- 변경: `src/infrastructure/persona/profiles/*.json`에 두 프로필을 같은 방식으로 배치하고 `synthetic-catalog.ts`에서 서버 승인 manifest/활성 버전을 명시했다. `src/domain/persona/catalog.ts`는 기존 Zod 승인 로더와 정확한 버전 선택을 재사용하며 승인 버전 보존과 ID당 활성 버전 1개를 지원한다. API 카탈로그의 프로필 본문/선택 로직 및 별도 합쇼체 TS 파일을 제거하고, 평가도 같은 카탈로그로 통합했다.
+- `src/application/dev-api-test/index.ts`의 persona 목록 상한을 공통 카탈로그와 같은 50으로 맞췄다. `tests/persona-catalog.test.ts` 4건 및 API 12개 목록/0콜 검사를 추가하고 기존 API/평가 일치 검사를 두 문체 전체 비교로 강화했다. 사용자 프로필 업로드나 자동 파일 스캔 승인은 추가하지 않았다.
+- 관련 5개 파일 **81건 PASS**. 기존 커밋의 두 프로필 객체와 새 JSON을 필드 전체 deepEqual로 비교해 동일함을 확인했다. 실행 중 프로필 버전은 해요체 1.0.0/합쇼체 1.0.1 유지. 현재 평가의 해요체 표시명/설명도 런타임과 일치시키며 과거 JSON/단위 fixture는 보존한다.
+- 문서 11, 도메인 README, 새 infrastructure README 및 QA 보고서에 JSON 추가 → 서버 승인 등록 → 활성 버전 지정 → 회귀 검증 절차와 제품용/합성 승인 분리를 기록했다. DB/관리 UI/제품 캐릭터 구현 및 실 API 호출은 하지 않는다.
+- 전체 `npm.cmd test -- --maxWorkers=1`: **45개 파일/1084건 PASS**, exit 0(118.40초). 현재 공통 JSON 프로필로 180건 Mock 행렬도 통과했다. `tsc --noEmit`/lint PASS, 경고 0. 최종 로컬 링크 검사 **47개 문서/73개 링크/문제 0건**.
+- `npm.cmd run test:e2e:api-test`: **개발 9/9 + production 차단 1/1 PASS**, 격리 production build/route typegen/tsc PASS(exit 0). 정적 JSON을 실제 Next 개발/운영 빌드에 포함해 두 문체 선택/실행과 운영 차단을 확인했다. 키 빈 값/Live false이며 추가 실제 호출 **0회 / LIVE_NOT_RUN**.
+- 최종 사용자 두 수정 파일 SHA256 동일, .env/실제 장부/과거 평가 산출물/독립 골든 변경 없음. 새 PR 없이 기존 #25에 커밋·푸시하고 설명을 갱신한 뒤 중지한다.

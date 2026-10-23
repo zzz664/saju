@@ -4,7 +4,7 @@ import { calculateNatalFacts } from "@/application/natal-facts";
 import { runCli } from "@/cli/run";
 import { manseryeokCalendarAdapter, manseryeokCalendarConversionAdapter, manseryeokEquationOfTimeAdapter, manseryeokPolicyCalendarAdapter, manseryeokSymbolCatalogAdapter } from "@/infrastructure/manseryeok";
 import { temporalTimeZoneAdapter } from "@/infrastructure/timezone";
-import input from "./fixtures/cli-input.json";
+import input from "./fixtures/core-reference-input.json";
 
 const dependencies = { timeZone: temporalTimeZoneAdapter, calendar: manseryeokCalendarConversionAdapter, equationOfTime: manseryeokEquationOfTimeAdapter, pillars: manseryeokPolicyCalendarAdapter, symbols: manseryeokSymbolCatalogAdapter };
 const base = { ...input, birthInput: { ...input.birthInput, birthDate: "2024-02-10", birthTime: { status: "known", time: "12:00" }, timezoneId: "Asia/Seoul" } };

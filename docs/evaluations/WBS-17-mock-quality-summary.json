@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "1.0.0",
+  "wbs": "WBS-17",
+  "baselineCommit": "b5293423c0d149b3176acc84e2a78768a3b711bb",
+  "checkedAt": "2026-10-23T11:41:39.249Z",
+  "runtime": {
+    "node": "24.12.0",
+    "icu": "77.1",
+    "tzdb": "2025b"
+  },
+  "suiteId": "r01-quality-30",
+  "suiteVersion": "1.0.0",
+  "providerKind": "mock",
+  "modelId": "gpt-4o-mini",
+  "versions": {
+    "commonPromptVersion": "1.0.0",
+    "promptVersion": "1.0.1",
+    "outputSchemaVersion": "1.0.0",
+    "stylePolicyVersion": "1.0.0"
+  },
+  "fixtureSha256": {
+    "independent-core-golden.json": "2f70dde756223e04801308ea808ebb6da6b75307941d965bcdf692008c4d0e83",
+    "persona-evaluation-cases.json": "fadf33bcaa1cd5d7039eb13301f67ab66a001842be6164c4367526604ae9c4f8",
+    "persona-style.json": "f0a505e356fabc8eaa735b85d656bbd3980515a050b2ddcd816aca434ddaeda4"
+  },
+  "caseStatuses": {
+    "complete": 20,
+    "partial": 4,
+    "unavailable": 6
+  },
+  "summary": {
+    "total": 180,
+    "completed": 180,
+    "failed": 0,
+    "styleFlagged": 0,
+    "contractPassed": true,
+    "byPersona": [
+      {
+        "personaId": "synthetic-style",
+        "total": 90,
+        "completed": 90,
+        "failed": 0,
+        "styleFlagged": 0,
+        "distinctOutputs": 9,
+        "distinctOpenings": 2,
+        "repeatedOpenings": 88,
+        "caseSamples": 30,
+        "distinctCaseOpenings": 2,
+        "repeatedCaseOpenings": 28
+      },
+      {
+        "personaId": "synthetic-formal",
+        "total": 90,
+        "completed": 90,
+        "failed": 0,
+        "styleFlagged": 0,
+        "distinctOutputs": 9,
+        "distinctOpenings": 2,
+        "repeatedOpenings": 88,
+        "caseSamples": 30,
+        "distinctCaseOpenings": 2,
+        "repeatedCaseOpenings": 28
+      }
+    ]
+  },
+  "repeats": {
+    "groups": 60,
+    "identicalGroups": 60
+  },
+  "humanEvaluation": {
+    "status": "not-performed",
+    "naturalnessMean": null,
+    "readabilityMean": null,
+    "targetMean": 4,
+    "recommendedReviewers": 2
+  },
+  "evidence": "MOCK_PASS",
+  "additionalLiveCalls": 0,
+  "liveRegression": "LIVE_NOT_RUN",
+  "meaningReview": "NOT_PERFORMED",
+  "limitations": [
+    "Mock quote/ID checks do not certify semantic faithfulness or naturalness.",
+    "Formal synthetic profile inherits haeyo examples; tracked for versioned profile review.",
+    "Previous user-reported completed Live response failed style validation; not reclassified as LIVE_PASS."
+  ]
+}

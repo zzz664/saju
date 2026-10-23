@@ -26,7 +26,7 @@ const Choice = z.strictObject({ id: z.string().min(1).max(64), label: z.string()
 export const ApiTestConfigSchema = z.strictObject({ defaultMode: z.literal("mock"), modelId: OpenAiModelIdSchema, keyStatus: z.enum(["ready", "missing"]),
   liveAvailable: z.boolean(), liveStatus: z.enum(["LIVE_BLOCKED", "LIVE_NOT_RUN"]), liveReason: z.string().min(1).max(64), csrfToken: z.string().regex(/^[a-f0-9]{64}$/),
   liveUsed: Quota.optional(), liveRemaining: Quota.optional(),
-  limits: ApiTestLimitsSchema, used: Quota, remaining: Quota, fixtures: z.array(Choice).max(10), personas: z.array(Choice).max(10) });
+  limits: ApiTestLimitsSchema, used: Quota, remaining: Quota, fixtures: z.array(Choice).max(10), personas: z.array(Choice).max(50) });
 export type ApiTestConfig = z.infer<typeof ApiTestConfigSchema>;
 export const ApiTestRunSchema = z.strictObject({ testRunId: z.uuid(), mode: z.enum(["mock", "live"]), scenario: z.literal("narration"), featureId: z.literal("core-base"),
   modelId: OpenAiModelIdSchema, personaId: z.string().min(1).max(64), status: z.enum(["blocked", "running", "passed", "failed", "interrupted"]),

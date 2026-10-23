@@ -35,7 +35,7 @@ node node_modules/typescript/bin/tsc --noEmit
 npm run lint
 ```
 
-고정된 [평가 manifest](../../tests/fixtures/persona-evaluation-cases.json)와 합성 문체 설정만 사용한다. 임의 출생 파일·프롬프트·공급자·출력 경로 옵션은 받지 않는다. 환경변수에서 읽는 것은 production 실행 차단을 위한 NODE_ENV뿐이며 키를 읽지 않는다. 예산 가드는 로컬 평가 ID/세션·10분 기한·180회 상한으로 적용한다. 단가 1 microUSD/백만 추정 토큰은 Mock 예약 검증용 값이며 실제 요금이 아니다.
+고정된 [평가 manifest](../../tests/fixtures/persona-evaluation-cases.json)와 합성 문체 설정만 사용한다. 임의 출생 파일·프롬프트·공급자·출력 경로 옵션은 받지 않는다. 현재 CLI는 production 차단용 NODE_ENV와 서버 OPENAI_MODEL 설정을 사용하며 .env/.env.local을 로드한다. 실제 API 키를 참조해 Provider를 선택하지 않고 항상 Mock으로 실행한다. WBS-66의 공통 모델 설정/프롬프트 변경 이후 재실행은 별도의 시점별 평가이며 아래 과거 산출물을 소급 갱신하지 않는다. 예산 가드는 로컬 평가 ID/세션·10분 기한·180회 상한으로 적용한다. 단가 1 microUSD/백만 추정 토큰은 Mock 예약 검증용 값이며 실제 요금이 아니다.
 
 생성 산출물:
 

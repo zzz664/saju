@@ -1,0 +1,17 @@
+{
+  "birthInput": {
+    "calendarType": "solar",
+    "birthDate": "1992-10-24",
+    "isLeapMonth": false,
+    "birthTime": { "status": "known", "time": "05:30" },
+    "timezoneId": "Etc/GMT-9",
+    "longitudeDeg": null,
+    "latitudeDeg": null,
+    "directionBasis": "unspecified"
+  },
+  "calculationPolicy": {
+    "solarTime": "standard",
+    "dayBoundary": "midnight",
+    "dstDisambiguation": "reject"
+  }
+}

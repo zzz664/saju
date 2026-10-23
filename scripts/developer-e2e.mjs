@@ -5,10 +5,12 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 
 const source = process.cwd();
+const mode = process.argv[2] ?? "core";
+if (process.argv.length > 3 || !["core", "api-test", "all"].includes(mode)) throw new Error("Unknown E2E verification mode.");
 const tempBase = await realpath(tmpdir());
 const workspace = await mkdtemp(path.join(tempBase, "saju-dev-e2e-"));
 async function run(script, args, cwd, env = {}) {
-  const child = spawn(process.execPath, [script, ...args], { cwd, env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1", ...env }, stdio: "inherit", windowsHide: true });
+  const child = spawn(process.execPath, [script, ...args], { cwd, env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1", ...env, OPENAI_API_KEY: "", ENABLE_LIVE_API_TESTS: "false" }, stdio: "inherit", windowsHide: true });
   const code = await new Promise((resolve, reject) => { child.once("error", reject); child.once("exit", resolve); });
   if (code !== 0) throw new Error(`Verification command failed (${code}).`);
 }
@@ -22,7 +24,7 @@ try {
   await cp(path.join(source, "tests/e2e"), path.join(workspace, "tests/e2e"), { recursive: true });
   // A real dependency copy keeps Turbopack inside its isolated project root.
   await cp(path.join(source, "node_modules"), path.join(workspace, "node_modules"), { recursive: true });
-  const env = { SAJU_E2E_ROOT: workspace, SAJU_E2E_PORT: String(port), SAJU_E2E_API_TEST: process.argv[2] === "api-test" ? "1" : "0" };
+  const env = { SAJU_E2E_ROOT: workspace, SAJU_E2E_PORT: String(port), SAJU_E2E_API_TEST: mode !== "core" ? "1" : "0", SAJU_E2E_ALL: mode === "all" ? "1" : "0" };
   const playwright = path.join(source, "node_modules/@playwright/test/cli.js");
   await run(playwright, ["test"], source, { ...env, SAJU_E2E_PRODUCTION: "0" });
   await run(path.join(workspace, "node_modules/next/dist/bin/next"), ["build"], workspace, { NODE_ENV: "production" });
