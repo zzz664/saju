@@ -23,17 +23,21 @@ export function apiTestPolicy(limits: ApiTestLimits, now: number) {
 const Quota = z.strictObject({ calls: z.number().int().nonnegative(), tokens: z.number().int().nonnegative() });
 const Choice = z.strictObject({ id: z.string().min(1).max(64), label: z.string().min(1).max(100) });
 export const ApiTestConfigSchema = z.strictObject({ defaultMode: z.literal("mock"), modelId: z.literal("gpt-4o-mini"), keyStatus: z.enum(["ready", "missing"]),
-  liveAvailable: z.literal(false), liveStatus: z.literal("LIVE_BLOCKED"), liveReason: z.string().min(1).max(64), csrfToken: z.string().regex(/^[a-f0-9]{64}$/),
+  liveAvailable: z.boolean(), liveStatus: z.enum(["LIVE_BLOCKED", "LIVE_NOT_RUN"]), liveReason: z.string().min(1).max(64), csrfToken: z.string().regex(/^[a-f0-9]{64}$/),
+  liveUsed: Quota.optional(), liveRemaining: Quota.optional(),
   limits: ApiTestLimitsSchema, used: Quota, remaining: Quota, fixtures: z.array(Choice).max(10), personas: z.array(Choice).max(10) });
 export type ApiTestConfig = z.infer<typeof ApiTestConfigSchema>;
-export const ApiTestRunSchema = z.strictObject({ testRunId: z.uuid(), mode: z.literal("mock"), scenario: z.literal("narration"), featureId: z.literal("core-base"),
-  modelId: z.literal("gpt-4o-mini"), personaId: z.string().min(1).max(64), status: z.enum(["running", "passed", "failed", "interrupted"]),
+export const ApiTestRunSchema = z.strictObject({ testRunId: z.uuid(), mode: z.enum(["mock", "live"]), scenario: z.literal("narration"), featureId: z.literal("core-base"),
+  modelId: z.literal("gpt-4o-mini"), personaId: z.string().min(1).max(64), status: z.enum(["blocked", "running", "passed", "failed", "interrupted"]),
   personaVersion: z.string().min(1).max(32), promptVersion: z.string().min(1).max(32), commonPromptVersion: z.string().min(1).max(32), schemaVersion: z.literal("1.0.0"),
   startedAt: z.iso.datetime(), finishedAt: z.iso.datetime().optional(), durationMs: z.number().nonnegative().optional(),
-  inputTokens: z.null(), outputTokens: z.null(), evidence: z.enum(["MOCK_PASS", "MOCK_FAILED"]).optional(), errorCode: z.string().regex(/^[A-Z_]+$/).optional(),
+  inputTokens: z.number().int().nonnegative().nullable(), outputTokens: z.number().int().nonnegative().nullable(),
+  providerStatus: z.enum(["completed", "failed", "incomplete", "cancelled", "queued", "in_progress"]).optional(),
+  verdict: z.strictObject({ evidenceIdsValid: z.boolean(), styleHeuristicPassed: z.boolean() }).optional(),
+  evidence: z.enum(["MOCK_PASS", "MOCK_FAILED", "LIVE_BLOCKED", "LIVE_PASS", "LIVE_FAILED"]).optional(), errorCode: z.string().regex(/^[A-Z_]+$/).optional(),
   // The shared R01 service validates its full draft. This view adds transport bounds
   // without importing the server's prompt composer into the client bundle.
   result: z.object({ sections: z.array(z.object({ paragraphs: z.array(z.string().max(3000)).max(4) }).passthrough()).max(8),
-    styleEvaluation: z.object({ passed: z.boolean() }).passthrough(), meta: z.object({ providerKind: z.literal("mock"), modelId: z.literal("gpt-4o-mini") }).passthrough() }).passthrough().optional(),
+    styleEvaluation: z.object({ passed: z.boolean() }).passthrough(), meta: z.object({ providerKind: z.enum(["mock", "openai"]), modelId: z.literal("gpt-4o-mini") }).passthrough() }).passthrough().optional(),
 });
 export type ApiTestRun = z.infer<typeof ApiTestRunSchema>;

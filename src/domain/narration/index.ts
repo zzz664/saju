@@ -15,6 +15,8 @@ const messages = {
   INPUT_REJECTED: "Narration input was rejected.", OUTPUT_REJECTED: "Narration output was rejected.",
   REFUSED: "Narration provider refused.", INCOMPLETE: "Narration provider output was incomplete.",
   PROVIDER_FAILED: "Narration provider failed.", CANCELLED: "Narration was cancelled.", LIVE_DISABLED: "Live narration is disabled.",
+  RATE_LIMITED: "Narration provider rate limited.", TIMEOUT: "Narration provider timed out.", MODEL_MISMATCH: "Narration model was rejected.",
+  USAGE_MISSING: "Narration usage is missing.",
 } as const;
 export class NarrationError extends Error {
   constructor(readonly code: keyof typeof messages) { super(messages[code]); this.name = "NarrationError"; }

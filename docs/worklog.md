@@ -809,3 +809,28 @@
 - `tests/bootstrap.test.tsx`: TSX/경로 별칭/루트 레이아웃 서버 렌더링 스모크 2건.
 - `README.md`: 설치/개발/로컬 검증 절차 및 공식 문서 링크.
 - `docs/worklog.md`: 선행 승인·범위·검증·제약·변경 파일 기록.
+
+# WBS-66 — 착수 및 완료 기준
+
+- PR #23: GitHub MERGED (2026-10-23T10:09:23Z), merge `e9c1664e961de8ecdd0f38e0512c6ab5fe97f25a`가 최신 origin/develop에 포함됨. WBS-47 선행 커밋도 ancestor 확인. develop ff-only 갱신 및 WBS-65 로컬 브랜치 안전 삭제 후 `feature/WBS-66-live-narration` 생성.
+- 완료 조건: 동일 R01 코어/승인 페르소나/프롬프트/검증기를 공유하는 Responses API Provider; 보호된 로컬 설정의 명시 Live 동의/실행; 영속 예산 예약과 usage 정산; 비식별 실행 증빙 및 오류 처리. R02/R03/F01~F11 확장 제외.
+- 정상 테스트: 가짜 Responses HTTP transport로 요청 계약, 동일 Mock/Live 입력, 모델·usage·근거·문체·버전·멱등성 검증. 실제 외부 호출 아님.
+- 오류/경계 테스트: 키/플래그/인증/동의/CSRF/운영 차단 0콜, 예산·동시성·재시작·장부 오류, 429/5xx/네트워크/timeout/abort/refusal/incomplete, 잘못된 모델·JSON·근거·문체, usage 누락 시 예약 유지, 비밀/출생 원문 비노출.
+- 검증 계획: npm test, 타입/린트, 격리된 API 설정 E2E와 프로덕션 빌드. 실제 Live는 사용자 UI 실행 승인 전 `LIVE_NOT_RUN`이며 환경 비활성 시 `LIVE_BLOCKED`.
+- 사용자 수정 `next-env.d.ts`, `tests/fixtures/cli-input.json` 및 .env는 보존하고 커밋하지 않는다.
+
+## 구현 및 검증 결과
+
+- 구현: `src/infrastructure/openai/narration.ts`는 고정 Responses endpoint, 서버 키, store:false/stream:false, Strict JSON, 최대 출력/응답 크기, timeout/abort, 재시도 0회, completed/refusal/incomplete/HTTP 오류·모델/usage 검사를 담당한다. 원문·키·외부 오류를 로깅하지 않는다.
+- `src/infrastructure/openai/live-budget.ts`: Git 제외 로컬 파일 장부, 독점 파일 잠금/atomic rename/fsync, UTC 일 공유 예산, 호출/입출력 사전 예약·usage 정산, unknown usage 예약 유지, 재시작/다른 세션/동시 프로세스의 중복 지출 방지. crash/persist 실패는 잠금/pending을 유지한다. Live는 최대 1건이며 분산 보장을 주장하지 않는다.
+- `src/application/narration/{index,persona}.ts`는 기존 R01 실행/검증을 공통화하고, 기존 Mock 전용 실험/CLI 가드는 유지한다. `src/server/api-test-live.ts`, `api-test.ts`, `api-test-runtime.ts`가 인증/Origin/CSRF/비용 동의/환경/승인 fixture 이후에만 Live를 연결한다.
+- `src/application/dev-api-test/index.ts`, `src/app/dev/api-test/test-form.tsx`: 서버 판단 Live 준비/차단 상태, 별도 Live 예산, usage·소요 시간·검사 결과, 입력 잠금/중단, 원문 없는 증빙 내보내기. 페이지 진입·모드/동의 변경·새로고침 시 호출하지 않으며 기본 Mock이다.
+- 변경 문서/설정: `.gitignore`, `src/app/dev/api-test/README.md`, `docs/21_실제_OpenAI_API_테스트_설계.md`, 본 worklog. 테스트: `tests/live-narration.test.ts`, `tests/e2e/api-test.spec.ts`.
+- 관련 `npm.cmd test -- tests/live-narration.test.ts tests/api-test.test.ts tests/narration.test.ts tests/persona.test.ts tests/experiment-guard.test.ts tests/persona-evaluation.test.ts`: **155/155 PASS**, 신규 Live HTTP/파일 계약 34건 포함. 실제 HTTP는 주입한 가짜 transport이며 Live 실행 증빙이 아니다.
+- 전체 `npm.cmd test` 첫 실행: **1028 PASS/21 FAIL**. 사용자 수정 CLI 입력과 고정 기대값 불일치 및 제한 환경 tsx `uv_os_get_passwd/ENOMEM` 실패를 확인했다. 사용자 fixture는 복원/수정하지 않았다. 첫 임시 검증은 docs 누락/CLI 제한/부하 timeout 때문에 실패했으며 이를 통과로 취급하지 않았다.
+- 재검증: `.env`와 개인 fixture를 제외한 임시 사본에 `git show HEAD:tests/fixtures/cli-input.json`의 커밋 fixture와 docs를 넣고 제한 밖에서 `npm test -- --maxWorkers=1` 실행: **41개 파일, 1056/1056 PASS (90.48초)**. 실패 무시/skip 옵션은 사용하지 않았다. 원본 작업 트리의 개인 fixture 상태에서는 전체 테스트 통과를 주장하지 않는다.
+- `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint`: **PASS**, lint 경고 0. 최종 E2E/빌드 결과는 아래 기록한다.
+- 제한 환경 첫 E2E는 개발 7건 통과 후 종료가 지연되어, 명령/PID를 확인한 해당 격리 테스트 트리만 종료하고 생성한 임시 사본을 경로 검증 후 정리했다. 키 없음/Live false 상태에서 제한 밖 재검증 진행.
+- 실제 OpenAI 요청: **0회 / LIVE_NOT_RUN**. 가짜 응답의 LIVE_PASS/실패 값은 계약 테스트일 뿐 실제 계정/청구/품질 증빙이 아니다. 실제 Live는 사용자가 서버 환경을 설정하고 화면에서 비용 동의 후 실행해야 하며 의미상 품질 수동 검토도 남는다. 키/비밀 변경, CI/PG/SSE/DB 구현은 수행하지 않았다.
+- 최종 `npm.cmd run test:e2e:api-test`: **exit 0**, 개발 E2E **8/8 PASS**(Live 동의/명시 버튼/진행 중 입력 잠금/usage/증빙을 브라우저 응답으로 시뮬레이션), production 404 E2E **1/1 PASS**, 격리 production 빌드·route typegen·tsc **PASS**. 서버 OPENAI_API_KEY는 빈 값, ENABLE_LIVE_API_TESTS=false로 고정했다. 320/390/768/1440px·키보드·Mock 기본 복귀·무자동호출도 확인했다.
+- 보존 확인: 작업 전후 `next-env.d.ts`, `tests/fixtures/cli-input.json`의 SHA256 동일. 두 파일 및 .env는 PR에서 제외한다. 구현과 자동 검증 완료 후 develop 대상 PR 1건을 생성하며 다음 WBS는 시작하지 않는다.

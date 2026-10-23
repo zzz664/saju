@@ -1,4 +1,5 @@
 import { ManualPromptDataSchema } from "../../domain/core-export/index";
+import { ExperimentError } from "../../domain/experiment/index";
 import { createNarrationRequest, NarrationError, NARRATION_META, NarrationProviderResponseSchema, validateNarrationOutput, type NarrationProvider, type NarrationRequest } from "../../domain/narration/index";
 
 async function generate(provider: NarrationProvider, request: NarrationRequest, signal?: AbortSignal): Promise<unknown> {
@@ -20,10 +21,9 @@ async function generate(provider: NarrationProvider, request: NarrationRequest, 
 /** Shared supplier boundary, independent of the selected developer JSON output contract. */
 export async function receiveNarrationText(request: NarrationRequest, provider: NarrationProvider, signal?: AbortSignal): Promise<string> {
   if (signal?.aborted) throw new NarrationError("CANCELLED");
-  if (provider.kind !== "mock") throw new NarrationError("LIVE_DISABLED");
   let raw: unknown;
   try { raw = await generate(provider, request, signal); }
-  catch { throw new NarrationError(signal?.aborted ? "CANCELLED" : "PROVIDER_FAILED"); }
+  catch (cause) { if (cause instanceof NarrationError || cause instanceof ExperimentError) throw cause; throw new NarrationError(signal?.aborted ? "CANCELLED" : "PROVIDER_FAILED"); }
   if (signal?.aborted) throw new NarrationError("CANCELLED");
   const response = NarrationProviderResponseSchema.safeParse(raw);
   if (!response.success) throw new NarrationError("OUTPUT_REJECTED");

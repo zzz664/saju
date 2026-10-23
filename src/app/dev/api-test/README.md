@@ -1,4 +1,31 @@
-# WBS-65 개발자 API 테스트 설정
+# WBS-65/66 개발자 API 테스트 설정
+
+## WBS-66 현재 사용법과 범위
+
+WBS-65의 보호된 설정에 **비스트리밍 R01 Live Provider**를 추가했다. 아래 WBS-65 구현 전 계획/최종 결과는 당시 기록이다. 현재 Live 사용법은 이 절을 기준으로 한다. P06·R02/R03 및 F01~F11은 이번 범위에 포함되지 않는다.
+
+1. 운영자가 서버 `.env.local`에 `DEV_TEST_SESSION_SECRET`(32~256자), `OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4o-mini`를 설정한다. Mock만 쓰려면 API 키가 필요 없다. 키/비밀값은 Git·로그에 넣지 않는다.
+2. 실제 실행을 원할 때만 `ENABLE_LIVE_API_TESTS=true`로 설정하고 `npm run dev:api-test`로 loopback 서버를 시작한다. 일반 dev/production/CI/Preview에서는 경로를 활성화하지 않는다.
+3. `http://127.0.0.1:3000/dev/api-test`에서 잠금해제한다. 초기 모드는 항상 Mock이다. Live를 고르고 비용 동의 후 **테스트 실행**을 눌러야 실제 요청이 1회 발생한다. 모드 변경·조회·새로고침·동의 체크만으로 호출하지 않는다.
+4. 합성 사례 3개/합성 문체 2개만 선택할 수 있다. 실제 개인 입력을 받지 않는다. 기존 R01의 동일 코어·정규화 판단·승인 페르소나·전체 프롬프트·JSON Schema·근거/문체 검증기를 공유하고 Provider만 바꾼다.
+5. HTTP 실패, refusal/incomplete, 모델 불일치, JSON/근거/문체 검증 실패는 성공으로 처리하지 않는다. 60초 timeout, 명시 abort, 자동 재시도 0회. 이미 처리된 토큰은 과금될 수 있다.
+
+### 예산과 증빙
+
+- 기본 일 호출 15회/입출력 합계 30,000토큰, 요청 출력 최대 1,200. Mock/Live 예산은 별도이며 공통 환경변수 한도를 적용한다. UTF-8 요청 바이트+envelope+출력 상한으로 보수적으로 예약하므로 15회 전에 차단될 수 있다. 이는 tokenizer나 실제 비용 계산이 아니다.
+- Live는 `.local/api-test/live-budget.json`에 예약·usage·공급자 ID/종료 상태를 저장한다(Git 제외). 같은 로컬 프로젝트의 모든 잠금해제 세션/프로세스가 UTC 일 한도를 공유한다. 단일 호스트 전용이며 Live는 한 번에 1건만 허용한다. 환경변수의 동시성 상한을 높여도 Live는 1건으로 보수적으로 제한한다.
+- 완료/거절/검증 실패 모두 유효한 usage가 있으면 실제 입력+출력으로 정산한다. usage가 없으면 예약량을 유지한다. 실제 usage가 추정치를 넘으면 더 큰 실제 수치를 반영한다. 호출 수는 환불하지 않는다.
+- 장부는 atomic rename/fsync와 독점 파일 잠금을 사용한다. 서버 재시작으로 예산이 초기화되지 않는다. 비정상 종료/저장 실패 시 잠금 또는 pending 예약이 남아 추가 Live를 차단한다. **자동 잠금 삭제·예산 초기화 기능은 없다.** 운영자가 실행 프로세스 종료와 OpenAI 사용량을 대조한 뒤 별도 복구해야 한다. 잠금/장부를 지워 한도를 우회하지 않는다.
+- 장부 손상/쓰기 실패는 fail closed. 장부 10,000건/파일 5MB 상한에 도달하면 실행을 멈추고 운영자 검토를 요구한다. 다중 서버/배포 예산 보장이나 대시보드 청구액 대조를 대체하지 않는다.
+- 실행 결과와 멱등 캐시는 프로세스 메모리다. 같은 프로세스/세션에서 재요청은 기존 결과를 반환한다. 재시작 뒤 같은 세션+requestId는 영속 장부가 중복 지출을 차단하지만 과거 본문은 복구하지 않는다. 과거 세션의 결과를 다른 세션이 읽을 수 없다.
+- 화면과 내보내기는 usage, 모델/페르소나/프롬프트/스키마 버전, 지연, 종료 상태, 고정 오류와 검사 결과를 제공한다. 원문 출력은 내보내기에서 제외하며 공급자 ID는 서버 장부에만 남긴다. API 키·원본 출생 입력·질문·응답 원문은 장부/일반 로그에 남기지 않는다.
+- `LIVE_PASS`는 공급자의 completed 응답+usage+스키마/근거 ID/휴리스틱 문체 검사 통과를 뜻한다. **의미상 근거 충실도·한국어 자연스러움·명리 정확성 인증은 아니다.** 실제 실행 후 출력은 사람이 검토한다. 미호출은 `LIVE_NOT_RUN`, 게이트/예산 차단은 `LIVE_BLOCKED`, 실행 후 실패는 `LIVE_FAILED`다.
+
+### WBS-66 검증
+
+`npm test -- tests/live-narration.test.ts tests/api-test.test.ts tests/narration.test.ts tests/persona.test.ts tests/experiment-guard.test.ts tests/persona-evaluation.test.ts`와 `npm run test:e2e:api-test`를 사용한다. 자동 검증은 가짜 HTTP 응답/브라우저 route simulation 또는 Mock만 사용하며 실제 OpenAI 호출을 하지 않는다. E2E 서버는 키 없음/Live false로 고정한다.
+
+공식 계약: [Responses Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses). SDK 추가 없이 서버 REST transport로 같은 요청 계약을 전송한다. 실제 계정/키 가용성·청구액·사용량 대조와 사용자 Live 실행은 별도이며, 이번 구현 검증 상태는 **MOCK_PASS / LIVE_NOT_RUN**이다.
 
 ## 구현 전 완료 조건과 테스트 계획
 

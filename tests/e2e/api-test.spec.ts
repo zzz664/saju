@@ -46,6 +46,38 @@ test("unknown-time fixture preserves partial status and formal persona", async (
   await expect(page.getByRole("heading", { name: "MOCK_PASS" })).toBeVisible();
 });
 
+test("simulated Live UI requires consent and an explicit click, locks controls and exports usage", async ({ page }) => {
+  // Browser transport simulation only. Server remains keyless with Live disabled.
+  await page.route("**/api/dev/api-test/config", async route => {
+    const response = await route.fetch();
+    if (!response.ok()) { await route.fulfill({ response }); return; }
+    const config = await response.json();
+    await route.fulfill({ response, json: { ...config, keyStatus: "ready", liveAvailable: true, liveStatus: "LIVE_NOT_RUN", liveReason: "READY" } });
+  });
+  let calls = 0, release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/dev/api-test/runs", async route => {
+    calls++; expect(route.request().postDataJSON()).toMatchObject({ mode: "live", acknowledgedCost: true }); await gate;
+    await route.fulfill({ json: { testRunId: "00000000-0000-4000-8000-000000000001", mode: "live", scenario: "narration", featureId: "core-base", modelId: "gpt-4o-mini", personaId: "synthetic-style",
+      status: "passed", personaVersion: "1.0.0", promptVersion: "1.0.0", commonPromptVersion: "1.0.0", schemaVersion: "1.0.0",
+      startedAt: "2026-10-23T00:00:00Z", finishedAt: "2026-10-23T00:00:01Z", durationMs: 1000, inputTokens: 100, outputTokens: 60,
+      providerStatus: "completed", evidence: "LIVE_PASS", verdict: { evidenceIdsValid: true, styleHeuristicPassed: true } } });
+  });
+  await unlock(page); await page.getByRole("radio", { name: "Live", exact: true }).check();
+  await expect(page.getByRole("button", { name: "테스트 실행" })).toBeDisabled(); expect(calls).toBe(0);
+  await page.getByRole("checkbox").check(); await expect(page.getByRole("button", { name: "테스트 실행" })).toBeEnabled(); expect(calls).toBe(0);
+  await page.getByRole("button", { name: "테스트 실행" }).click(); await expect.poll(() => calls).toBe(1);
+  await expect(page.getByRole("radio", { name: "Mock", exact: true })).toBeDisabled();
+  await expect(page.getByLabel("가상 사례", { exact: true })).toBeDisabled(); release();
+  await expect(page.getByRole("heading", { name: "LIVE_PASS" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Live 실행 결과" })).toContainText("100");
+  await expect(page.getByRole("region", { name: "Live 실행 결과" })).toContainText("60");
+  await expect(page.getByRole("checkbox")).not.toBeChecked();
+  const download = page.waitForEvent("download"); await page.getByRole("button", { name: "비식별 증빙 내보내기" }).click();
+  expect((await download).suggestedFilename()).toBe("live-test-evidence.json");
+  await page.reload(); await expect(page.getByRole("radio", { name: "Mock", exact: true })).toBeChecked(); expect(calls).toBe(1);
+});
+
 for (const width of [320, 390, 768, 1440]) test(`settings layout fits ${width}px and keyboard can reach controls`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 900 }); await unlock(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

@@ -196,3 +196,13 @@ WBS-65 착수 시 기존 R01은 내부 개발자용 `core-base`만 구현되어 
 - OpenAI Responses API 스트리밍 이벤트: https://platform.openai.com/docs/api-reference/responses-streaming
 - OpenAI Streaming 가이드: https://platform.openai.com/docs/guides/streaming-responses
 - OpenAI API 보안/개발 운영: https://platform.openai.com/docs/guides/production-best-practices
+
+## 12. WBS-66 구현 경계와 검증 상태
+
+로컬 `/dev/api-test`의 명시 실행은 동일 `core-base` 판단·승인형 합성 페르소나·공통 R01 프롬프트/검증기를 사용한다. 서버 전용 REST `OpenAIProvider`는 Responses API에 `store:false`, `stream:false`, Strict JSON Schema, 출력 상한을 전달한다. 기존 오프라인 실험 실행기는 Mock 전용 차단을 유지한다. 외부 호출은 모든 서버 게이트와 비용 동의 및 파일 예약을 통과한 요청에서만 수행한다.
+
+Live 예산은 Git에서 제외한 `.local/api-test/live-budget.json`에 저장하며, 독점 파일 잠금과 atomic rename/fsync로 동일 호스트 내 예약을 직렬화한다. 한 번에 Live 1건, UTC 일 한도는 모든 로컬 세션에서 공유한다. usage가 확인되면 실제 입력+출력으로 정산하고, 알 수 없으면 예약값을 유지한다. 재시작으로 한도를 초기화하지 않는다. 비정상 종료/정산 저장 실패의 잠금·pending 상태는 자동 해제하지 않고 운영자 확인을 요구한다. 다중 서버/테스트 배포에서 사용할 분산 장부는 아니다.
+
+공급자 ID·usage·종료 상태는 서버 장부에만 남긴다. 응답 원문은 일반 로그/장부/내보내기에서 제외한다. 실행 결과/멱등 캐시는 프로세스 메모리이며, 재시작 후 결과 본문은 복구하지 않는다. 동일 세션/requestId의 추가 지출은 영속 장부로 차단한다. 조회는 실행한 잠금해제 세션만 허용한다.
+
+자동 테스트의 가짜 HTTP 응답/브라우저 시뮬레이션은 실제 실행 증빙이 아니다. 구현 검증 상태는 `MOCK_PASS`, 실제 API는 사용자의 Live 실행 전 `LIVE_NOT_RUN`이다. `LIVE_PASS`의 근거 ID/문체 휴리스틱 검사는 의미상 충실도·자연스러움·명리 정확성 보증이 아니며 수동 검토가 필요하다. 로컬 설정/장부 복구 주의사항은 `src/app/dev/api-test/README.md`를 참조한다.
