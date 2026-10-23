@@ -12,10 +12,11 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import {
   boundPassage,
+  createWikitextLoader,
   digestText,
   extractSection,
   titleFromUrl,
-  wikisourceApiUrl,
+  WikisourcePageError,
 } from "./lib.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -46,22 +47,12 @@ async function loadScaffold() {
   }
 }
 
-async function fetchWikitext(title) {
-  const response = await fetch(wikisourceApiUrl(title), {
-    headers: { "user-agent": "saju-interpretation-collector/1.0 (local developer script)" },
-  });
-  if (!response.ok) throw new Error(`Wikisource ${response.status}`);
-  const body = await response.json();
-  const wikitext = body?.parse?.wikitext;
-  if (typeof wikitext !== "string") throw new Error("Wikisource response had no wikitext");
-  return wikitext;
-}
-
 async function main() {
   const scaffold = await loadScaffold();
   const file = JSON.parse(readFileSync(dataFile, "utf8"));
-  const pages = new Map();
-  const report = { collected: 0, skipped: 0, missing: [], errors: [] };
+  // One request per page title (3 pages for the full scaffold), paced to respect Wikisource.
+  const loader = createWikitextLoader();
+  const report = { collected: 0, skipped: 0, missing: [], pageErrors: new Map(), unavailable: 0 };
   for (const entry of scaffold) {
     const { sourceId, url, locator } = entry.source;
     if (only && only !== sourceId) continue;
@@ -70,23 +61,27 @@ async function main() {
       continue;
     }
     const title = titleFromUrl(url);
+    let wikitext;
     try {
-      if (!pages.has(title)) pages.set(title, await fetchWikitext(title));
-      const section = extractSection(pages.get(title), locator);
-      if (!section) {
-        report.missing.push(`${sourceId} (${title} › ${locator})`);
-        continue;
-      }
-      const passage = boundPassage(section);
-      file.passages[sourceId] = {
-        passage,
-        retrievedAt: new Date().toISOString(),
-        passageDigest: digestText(passage),
-      };
-      report.collected++;
+      wikitext = await loader.load(title);
     } catch (error) {
-      report.errors.push(`${sourceId}: ${error instanceof Error ? error.message : "failed"}`);
+      const code = error instanceof WikisourcePageError ? error.code : "FETCH_FAILED";
+      report.pageErrors.set(title, code);
+      report.unavailable++;
+      continue;
     }
+    const section = extractSection(wikitext, locator);
+    if (!section) {
+      report.missing.push(`${sourceId} (${title} › ${locator})`);
+      continue;
+    }
+    const passage = boundPassage(section);
+    file.passages[sourceId] = {
+      passage,
+      retrievedAt: new Date().toISOString(),
+      passageDigest: digestText(passage),
+    };
+    report.collected++;
   }
   if (!dryRun && report.collected > 0)
     writeFileSync(dataFile, JSON.stringify(file, null, 2) + "\n", "utf8");
@@ -94,18 +89,28 @@ async function main() {
     JSON.stringify(
       {
         dryRun,
+        httpRequests: loader.requests,
         collected: report.collected,
         skipped: report.skipped,
         missing: report.missing.length,
-        errors: report.errors.length,
+        pagesFailed: report.pageErrors.size,
+        slotsWithoutPage: report.unavailable,
       },
       null,
       2,
     ),
   );
   for (const line of report.missing) console.log("missing  " + line);
-  for (const line of report.errors) console.log("error    " + line);
-  if (report.errors.length) process.exitCode = 1;
+  for (const [title, code] of report.pageErrors)
+    console.log(
+      `page     ${title}: ${code}` +
+        (code === "MISSING_TITLE"
+          ? " — 이 제목의 페이지가 없다. scaffold.ts의 url을 실제 Wikisource 제목으로 고친다."
+          : code === "RATE_LIMITED"
+            ? " — 요청 제한. 몇 분 뒤 다시 실행한다(페이지당 1회만 요청한다)."
+            : ""),
+    );
+  if (report.pageErrors.size) process.exitCode = 1;
 }
 
 main().catch((error) => {

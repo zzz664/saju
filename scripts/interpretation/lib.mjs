@@ -53,10 +53,77 @@ export function wikisourceApiUrl(title) {
     action: "parse",
     page: title,
     prop: "wikitext",
+    redirects: "1",
     format: "json",
     formatversion: "2",
   });
   return `https://zh.wikisource.org/w/api.php?${params}`;
+}
+
+export class WikisourcePageError extends Error {
+  constructor(code, title) {
+    super(`${code}: ${title}`);
+    this.code = code; // MISSING_TITLE | RATE_LIMITED | HTTP_<status> | NO_WIKITEXT
+    this.title = title;
+  }
+}
+
+/**
+ * Fetch each page title at most once per run, including failures, and pace requests so the
+ * 141 slots never turn into 141 HTTP calls (Wikisource answers bursts with 429).
+ * `fetchImpl`/`sleep` are injectable for offline tests.
+ */
+export function createWikitextLoader({
+  fetchImpl = fetch,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  delayMs = 1500,
+  maxRetries = 1,
+} = {}) {
+  const cache = new Map(); // title -> { text } | { error }
+  let requests = 0;
+  async function request(title) {
+    for (let attempt = 0; ; attempt++) {
+      if (requests > 0) await sleep(delayMs);
+      requests++;
+      const response = await fetchImpl(wikisourceApiUrl(title), {
+        headers: {
+          "user-agent":
+            "saju-interpretation-collector/1.1 (local developer script; contact repo owner)",
+          accept: "application/json",
+        },
+      });
+      if (response.status === 429 && attempt < maxRetries) {
+        const retryAfter = Number(response.headers.get("retry-after"));
+        await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 10_000);
+        continue;
+      }
+      if (response.status === 429) throw new WikisourcePageError("RATE_LIMITED", title);
+      if (!response.ok) throw new WikisourcePageError(`HTTP_${response.status}`, title);
+      const body = await response.json();
+      if (body?.error?.code === "missingtitle")
+        throw new WikisourcePageError("MISSING_TITLE", title);
+      const wikitext = body?.parse?.wikitext;
+      if (typeof wikitext !== "string") throw new WikisourcePageError("NO_WIKITEXT", title);
+      return wikitext;
+    }
+  }
+  return {
+    async load(title) {
+      if (!cache.has(title)) {
+        try {
+          cache.set(title, { text: await request(title) });
+        } catch (error) {
+          cache.set(title, { error });
+        }
+      }
+      const entry = cache.get(title);
+      if (entry.error) throw entry.error;
+      return entry.text;
+    },
+    get requests() {
+      return requests;
+    },
+  };
 }
 
 /** Title is the last path segment of the scaffold url (already percent-encoded). */

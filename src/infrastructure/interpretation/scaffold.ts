@@ -150,7 +150,7 @@ export function buildScaffold(): readonly ScaffoldEntry[] {
           sourceId: `src.qtbj.${id}`,
           work: "궁통보감",
           locator: `${MONTH_NAME_BY_BRANCH[branch]}${hanja}`,
-          url: WIKISOURCE + encodeURIComponent("窮通寶鑑"),
+          url: WIKISOURCE + encodeURIComponent("穷通宝鉴"),
           license: "public-domain",
           language: "zh-Hant",
         },
