@@ -1,6 +1,7 @@
+import { deepEqualCanonical } from "@/domain/json";
 import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
-import { DerivedNatalFactsSchema, type DerivedNatalFacts } from "@/domain/natal-facts";
+import { parseDerivedNatalFacts, type DerivedNatalFacts } from "@/domain/natal-facts";
 import { BASE_RULE_CATALOG } from "@/domain/judgment/catalog";
 import {
   CatalogBaseSchema,
@@ -23,12 +24,17 @@ function canonical(catalog: JudgmentCatalog): string {
 export const JudgmentCatalogSchema = CatalogBaseSchema.refine(
   (value) => canonical(value) === canonical(BASE_RULE_CATALOG),
 );
-export const JudgmentEvaluationSchema = EvaluationBaseSchema.refine((value) => {
+export const JudgmentEvaluationSchema = EvaluationBaseSchema;
+export const judgmentEvaluationInvariants = (value: JudgmentEvaluation) => {
   const rules = new Map(BASE_RULE_CATALOG.rules.map((rule) => [rule.ruleId, rule]));
   const order = [...BASE_RULE_CATALOG.rules].sort(
     (a, b) => b.priority - a.priority || compare(a.ruleId, b.ruleId),
   );
-  if (new Set(value.results.map((result) => result.ruleId)).size !== 20) return false;
+  if (
+    value.results.length !== BASE_RULE_CATALOG.rules.length ||
+    new Set(value.results.map((result) => result.ruleId)).size !== BASE_RULE_CATALOG.rules.length
+  )
+    return false;
   if (value.results.some((result, index) => result.ruleId !== order[index].ruleId)) return false;
   const known = Object.values(value.sourcePillars).filter((pillar) => pillar !== null).length;
   if (value.status !== (known === 4 ? "complete" : known === 0 ? "unavailable" : "partial"))
@@ -45,10 +51,10 @@ export const JudgmentEvaluationSchema = EvaluationBaseSchema.refine((value) => {
     if (
       !rule ||
       result.priority !== rule.priority ||
-      JSON.stringify(result.sourceRefs) !== JSON.stringify(rule.sourceRefs) ||
-      JSON.stringify(result.inputPaths) !== JSON.stringify(rule.inputPaths) ||
-      JSON.stringify(result.caveats) !== JSON.stringify(rule.caveats) ||
-      JSON.stringify(result.exceptionsDeclared) !== JSON.stringify(rule.exceptions) ||
+      !deepEqualCanonical(result.sourceRefs, rule.sourceRefs) ||
+      !deepEqualCanonical(result.inputPaths, rule.inputPaths) ||
+      !deepEqualCanonical(result.caveats, rule.caveats) ||
+      !deepEqualCanonical(result.exceptionsDeclared, rule.exceptions) ||
       result.exceptionsApplied.some((exception) => !rule.exceptions.includes(exception))
     )
       return false;
@@ -56,7 +62,7 @@ export const JudgmentEvaluationSchema = EvaluationBaseSchema.refine((value) => {
     if (result.coverage === "complete" && result.exceptionsApplied.length !== 0) return false;
     if (
       result.coverage === "partial" &&
-      JSON.stringify(result.exceptionsApplied) !== JSON.stringify(["INCOMPLETE_SEARCH_SCOPE"])
+      !deepEqualCanonical(result.exceptionsApplied, ["INCOMPLETE_SEARCH_SCOPE"])
     )
       return false;
     if (result.coverage === "none" && result.exceptionsApplied.length === 0) return false;
@@ -77,11 +83,16 @@ export const JudgmentEvaluationSchema = EvaluationBaseSchema.refine((value) => {
         findingId === `finding:${rule.ruleId}` &&
         assertion === rule.assertion &&
         precision === (coverage === "complete" ? "confirmed" : "partial") &&
-        JSON.stringify(trace) === JSON.stringify(resultTrace)
+        deepEqualCanonical(trace, resultTrace)
       );
     })
   );
-});
+};
+export function parseJudgmentEvaluation(value: unknown): JudgmentEvaluation {
+  const parsed = JudgmentEvaluationSchema.parse(value);
+  if (!judgmentEvaluationInvariants(parsed)) throw new JudgmentError("INPUT_REJECTED");
+  return parsed;
+}
 export type JudgmentEvaluation = z.infer<typeof JudgmentEvaluationSchema>;
 
 /** Check every observed atom against the actual immutable facts, including array indices. */
@@ -91,7 +102,7 @@ export function evidenceMatchesFacts(
 ): boolean {
   if (
     evaluation.status !== facts.status ||
-    JSON.stringify(evaluation.sourcePillars) !== JSON.stringify(facts.sourcePillars)
+    !deepEqualCanonical(evaluation.sourcePillars, facts.sourcePillars)
   )
     return false;
   return evaluation.results.every((result) =>
@@ -260,8 +271,13 @@ export function evaluateBaseJudgments(
   value: unknown,
   rawCatalog: unknown = BASE_RULE_CATALOG,
 ): JudgmentEvaluation {
-  const facts = DerivedNatalFactsSchema.safeParse(value);
-  if (!facts.success) throw new JudgmentError("INPUT_REJECTED");
+  let data: DerivedNatalFacts;
+  try {
+    data = parseDerivedNatalFacts(value);
+  } catch {
+    throw new JudgmentError("INPUT_REJECTED");
+  }
+  const facts = { data };
   const catalog = JudgmentCatalogSchema.safeParse(rawCatalog);
   if (!catalog.success) throw new JudgmentError("CATALOG_INVALID");
   const rules = [...catalog.data.rules].sort(
@@ -294,7 +310,11 @@ export function evaluateBaseJudgments(
       scope: "base-structural-observations",
     },
   });
-  if (!output.success || !evidenceMatchesFacts(facts.data, output.data))
+  if (
+    !output.success ||
+    !judgmentEvaluationInvariants(output.data) ||
+    !evidenceMatchesFacts(facts.data, output.data)
+  )
     throw new JudgmentError("OUTPUT_INVALID");
   return output.data;
 }

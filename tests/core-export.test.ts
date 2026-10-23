@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateCoreExport } from "@/application/core-export";
 import {
-  CoreExportSchema,
+  validateCoreExport,
   coreExportJsonSchema,
   serializeCoreExport,
   parseCoreExport,
@@ -72,7 +72,7 @@ describe("core JSON and manual ChatGPT copy contract", () => {
       { ...complete, calculation: { ...complete.calculation, reasons: ["LONGITUDE_UNKNOWN"] } },
       { ...complete, calculation: { ...complete.calculation, library: null } },
     ]) {
-      expect(CoreExportSchema.safeParse(document).success).toBe(false);
+      expect(() => validateCoreExport(document)).toThrow();
       expect(() => serializeCoreExport(document)).toThrow("Core export document was rejected.");
     }
     // Internally consistent traces/arbitration still cannot turn wood evidence into a fire match.
@@ -94,14 +94,14 @@ describe("core JSON and manual ChatGPT copy contract", () => {
     );
     const evaluation = { ...complete.evaluation, results, findings };
     expect(JudgmentEvaluationSchema.safeParse(evaluation).success).toBe(true);
-    expect(
-      CoreExportSchema.safeParse({
+    expect(() =>
+      validateCoreExport({
         ...complete,
         status: "partial",
         evaluation,
         resolution: arbitrateBaseJudgments(evaluation),
-      }).success,
-    ).toBe(false);
+      }),
+    ).toThrow();
   });
 
   it("rejects malformed, truncated, oversized and non-string JSON without echoing it", () => {
@@ -177,7 +177,7 @@ describe("core JSON and manual ChatGPT copy contract", () => {
         ),
       ).toBe(true);
       if (dayBoundary === "zi-start") expect(document.facts?.dayMaster).toBeNull();
-      expect(CoreExportSchema.safeParse({ ...document, status: "complete" }).success).toBe(false);
+      expect(() => validateCoreExport({ ...document, status: "complete" })).toThrow();
     },
     15000,
   );

@@ -6,6 +6,7 @@ import {
   BASE_RULE_CATALOG,
   JudgmentCatalogSchema,
   JudgmentEvaluationSchema,
+  parseJudgmentEvaluation,
   evidenceMatchesFacts,
 } from "@/domain/judgment";
 import golden from "./fixtures/base-judgment-golden.json";
@@ -163,18 +164,16 @@ describe("reviewed classical base judgment rules", () => {
         ],
       }),
     ).toBe(false);
-    expect(JudgmentEvaluationSchema.safeParse({ ...result, status: "unavailable" }).success).toBe(
-      false,
-    );
-    expect(
-      JudgmentEvaluationSchema.safeParse({
+    expect(() => parseJudgmentEvaluation({ ...result, status: "unavailable" })).toThrow();
+    expect(() =>
+      parseJudgmentEvaluation({
         ...result,
         findings: [
           { ...result.findings[0], assertion: "unsupported prediction" },
           ...result.findings.slice(1),
         ],
-      }).success,
-    ).toBe(false);
+      }),
+    ).toThrow();
   });
 
   it("knows a single-hidden-stem month has no other-stem exposure even with unrelated missing pillars", () => {

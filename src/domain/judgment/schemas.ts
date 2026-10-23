@@ -2,7 +2,12 @@ import { PINNED_CALENDAR_LIBRARY } from "@/domain/provenance";
 import { CoverageStatusSchema } from "@/domain/contracts";
 import { TenGodSchema } from "@/domain/contracts";
 import { z } from "zod";
-import { StemSchema, BranchSchema, ElementSchema, KnownPillarsSchema } from "@/domain/natal-facts";
+import {
+  StemSchema,
+  BranchSchema,
+  ElementSchema,
+  KnownPillarsSchema,
+} from "@/domain/natal-facts/schemas";
 
 export const ExceptionSchema = z.enum([
   "DAY_MASTER_UNKNOWN",
@@ -78,13 +83,13 @@ export const CatalogBaseSchema = z
       )
       .min(4)
       .readonly(),
-    rules: z.array(RuleDefinitionSchema).length(20).readonly(),
+    rules: z.array(RuleDefinitionSchema).min(1).max(100).readonly(),
   })
   .refine((catalog) => {
     const ids = new Set(catalog.sources.map((source) => source.id));
     return (
       ids.size === catalog.sources.length &&
-      new Set(catalog.rules.map((rule) => rule.ruleId)).size === 20 &&
+      new Set(catalog.rules.map((rule) => rule.ruleId)).size === catalog.rules.length &&
       catalog.rules.every(
         (rule) =>
           new Set(rule.sourceRefs).size === rule.sourceRefs.length &&
@@ -133,7 +138,7 @@ export const EvaluationBaseSchema = z
   .strictObject({
     status: CoverageStatusSchema,
     sourcePillars: KnownPillarsSchema,
-    results: z.array(RuleEvaluationSchema).length(20).readonly(),
+    results: z.array(RuleEvaluationSchema).min(1).max(100).readonly(),
     findings: z.array(JudgmentFindingSchema).max(20).readonly(),
     provenance: z
       .strictObject({

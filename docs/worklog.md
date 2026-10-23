@@ -967,3 +967,10 @@
 - CLI 명령 목록을 commands.ts에서 공유. calculate는 공개 fixed-clock 호환 명령으로 명시적으로 deprecated하며 신규 경로는 calculate-policy다. 기존 CLI 응답/실패 계약을 깨는 삭제는 하지 않았다. developer-analysis의 테스트 편의 재export 및 항상 덮어쓰던 NARRATION_META.model 제거.
 - parseCoreExport/verifyCoreFingerprint는 WBS-54 저장 재검증 용도로 유지한다. developer-json Mock은 비교·호환 검증 경로이며 제품/R01 진입점으로 안내하지 않는다.
 - 검증: 타입/린트 PASS, 이동한 SDK 경계·CLI·분석 API 관련 6파일 179건 PASS. 실제 API 호출 0회.
+
+## 2026-10-24 코드리뷰 리팩터링 D — 구조 계약/의미 불변식 경계
+
+- natal/judgment/arbitration/core-export/fingerprint/developer-response의 엔진 없는 schemas 모듈을 분리했다. 외부 의미 검증은 parseDerivedNatalFacts/parseJudgmentEvaluation/parseArbitrationResult/validateCoreExport/parseHashedCoreExport로 명시한다. serialize/parse/fingerprint/prompt는 validateCoreExport 경계를 사용한다.
+- 내부 judgment 결과는 이미 생성한 값을 전달하고 중재기 출력 스키마가 resolve를 재실행하지 않는다. 검증된 불변 CoreExport는 브랜드 타입+WeakSet으로 동일 객체를 재사용한다. 순환적 정답 검증을 늘리지 않으며 외부 JSON은 다시 검증한다.
+- 클라이언트 validation form은 구조 스키마만 import. use client ESLint 가드와 두 UI의 전이적 런타임 의존 그래프 테스트로 엔진/카탈로그/전송 유입을 차단한다. JSON.stringify 동등 비교 13곳을 키 정렬 기반 공용 비교로 바꿨다. 평가기 규칙 수는 실제 카탈로그 길이에서 검증한다.
+- 기존 변조 거절 테스트를 의미 검증 함수로 옮겨 유지했다. 골든·해시·내보내기·API 등 9파일 295건 PASS. 정규화 비교/경계/정책/파생 service 추가 재검증 5파일 107건 PASS. 타입/린트 PASS. 외부 API 0회.

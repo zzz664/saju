@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   deriveNatalFacts,
   DerivedNatalFactsSchema,
+  parseDerivedNatalFacts,
   SymbolCatalogSchema,
 } from "@/domain/natal-facts";
 import { manseryeokSymbolCatalogAdapter } from "@/infrastructure/manseryeok";
@@ -126,12 +127,12 @@ describe("SDK-backed symbols and pure natal facts", () => {
     expect(deriveNatalFacts(pillars, catalog)).toEqual(result);
     expect(Object.isFrozen(result.positions.year?.branch.hiddenStems)).toBe(true);
     expect(DerivedNatalFactsSchema.parse(JSON.parse(JSON.stringify(result)))).toEqual(result);
-    expect(
-      DerivedNatalFactsSchema.safeParse({
+    expect(() =>
+      parseDerivedNatalFacts({
         ...result,
         distribution: { ...result.distribution, knownSurfaceSymbols: 7 },
-      }).success,
-    ).toBe(false);
+      }),
+    ).toThrow();
     expect(pillars).toEqual(before);
   });
 

@@ -1,3 +1,4 @@
+import { deepEqualCanonical } from "@/domain/json";
 import { PolicyCalculationReasonSchema } from "@/domain/contracts";
 import { z } from "zod";
 import { CalendarAdapterError, CalendarPillarsSchema } from "@/domain/calendar";
@@ -144,8 +145,7 @@ export const PolicyCalculationResultSchema = z
           ) &&
           value.candidates.some((candidate) => candidate.status === "possible") &&
           value.information.unknownFields.includes("birthTime") &&
-          JSON.stringify(value.confirmedPillars) ===
-            JSON.stringify(commonPillars(value.candidates)),
+          deepEqualCanonical(value.confirmedPillars, commonPillars(value.candidates)),
       ),
     PreparedBirthTimeSchema.unwrap().options[1],
     z.strictObject({
@@ -191,7 +191,7 @@ function known(
     );
   }
   const snapshot = PolicyPillarsSnapshotSchema.safeParse(raw);
-  if (!snapshot.success || JSON.stringify(snapshot.data.request) !== JSON.stringify(request.data))
+  if (!snapshot.success || !deepEqualCanonical(snapshot.data.request, request.data))
     throw new CalendarAdapterError("OUTPUT_INVALID");
   return PolicyCalculationResultSchema.parse({
     status: "calculated",
@@ -247,7 +247,7 @@ export function calculatePolicySaju(
     );
     if (result.status === "partial") throw new CalendarAdapterError("OUTPUT_INVALID");
     if (result.status === "calculated") {
-      if (first && JSON.stringify(first.time.provenance) !== JSON.stringify(result.time.provenance))
+      if (first && !deepEqualCanonical(first.time.provenance, result.time.provenance))
         throw new CalendarAdapterError("OUTPUT_INVALID");
       first ??= result;
     }

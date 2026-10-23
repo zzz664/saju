@@ -39,7 +39,7 @@ export function calculateJudgments(
 ): JudgmentCalculationResult {
   const analysis = calculateNatalFacts(value, dependencies);
   const evaluation = analysis.facts === null ? null : evaluateBaseJudgments(analysis.facts);
-  return JudgmentCalculationResultSchema.parse({ status: analysis.status, analysis, evaluation });
+  return Object.freeze({ status: analysis.status, analysis, evaluation });
 }
 
 export const ArbitratedJudgmentCalculationResultSchema = z
@@ -81,5 +81,5 @@ export function calculateArbitratedJudgments(
     : states.includes("partial")
       ? "partial"
       : "complete";
-  return ArbitratedJudgmentCalculationResultSchema.parse({ status, judgment, resolution });
+  return Object.freeze({ status, judgment, resolution });
 }

@@ -42,7 +42,8 @@ JSON 계약은 `schemaVersion: 1.0.0`, `scope: base-structural-observations`다.
 일부 계산 후보가 거절되어 공통 기둥이 전혀 없으면 calculation은 partial이지만
 facts/evaluation/resolution은 unavailable인 채로 보존된다. 계산 자체가 거절/미지원이면 셋 모두 null이다.
 
-`CoreExportSchema`는 strict/readonly Zod 계약이다. facts에 기초 규칙을 다시 평가해 원래
+`CoreExportSchema`는 엔진에 의존하지 않는 strict/readonly 구조 계약이다.
+외부 JSON/저장 문서는 `validateCoreExport` 또는 `parseCoreExport`로 검증한다. 이 경계에서 facts에 기초 규칙을 평가해 원래
 evaluation과 일치하는지 확인하고 중재 결과·미상 trace를 재연결한다. 달력이나 파생 facts를
 다시 계산하거나 변경하지 않는다. 이 검사는 문서 내부 일관성 검사이며 서명/출처 인증이 아니다.
 원본 facts 자체가 실제 입력에서 생성됐는지는 신뢰할 수 있는 계산 경로에서 보장해야 한다.
@@ -52,7 +53,7 @@ evaluation과 일치하는지 확인하고 중재 결과·미상 trace를 재연
 잘린 JSON·추가 필드·미지원 버전·상태/근거/중재 연결 오류는 고정 오류로 거절한다.
 `export-schema`는 같은 Zod에서 생성한 draft 2020-12 구조 스키마를 반환하며 stdin/공급자를
 사용하지 않는다. JSON Schema는 필드/형식 계약이고 Zod의 모든 사용자 정의 교차 검증을
-표현하지 못한다. 가져온 문서의 의미 검증에는 반드시 `CoreExportSchema`/`parseCoreExport`를 사용한다.
+표현하지 못한다. 가져온 문서의 의미 검증에는 반드시 `validateCoreExport`/`parseCoreExport`를 사용한다.
 이를 P06이나 R02/R03 서술 JSON 출력 스키마로 사용하지 않는다.
 
 수동 프롬프트는 고정 한국어 지시문과 `<analysis_data>` JSON 블록 하나로 구성된다.

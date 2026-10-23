@@ -5,6 +5,7 @@ import {
   arbitrateJudgments,
   arbitrateBaseJudgments,
   ArbitrationResultSchema,
+  parseArbitrationResult,
 } from "@/domain/judgment/arbitration";
 import { manseryeokSymbolCatalogAdapter } from "@/infrastructure/manseryeok";
 
@@ -219,25 +220,24 @@ describe("conflict and uncertainty arbitration", () => {
     expect(candidates).toEqual(before);
     expect(Object.isFrozen(result.candidates[0].finding.evidence)).toBe(true);
     expect(ArbitrationResultSchema.parse(JSON.parse(JSON.stringify(result)))).toEqual(result);
-    expect(ArbitrationResultSchema.safeParse({ ...result, status: "partial" }).success).toBe(false);
-    expect(ArbitrationResultSchema.safeParse({ ...result, findings: [] }).success).toBe(false);
-    expect(
-      ArbitrationResultSchema.safeParse({ ...result, candidates: result.candidates.slice(1) })
-        .success,
-    ).toBe(false);
-    expect(ArbitrationResultSchema.safeParse({ ...result, conflicts: [] }).success).toBe(false);
-    expect(
-      ArbitrationResultSchema.safeParse({
+    expect(() => parseArbitrationResult({ ...result, status: "partial" })).toThrow();
+    expect(() => parseArbitrationResult({ ...result, findings: [] })).toThrow();
+    expect(() =>
+      parseArbitrationResult({ ...result, candidates: result.candidates.slice(1) }),
+    ).toThrow();
+    expect(() => parseArbitrationResult({ ...result, conflicts: [] })).toThrow();
+    expect(() =>
+      parseArbitrationResult({
         ...result,
         decisions: result.decisions.map((entry) => ({ ...entry, conflictingWith: [] })),
-      }).success,
-    ).toBe(false);
-    expect(
-      ArbitrationResultSchema.safeParse({
+      }),
+    ).toThrow();
+    expect(() =>
+      parseArbitrationResult({
         ...result,
         provenance: { ...result.provenance, policyVersion: "2.0.0" },
-      }).success,
-    ).toBe(false);
+      }),
+    ).toThrow();
   });
 
   it("retains all real base observations without calling coexistence a conflict", () => {

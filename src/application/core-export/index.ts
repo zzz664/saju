@@ -1,5 +1,5 @@
 import { AnalysisInputSchema } from "@/domain/input";
-import { CoreExportSchema, CoreExportError, type CoreExport } from "@/domain/core-export";
+import { validateCoreExport, type CoreExport } from "@/domain/core-export";
 import { calculateArbitratedJudgments } from "@/application/judgment";
 import type { NatalFactsDependencies } from "@/application/natal-facts";
 
@@ -31,7 +31,7 @@ export function calculateCoreExport(
       : calculation.status === "partial"
         ? calculation.provenance.normalization
         : null;
-  const output = CoreExportSchema.safeParse({
+  return validateCoreExport({
     schemaVersion: "1.0.0",
     scope: "base-structural-observations",
     status: result.status,
@@ -47,6 +47,4 @@ export function calculateCoreExport(
     evaluation: result.judgment.evaluation,
     resolution: result.resolution,
   });
-  if (!output.success) throw new CoreExportError("DOCUMENT_REJECTED");
-  return output.data;
 }

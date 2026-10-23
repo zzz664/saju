@@ -1,108 +1,92 @@
-import { CalculationReasonSchema as CommonCalculationReasonSchema } from "@/domain/contracts";
-import { escapeJsonForPrompt } from "@/domain/utilities";
-import { CoverageStatusSchema } from "@/domain/contracts";
-import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
-import { CalculationPolicySchema, InputInformationSchema } from "@/domain/input";
-import { DerivedNatalFactsSchema } from "@/domain/natal-facts";
-import { PolicyPillarsProvenanceSchema } from "@/domain/policy-calendar";
-import { ResolvedTimeSchema } from "@/domain/timezone";
-import { evaluateBaseJudgments, JudgmentEvaluationSchema } from "@/domain/judgment";
+import { escapeJsonForPrompt } from "@/domain/utilities";
+import { defineCodedError } from "@/domain/utilities";
 import {
-  arbitrationMatchesEvaluation,
-  BaseArbitrationSchema,
-  ArbitrationResultSchema,
-} from "@/domain/judgment/arbitration";
-import {
-  EvaluationBaseSchema,
-  JudgmentFindingSchema,
-  ExceptionSchema,
-} from "@/domain/judgment/schemas";
-
-const Status = CoverageStatusSchema;
-export const CalculationReasonSchema = CommonCalculationReasonSchema;
-export const CoreExportSchema = z
-  .strictObject({
-    schemaVersion: z.literal("1.0.0"),
-    scope: z.literal("base-structural-observations"),
-    status: Status,
-    calculation: z
-      .strictObject({
-        status: z.enum(["calculated", "partial", "rejected", "unavailable"]),
-        policy: CalculationPolicySchema,
-        information: InputInformationSchema,
-        reasons: z.array(CalculationReasonSchema).max(10).readonly(),
-        library: PolicyPillarsProvenanceSchema.nullable(),
-        normalization: ResolvedTimeSchema.unwrap().shape.provenance.nullable(),
-      })
-      .readonly(),
-    facts: DerivedNatalFactsSchema.nullable(),
-    evaluation: JudgmentEvaluationSchema.nullable(),
-    resolution: BaseArbitrationSchema.nullable(),
-  })
-  .refine(({ status, calculation, facts, evaluation, resolution }) => {
-    const { reasons } = calculation;
-    if (new Set(reasons).size !== reasons.length) return false;
-    if (calculation.status === "rejected" || calculation.status === "unavailable") {
-      const rejected =
-        reasons.length === 1 &&
-        (reasons[0] === "AMBIGUOUS_LOCAL_TIME" || reasons[0] === "NONEXISTENT_LOCAL_TIME");
-      return (
-        status === "unavailable" &&
-        facts === null &&
-        evaluation === null &&
-        resolution === null &&
-        calculation.library === null &&
-        (calculation.status === "rejected"
-          ? rejected && calculation.normalization !== null
-          : reasons.length > 0 &&
-            !reasons.some(
-              (reason) => reason === "AMBIGUOUS_LOCAL_TIME" || reason === "NONEXISTENT_LOCAL_TIME",
-            ) &&
-            calculation.normalization === null)
-      );
-    }
-    if (!facts || !evaluation || !resolution || !calculation.library || !calculation.normalization)
-      return false;
-    const unknown = calculation.information.unknownFields.includes("birthTime");
-    if (
-      calculation.status === "calculated"
-        ? reasons.length !== 0 || facts.status !== "complete" || unknown
-        : JSON.stringify(reasons) !== JSON.stringify(["BIRTH_TIME_UNKNOWN"]) ||
-          !unknown ||
-          facts.sourcePillars.hour !== null
-    )
-      return false;
-    if (
-      calculation.status === "partial" &&
-      calculation.policy.dayBoundary === "zi-start" &&
-      facts.sourcePillars.day !== null
-    )
-      return false;
-    try {
-      if (
-        JSON.stringify(evaluation) !== JSON.stringify(evaluateBaseJudgments(facts)) ||
-        !arbitrationMatchesEvaluation(evaluation, resolution)
-      )
-        return false;
-    } catch {
-      return false;
-    } // Nested semantic rejections must remain schema failures, not escaped exceptions.
-    const states = [
-      calculation.status === "calculated" ? "complete" : "partial",
-      resolution.arbitration.status,
-    ];
+  CoreExportSchema,
+  ManualPromptDataSchema,
+  type CoreExport,
+  type ManualPromptData,
+} from "@/domain/core-export/schemas";
+import { natalFactsInvariants } from "@/domain/natal-facts";
+import { evaluateBaseJudgments } from "@/domain/judgment";
+import { arbitrationMatchesEvaluation } from "@/domain/judgment/arbitration";
+import { deepEqualCanonical } from "@/domain/json";
+export * from "@/domain/core-export/schemas";
+const verifiedDocuments = new WeakSet<object>();
+declare const coreVerified: unique symbol;
+export type VerifiedCoreExport = CoreExport & { readonly [coreVerified]: true };
+export const coreExportInvariants = ({
+  status,
+  calculation,
+  facts,
+  evaluation,
+  resolution,
+}: CoreExport) => {
+  const { reasons } = calculation;
+  if (new Set(reasons).size !== reasons.length) return false;
+  if (calculation.status === "rejected" || calculation.status === "unavailable") {
+    const rejected =
+      reasons.length === 1 &&
+      (reasons[0] === "AMBIGUOUS_LOCAL_TIME" || reasons[0] === "NONEXISTENT_LOCAL_TIME");
     return (
-      status ===
-      (states.includes("unavailable")
-        ? "unavailable"
-        : states.includes("partial")
-          ? "partial"
-          : "complete")
+      status === "unavailable" &&
+      facts === null &&
+      evaluation === null &&
+      resolution === null &&
+      calculation.library === null &&
+      (calculation.status === "rejected"
+        ? rejected && calculation.normalization !== null
+        : reasons.length > 0 &&
+          !reasons.some(
+            (reason) => reason === "AMBIGUOUS_LOCAL_TIME" || reason === "NONEXISTENT_LOCAL_TIME",
+          ) &&
+          calculation.normalization === null)
     );
-  })
-  .readonly();
-export type CoreExport = z.infer<typeof CoreExportSchema>;
+  }
+  if (facts && !natalFactsInvariants(facts)) return false;
+  if (!facts || !evaluation || !resolution || !calculation.library || !calculation.normalization)
+    return false;
+  const unknown = calculation.information.unknownFields.includes("birthTime");
+  if (
+    calculation.status === "calculated"
+      ? reasons.length !== 0 || facts.status !== "complete" || unknown
+      : !deepEqualCanonical(reasons, ["BIRTH_TIME_UNKNOWN"]) ||
+        !unknown ||
+        facts.sourcePillars.hour !== null
+  )
+    return false;
+  if (
+    calculation.status === "partial" &&
+    calculation.policy.dayBoundary === "zi-start" &&
+    facts.sourcePillars.day !== null
+  )
+    return false;
+  try {
+    if (
+      !deepEqualCanonical(evaluation, evaluateBaseJudgments(facts)) ||
+      !arbitrationMatchesEvaluation(evaluation, resolution)
+    )
+      return false;
+  } catch {
+    return false;
+  } // Nested semantic rejections must remain schema failures, not escaped exceptions.
+  const states = [
+    calculation.status === "calculated" ? "complete" : "partial",
+    resolution.arbitration.status,
+  ];
+  return (
+    status ===
+    (states.includes("unavailable")
+      ? "unavailable"
+      : states.includes("partial")
+        ? "partial"
+        : "complete")
+  );
+};
+/** Read-only structural contracts are insufficient for untrusted stored/exported JSON. */
+export function validateCoreExport(value: unknown): VerifiedCoreExport {
+  return document(value);
+}
 
 const messages = {
   DOCUMENT_REJECTED: "Core export document was rejected.",
@@ -110,16 +94,19 @@ const messages = {
   TOO_LARGE: "Core export JSON exceeds 1 MiB.",
 } as const;
 export class CoreExportError extends defineCodedError("CoreExportError", messages) {}
-function document(value: unknown): CoreExport {
+function document(value: unknown): VerifiedCoreExport {
+  if (typeof value === "object" && value !== null && verifiedDocuments.has(value))
+    return value as VerifiedCoreExport;
   const parsed = CoreExportSchema.safeParse(value);
-  if (!parsed.success) throw new CoreExportError("DOCUMENT_REJECTED");
-  return parsed.data;
+  if (!parsed.success || !coreExportInvariants(parsed.data))
+    throw new CoreExportError("DOCUMENT_REJECTED");
+  verifiedDocuments.add(parsed.data);
+  return parsed.data as VerifiedCoreExport;
 }
 export const MAX_CORE_JSON_BYTES = 1024 * 1024;
 export function serializeCoreExport(value: unknown): string {
   return JSON.stringify(document(value), null, 2) + "\n";
 }
-/** External JSON/storage boundary; retained for WBS-54 persisted document revalidation. */
 export function parseCoreExport(value: unknown): CoreExport {
   if (typeof value !== "string") throw new CoreExportError("JSON_REJECTED");
   if (new TextEncoder().encode(value).byteLength > MAX_CORE_JSON_BYTES)
@@ -132,50 +119,10 @@ export function parseCoreExport(value: unknown): CoreExport {
   }
   return document(raw);
 }
-/** Structural interchange schema. Runtime refinements still require CoreExportSchema. */
+/** Structural interchange schema; use validateCoreExport at external trust boundaries. */
 export function coreExportJsonSchema() {
   return z.toJSONSchema(CoreExportSchema, { target: "draft-2020-12" });
 }
-
-const VerifiedFindingSchema = JudgmentFindingSchema.unwrap()
-  .extend({
-    precision: z.literal("confirmed"),
-    exceptionsApplied: z.array(ExceptionSchema).length(0).readonly(),
-    evidence: JudgmentFindingSchema.unwrap().shape.evidence.unwrap().min(1).readonly(),
-  })
-  .readonly();
-export const ManualPromptDataSchema = z
-  .strictObject({
-    schemaVersion: z.literal("1.0.0"),
-    promptVersion: z.literal("1.0.0"),
-    scope: z.literal("base-structural-observations"),
-    status: Status,
-    verifiedFindings: z.array(VerifiedFindingSchema).max(20).readonly(),
-    limitations: z
-      .strictObject({
-        input: InputInformationSchema,
-        calculationReasons: z.array(CalculationReasonSchema).max(10).readonly(),
-        uncertainties: z
-          .array(
-            z
-              .strictObject({
-                ruleId: z.string().min(1),
-                coverage: z.enum(["partial", "none"]),
-                exceptionsApplied: z.array(ExceptionSchema).min(1).readonly(),
-              })
-              .readonly(),
-          )
-          .max(20)
-          .readonly(),
-        excludedFindingIds: z.array(z.string().min(1)).max(20).readonly(),
-        arbitration: ArbitrationResultSchema.unwrap().shape.limitations,
-      })
-      .readonly(),
-    judgmentProvenance: EvaluationBaseSchema.unwrap().shape.provenance.nullable(),
-    arbitrationProvenance: ArbitrationResultSchema.unwrap().shape.provenance.nullable(),
-  })
-  .refine((value) => value.status !== "unavailable" || value.verifiedFindings.length === 0)
-  .readonly();
 
 const MANUAL_INSTRUCTIONS = `# 수동 ChatGPT 설명 요청
 이 요청은 개발자용 기초 관찰 설명입니다. 아래 verifiedFindings에 있는 확정·채택 판단만 자연스러운 한국어로 짧게 풀어 주세요.
@@ -189,7 +136,6 @@ verifiedFindings가 비어 있으면 설명 가능한 확정 판단이 없다는
 
 `;
 
-export type ManualPromptData = z.infer<typeof ManualPromptDataSchema>;
 /** Shared projection: accepted confirmed findings only, without raw birth input. */
 export function buildManualPromptData(value: unknown): ManualPromptData {
   const core = document(value);

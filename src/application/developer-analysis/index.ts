@@ -1,9 +1,6 @@
 import { calculateHashedCoreExport } from "@/application/core-fingerprint";
 import { buildManualPrompt } from "@/domain/core-export";
-import {
-  DeveloperAnalysisResponseSchema,
-  type DeveloperAnalysisResponse,
-} from "@/domain/developer-analysis";
+import type { DeveloperAnalysisResponse } from "@/domain/developer-analysis";
 import type { NatalFactsDependencies } from "@/application/natal-facts";
 import type { Sha256Adapter } from "@/domain/core-fingerprint";
 
@@ -13,8 +10,5 @@ export function calculateDeveloperAnalysis(
   hash: Sha256Adapter,
 ): DeveloperAnalysisResponse {
   const analysis = calculateHashedCoreExport(value, dependencies, hash);
-  return DeveloperAnalysisResponseSchema.parse({
-    analysis,
-    manualPrompt: buildManualPrompt(analysis.document),
-  });
+  return Object.freeze({ analysis, manualPrompt: buildManualPrompt(analysis.document) });
 }

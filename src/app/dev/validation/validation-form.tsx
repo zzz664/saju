@@ -5,7 +5,7 @@ import { AnalysisInputSchema } from "@/domain/input";
 import {
   DeveloperAnalysisResponseSchema,
   type DeveloperAnalysisResponse,
-} from "@/domain/developer-analysis";
+} from "@/domain/developer-analysis/schemas";
 import styles from "@/app/dev/validation/validation.module.css";
 
 const statusLabels = {

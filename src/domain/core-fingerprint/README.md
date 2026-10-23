@@ -58,6 +58,7 @@ undefined·비유한 수·BigInt·함수·심볼·Date 등 비평범 객체·접
 입력이나 예외 전문을 반사하지 않는 FingerprintError로 바꾼다.
 
 `HashedCoreExportSchema`는 문서/manifest/상태/해시 형식을 검증한다.
+외부 문서의 의미와 manifest 연결은 `parseHashedCoreExport`로 검증한다. 구조 스키마만 통과한 값을 신뢰하지 않는다.
 실제 바이트 체크섬 검증은 `verifyCoreFingerprint(value, nodeSha256Adapter)`로 수행한다.
 문서나 다이제스트가 달라지면 false이며, 해시 공급자가 실패하면 고정 오류를 발생시킨다.
 원본 생성 환경의 ICU/tzdb 등 버전이 바뀌면 달라질 수 있으며 재현에는 같은 내용·정책·버전이 필요하다.

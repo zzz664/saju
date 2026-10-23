@@ -1,3 +1,4 @@
+import { deepEqualCanonical } from "@/domain/json";
 import { z } from "zod";
 import {
   deriveNatalFacts,
@@ -31,7 +32,7 @@ export const NatalFactsCalculationResultSchema = z
         : calculation.confirmedPillars;
     return (
       value.facts !== null &&
-      JSON.stringify(source) === JSON.stringify(value.facts.sourcePillars) &&
+      deepEqualCanonical(source, value.facts.sourcePillars) &&
       value.status === (calculation.status === "calculated" ? "complete" : "partial")
     );
   })

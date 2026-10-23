@@ -1,12 +1,12 @@
-import { z } from "zod";
-import { HashedCoreExportSchema } from "@/domain/core-fingerprint";
-import { buildManualPrompt } from "@/domain/core-export";
-
-export const DeveloperAnalysisResponseSchema = z
-  .strictObject({
-    analysis: HashedCoreExportSchema,
-    manualPrompt: z.string().min(1).max(200000),
-  })
-  .refine((value) => value.manualPrompt === buildManualPrompt(value.analysis.document))
-  .readonly();
-export type DeveloperAnalysisResponse = z.infer<typeof DeveloperAnalysisResponseSchema>;
+import { DeveloperAnalysisResponseSchema } from "@/domain/developer-analysis/schemas";
+import { buildManualPrompt, validateCoreExport } from "@/domain/core-export";
+import { parseHashedCoreExport } from "@/domain/core-fingerprint";
+export * from "@/domain/developer-analysis/schemas";
+export function parseDeveloperAnalysisResponse(value: unknown) {
+  const parsed = DeveloperAnalysisResponseSchema.parse(value);
+  parseHashedCoreExport(parsed.analysis);
+  validateCoreExport(parsed.analysis.document);
+  if (parsed.manualPrompt !== buildManualPrompt(parsed.analysis.document))
+    throw new Error("Developer response was rejected.");
+  return parsed;
+}
