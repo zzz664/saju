@@ -22,7 +22,7 @@ try {
   await cp(path.join(source, "tests/e2e"), path.join(workspace, "tests/e2e"), { recursive: true });
   // A real dependency copy keeps Turbopack inside its isolated project root.
   await cp(path.join(source, "node_modules"), path.join(workspace, "node_modules"), { recursive: true });
-  const env = { SAJU_E2E_ROOT: workspace, SAJU_E2E_PORT: String(port) };
+  const env = { SAJU_E2E_ROOT: workspace, SAJU_E2E_PORT: String(port), SAJU_E2E_API_TEST: process.argv[2] === "api-test" ? "1" : "0" };
   const playwright = path.join(source, "node_modules/@playwright/test/cli.js");
   await run(playwright, ["test"], source, { ...env, SAJU_E2E_PRODUCTION: "0" });
   await run(path.join(workspace, "node_modules/next/dist/bin/next"), ["build"], workspace, { NODE_ENV: "production" });

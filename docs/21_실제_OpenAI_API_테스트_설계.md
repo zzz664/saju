@@ -187,7 +187,11 @@ Tester P17 설정 -> (server) auth / flags / allowed fixture / budget
 - `02` 전체 아키텍처, `04_AGENTS.md` 정책, `05` 단일 실행표, `06` QA, `08` 비용, `11/12/20` 프롬프트, `14` UI, `17` DB, `18` API, `19` 스트리밍과 본 문서 `21`을 병행한다.
 - 개인정보/모델 사용권/과금은 매번 실제 조직·계정 정책을 확인하며 **데이터 공유/무료 토큰을 보장하지 않는다**.
 
-## 10. 참고 공식 문서
+## 10. WBS-65 현재 코어의 연결 범위
+
+WBS-65 착수 시 기존 R01은 내부 개발자용 `core-base`만 구현되어 있다. 따라서 이 단계의 실행 요청에는 `core-base`를 명시하고 F01~F11은 준비되지 않은 선택지로 표시·서버 거절한다. 위 Fxx 요청 예시는 해당 기능 구현 후 적용한다. 기존 R01의 동일 코어·승인형 합성 페르소나·공통 프롬프트·Mock을 재사용하며 새 FeatureResult나 축약 명리 계산을 만들지 않는다. 실제 Provider와 영속 Live 예산/usage 정산은 WBS-66에서 구현한다.
+
+## 11. 참고 공식 문서
 
 - OpenAI Responses API 스트리밍 이벤트: https://platform.openai.com/docs/api-reference/responses-streaming
 - OpenAI Streaming 가이드: https://platform.openai.com/docs/guides/streaming-responses

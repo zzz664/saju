@@ -11,11 +11,13 @@
   "scripts": {
     "saju": "node --import tsx src/cli/main.ts",
     "dev": "next dev",
+    "dev:api-test": "node scripts/api-test-dev.mjs",
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "node scripts/developer-e2e.mjs",
+    "test:e2e:api-test": "node scripts/developer-e2e.mjs api-test",
     "eval:persona": "node --import tsx tests/evaluation/run-persona-evaluation.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint . --max-warnings=0"

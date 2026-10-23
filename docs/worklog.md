@@ -1,5 +1,33 @@
 # 작업 기록
 
+## 2026-10-23 — WBS-65: v2.5 문서 선행 커밋·로컬 개발자 API 테스트 설정/가드
+
+### 병합 확인과 문서 우선 반영
+
+- 직전 PR #22(WBS-25)의 GitHub MERGED, 대상 develop, 병합 시각 2026-10-23 17:52:19 KST, merge commit `eb5f78917ab80286f63e72034e830b52a4d46782`를 확인했다. `git ls-remote` 원격 develop 동일 해시, fetch 후 ancestor 확인. 새 WBS-65의 직접 선행 WBS-24(PR #19, `b03d3803b8d16e21d0e9d5afc79d580cdc401600`), WBS-47(PR #20, `537b73d489870fe4e79dcedfc5fdcfe0ab15e9d4`)도 GitHub develop MERGED 및 ancestor 확인했다.
+- develop checkout/ff-only pull 후 `git branch -d feature/WBS-25-persona-quality-evaluation` 안전 삭제 성공. 최신 develop에서 `feature/WBS-65-developer-api-test-settings` 한 개를 생성했다. 이전에 병합한 WBS-16/25를 재구현하지 않고, 새 실행순서 22의 WBS-65만 진행했다.
+- 사용자의 **이번 작업 한정 v2.5 문서 선행 커밋** 지시에 따라 AGENTS.md와 개정 문서/CSV/환경 예시·신규 21 설계/설정 예시 **19개 파일**을 구현 전에 `cad4b2b`로 커밋했다. 69개 WBS(필수 68+선택 19)의 ID 고유·선행 존재·실행순서 정합성과 Git 공백 검사 통과. 사용자 next-env.d.ts와 개인 cli-input.json은 제외했다. 문서 커밋은 실제 API 실행 승인으로 간주하지 않았다.
+- AGENTS/WBS/02/05와 필수 08/11/12/18/21, 기존 R01/예산·개발 UI/검증 계약을 읽었다. 65는 설정/권한/Mock·가드, 66은 실제 비스트리밍 공급자 호출, 67/68은 스트림/질문 검증으로 범위를 나눴다. 아직 없는 F01~F11 대신 기존 내부 core-base만 명시적으로 연결하며 21 설계에 이 과도기 범위를 설명했다.
+
+### 구현 전 테스트와 구현 범위
+
+- 구현 전 README에 정상/오류/경계 완료 조건을 정의하고 API 테스트를 선작성했다. 최초 실행은 새 server/api-test 모듈 부재로 종료 1을 확인한 뒤 구현했다. 정상은 잠금해제·설정·명시 Mock·원래 R01/근거/제한·버전·동일 세션 조회/내보내기다. 실패는 비밀/서명/만료·권한·Origin/CSRF·ID/본문 위조·환경/Live·JSON/크기·예산 차단, 경계는 시도/호출/예약 토큰/동시성·멱등 경쟁·취소와 모바일/운영 404다.
+- 전용 `npm run dev:api-test` 실행기는 loopback 127.0.0.1에 바인딩하고 전용 서버 마커를 설정한다. 일반 dev·production·CI·Preview는 페이지/API를 숨긴다. 이 마커만으로 인증되지 않으며 서버 비밀(32~256자), 30분 HMAC 서명 HttpOnly/SameSite=Strict 세션, Origin/CSRF 및 원격 전달 헤더 검증을 모두 적용한다. 잠금해제 실패 1분 5회, 세션 비밀/서명·CSRF는 결과/내보내기에 포함하지 않는다. 실제 서버 비밀/키를 생성·변경하지 않았다.
+- `/dev/api-test`와 unlock/config/runs/소유 runId 조회 API를 구현했다. 기본 모드는 Mock이며 새로고침마다 Mock으로 시작한다. 화면 조회·모드 변경·체크만으로 실행하지 않는다. Live 선택/비용 확인 UI는 있지만 기존 실 Provider가 없는 65에서는 실행 불가 및 LIVE_BLOCKED다. 키 존재 상태는 ready/missing만 표시하며 유효성/실연동 성공을 뜻하지 않는다.
+- 서버 승인 합성 입력 3종(시각 있음/미상/경도 누락)과 문체 2종을 기존 계산·승인형 registry·R01 공통 프롬프트/Mock에 전달한다. 개인 입력·임의 prompt/profile/API 키/userId/role을 받지 않는다. core-base 외 F01~F11·report_stream/follow_up은 UI 비활성화/서버 409다. 계산기·축약 프롬프트·P06 정적 결과를 새로 만들지 않았다.
+- 기존 WBS-24의 원자적 세 범위 예산/동시성 가드를 재사용한다. 로컬 개발자 principal은 새 세션에도 같아 새 잠금해제로 일 한도를 초기화할 수 없다. 기본 15회/30,000 예약 토큰/출력 1,200/동시 1이며 잘못된 환경 한도는 거절한다. 같은 session/requestId는 같은 결과를 반환하고 다른 본문/진행 중 중복은 409다. 취소/오류에도 예약을 되돌리지 않으며 미종료 공급자의 잠금을 유지한다.
+- 실행/장부는 프로세스 메모리에만 존재하고 최대 실행 1,000개에서 거절한다. 재시작·다중 인스턴스·영속 Live 예산을 보장하지 않는다. 현재 token 값은 기존 UTF-8 기반 보수적 예약 추정량이며 실제 usage/billing이 아니다. 실제 input/output 토큰은 null이다. 증빙은 모델·페르소나/프롬프트/스키마 버전·상태/시간/고정 오류 등 메타만 내보내고 문장 원문·원본 출생 입력·키/세션/CSRF는 제외한다.
+
+### 실제 검증 결과와 제약
+
+- 최종 `npm.cmd test -- tests/api-test.test.ts tests/persona.test.ts tests/experiment-guard.test.ts`: 종료 0, **3파일/74개 통과**(신규 15 + R01 23 + 예산 36). 무권한/Live 조건 미충족 0콜, 합성 키/Live 플래그/동의가 있어도 실 Provider 0콜, 토큰·일 상한과 경쟁/취소·예약 유지·소유권·멱등·주입/키 미노출을 확인했다.
+- 첫 E2E는 시각 있음 Mock 실행 후 미상 사례가 누적된 기본 예약 토큰 30,000 상한에 걸려 429였다. 차단이 정상 작동한 것으로 확인했고 **실제 기본값은 유지**한 채 격리 테스트 서버만 200,000 토큰을 사용해 독립 사례들을 검사했다. 실패를 skip하지 않았다. React effect 내 설정 함수 호출 린트 오류도 fetch 결과 콜백에서 상태를 갱신하고 unmount를 확인하도록 수정했다.
+- 최종 `npm.cmd run test:e2e:api-test`: 종료 0. 개발 **7개 통과**(초기 잠금/자동 호출 0/Live disabled·새로고침 Mock·HttpOnly/Strict, 실제 UI Mock·다른 route의 결과 조회·메타 다운로드/버전, 미상 partial/합쇼체, 320·390·768·1440px 가로 넘침/키보드 포커스). 390px 실제 스크린샷도 확인했다. production **1개 통과**, 페이지와 API 4경로×7메서드 전부 404. 전용 마커·합성 비밀이 있어도 production에서 차단했다.
+- 동일 E2E의 격리 사본에서 Next production 빌드·route typegen·TypeScript 검증도 통과했다. 루트 `node node_modules/typescript/bin/tsc --noEmit`, `npm.cmd run lint` 최종 종료 0, 경고 0. 원본 .next·next-env.d.ts·개인 fixture를 건드리지 않도록 기존 임시 사본 검증기를 재사용했다. 사본은 해석된 temp 경로와 생성 prefix를 검증한 뒤 안전 정리한다.
+- OpenAI Docs 스킬의 공식 [Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices)를 검색 후 실제 페이지를 읽어 서버 키/개발환경 분리 원칙을 확인했다. 실제 OpenAI 네트워크 호출·키/시크릿 발급·설정 변경은 수행하지 않았다. 의존성/lockfile·OAuth/PG/DB·CI는 변경하지 않았다.
+- 상태: **MOCK_PASS / LIVE_BLOCKED**, 실제 OpenAI 호출 0회. 사용자 실행 허용과 실제 공급자/영속 장부·usage 정산 연결은 WBS-66에서 구현/검증한다. 이후 OAuth 테스터 allowlist·실 스트림/후속 질문은 WBS-67/68이며 이번에 착수하지 않았다. 단일 프로세스 Mock 통과를 운영 인증/영속 예산·실제 모델 품질·LIVE_PASS로 표시하지 않는다.
+- 변경: 별도 선행 커밋의 v2.5 문서 19개 외에 `src/application/dev-api-test`, `src/server/api-test*`, `src/app/dev/api-test`, `src/app/api/dev/api-test`의 DTO/로컬 인증/Mock/API/UI, 전용 실행기·기존 격리 E2E 설정, API/E2E 테스트·README/21 보충·worklog. next-env.d.ts와 개인 cli-input.json은 SHA-256 동일 확인 후 커밋 제외한다. develop 대상 PR 한 건 생성 후 즉시 중지한다.
+
 ## 2026-10-23 — WBS-25: R01 Mock 반복 품질 평가·샘플/사람 평가 기준
 
 ### 선행 확인과 구현 전 완료 조건
