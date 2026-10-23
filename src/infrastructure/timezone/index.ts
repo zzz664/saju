@@ -1,14 +1,17 @@
 import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
+import * as nodeModule from "node:module";
 import { versions } from "node:process";
-import { pathToFileURL } from "node:url";
+import { dirname, resolve } from "node:path";
 import { Temporal } from "@js-temporal/polyfill";
 
 import { LocalTimeRequestSchema, TimeZoneAdapterError, TimeZoneResultSchema, type LocalTimeRequest, type TimeZoneAdapter } from "@/domain/timezone";
 
 // The pinned package exposes no package.json subpath. Read beside its public dist entry.
-const entry = createRequire(import.meta.url).resolve("@js-temporal/polyfill");
-const manifest: { name: string; version: string } = JSON.parse(readFileSync(new URL("../package.json", pathToFileURL(entry)), "utf8"));
+// Invoke the native function indirectly so Webpack does not replace require.resolve with a module ID.
+const nativeRequire = (Reflect.get(nodeModule, "createRequire") as typeof nodeModule.createRequire)(import.meta.url);
+const entry = nativeRequire.resolve("@js-temporal/polyfill");
+// A path expression avoids Next/Webpack treating new URL("../package.json", ...) as a build asset.
+const manifest: { name: string; version: string } = JSON.parse(readFileSync(resolve(dirname(entry), "..", "package.json"), "utf8"));
 const provenance = {
   engineName: manifest.name, engineVersion: manifest.version,
   icuVersion: versions.icu, tzdbVersion: versions.tz,
