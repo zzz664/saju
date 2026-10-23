@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  WikisourcePageError,
   boundPassage,
+  createWikitextLoader,
   digestText,
   entailmentRequestBody,
   extractSection,
@@ -33,9 +35,10 @@ describe("interpretation collector helpers (offline)", () => {
   it("bounds passages, derives titles and api urls from scaffold sources", () => {
     expect(boundPassage("  a  b\n\nc ", 3)).toBe("a b");
     const [first] = buildScaffold();
-    expect(titleFromUrl(first.source.url)).toBe("窮通寶鑑");
-    expect(wikisourceApiUrl("窮通寶鑑")).toContain("action=parse");
-    expect(wikisourceApiUrl("窮通寶鑑")).toContain("prop=wikitext");
+    expect(titleFromUrl(first.source.url)).toBe("穷通宝鉴");
+    expect(wikisourceApiUrl("穷通宝鉴")).toContain("action=parse");
+    expect(wikisourceApiUrl("穷通宝鉴")).toContain("prop=wikitext");
+    expect(wikisourceApiUrl("穷通宝鉴")).toContain("redirects=1");
     expect(digestText("x")).toMatch(/^[0-9a-f]{64}$/);
   });
   it("builds bounded, store:false request bodies and reads verdicts strictly", () => {
@@ -56,5 +59,41 @@ describe("interpretation collector helpers (offline)", () => {
       }),
     ).toBe("요약");
     expect(outputTextOf({ status: "incomplete", output: [] })).toBeNull();
+  });
+  it("fetches each page title once, caches failures and retries 429 once with Retry-After", async () => {
+    const calls: string[] = [];
+    const slept: number[] = [];
+    let rateLimited = true;
+    const fetchImpl = (async (input: string | URL | Request) => {
+      const title = decodeURIComponent(new URL(String(input)).searchParams.get("page")!);
+      calls.push(title);
+      if (title === "missing-page") return Response.json({ error: { code: "missingtitle" } });
+      if (title === "busy-page" && rateLimited) {
+        rateLimited = false;
+        return new Response("", { status: 429, headers: { "retry-after": "2" } });
+      }
+      return Response.json({ parse: { wikitext: `== ${title} ==\n本文` } });
+    }) as unknown as typeof fetch;
+    const loader = createWikitextLoader({
+      fetchImpl,
+      sleep: async (ms) => {
+        slept.push(ms);
+      },
+      delayMs: 100,
+    });
+    await expect(loader.load("missing-page")).rejects.toMatchObject({ code: "MISSING_TITLE" });
+    await expect(loader.load("missing-page")).rejects.toBeInstanceOf(WikisourcePageError);
+    expect(await loader.load("busy-page")).toContain("本文");
+    expect(await loader.load("busy-page")).toContain("本文");
+    expect(await loader.load("ok-page")).toContain("ok-page");
+    expect(calls).toEqual(["missing-page", "busy-page", "busy-page", "ok-page"]);
+    expect(loader.requests).toBe(4);
+    expect(slept).toEqual([100, 2000, 100, 100]);
+    const exhausted = createWikitextLoader({
+      fetchImpl: (async () => new Response("", { status: 429 })) as unknown as typeof fetch,
+      sleep: async () => {},
+      maxRetries: 0,
+    });
+    await expect(exhausted.load("x")).rejects.toMatchObject({ code: "RATE_LIMITED" });
   });
 });

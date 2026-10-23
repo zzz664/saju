@@ -4,6 +4,17 @@ export function extractSection(wikitext: string, locator: string): string | null
 export function boundPassage(text: string, maxCharacters?: number): string;
 export function wikisourceApiUrl(title: string): string;
 export function titleFromUrl(url: string): string;
+export class WikisourcePageError extends Error {
+  code: string;
+  title: string;
+  constructor(code: string, title: string);
+}
+export function createWikitextLoader(options?: {
+  fetchImpl?: typeof fetch;
+  sleep?: (ms: number) => Promise<void>;
+  delayMs?: number;
+  maxRetries?: number;
+}): { load(title: string): Promise<string>; readonly requests: number };
 export const SUMMARY_PROMPT_VERSION: string;
 export const SUMMARY_INSTRUCTIONS: string;
 export const ENTAILMENT_INSTRUCTIONS: string;

@@ -1105,3 +1105,21 @@
 - 사용자 환경: `collect-passages.mjs --dry-run`으로 locator 적중 확인 → 수집 → 승인 후 `summarize-units.mjs`. 절차는 `docs/22` D절.
 - WBS-71 실측 보정 루프 18회 → 거절 코드 분포로 프롬프트/검증기 1회 조정. 그 전까지 Live 품질 주장 없음.
 - F02·F04 서술 연결(spec 등록), F05·F06은 NP 패턴으로 재정의됨. 사람 품질 평가 미실시.
+
+# 2026-10-24 — Wikisource 수집기 수정 (해석 카탈로그 채우기 후속) · 브랜치 `claude/fervent-newton-z75xzm`
+
+## 배경
+
+- 사용자 환경에서 `collect-passages.mjs --dry-run` 실행 시 141건 오류: 첫 건 `Wikisource response had no wikitext`, 나머지 `Wikisource 429`. 원인 두 가지. (1) `scaffold.ts`의 궁통보감 URL 제목 `窮通寶鑑`은 Wikisource에 없는 제목이라 `missingtitle` 응답을 받았다(실제 제목 `穷通宝鉴`, `src/domain/judgment/catalog.ts`의 기존 URL과 동일). (2) 수집기가 실패를 캐시하지 않아 141 슬롯마다 같은 페이지를 다시 요청해 rate limit에 걸렸다.
+
+## 변경
+
+- `scripts/interpretation/lib.mjs`: `createWikitextLoader`(페이지 제목당 요청 1회, 성공·실패 모두 캐시, 요청 사이 1.5초, 429는 `Retry-After` 따라 1회 재시도), `WikisourcePageError`(`MISSING_TITLE`·`RATE_LIMITED`·`NO_WIKITEXT`·`HTTP_<status>`), API URL에 `redirects=1`. `lib.d.mts` 선언 추가.
+- `scripts/interpretation/collect-passages.mjs`: 로더 사용, 페이지 오류를 제목당 1줄로 출력하고 코드별 조치 힌트. 보고에 `httpRequests·pagesFailed·slotsWithoutPage` 추가, 페이지 오류가 있으면 exit 1.
+- `src/infrastructure/interpretation/scaffold.ts`: 궁통보감 URL 제목 `穷通宝鉴`으로 수정. 조건 키·locator·ID는 변경 없음.
+- `tests/interpretation-scripts.test.ts`: 로더 캐시·429 재시도·실패 코드 테스트 추가. `src/domain/interpretation/README.md`, `docs/22` D절에 오류 코드 대응 안내.
+
+## 검증
+
+- `npm test`: 73개 파일 / 1,457건 PASS. `npm run lint`(경고 0)·`npm run typecheck`·`npm run format:check`·`npm run check:docs` PASS.
+- 이 환경은 Wikisource 접근이 차단되어 실수집은 실행하지 않았다. 사용자 환경에서 `--dry-run` 재실행이 필요하다.
