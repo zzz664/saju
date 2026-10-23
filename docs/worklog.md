@@ -895,3 +895,15 @@
 - WBS-26 이후, 명리 11개 기능 확장, P06/R02/R03, OAuth/DB/RLS/PG/배포 QA는 이번 완료 범위가 아니다. CI 구축·키/실제 장부 변경·실 PG·DB 상태 변경·제품명 확정 없음. WBS.csv TODO를 임의 일괄 변경하지 않았다.
 - 사용자 수정 `next-env.d.ts`, `tests/fixtures/cli-input.json` 및 .env는 보존하고 PR에서 제외한다. 두 수정 파일의 최종 SHA256이 시작 시 기록한 값과 동일함을 확인했다. 기존 WBS-25 JSON/샘플, 독립 골든 JSON/승인표도 diff 없음.
 - develop 대상 PR 한 건을 생성한 직후 중지한다. 다음 WBS를 시작하거나 자동 병합하지 않는다.
+
+## PR #25 리뷰 수정 — 합쇼체 프로필의 해요체 예시 상속 제거
+
+- 사용자 지적에 따라 QA-05 잔여 문제를 이번 PR에서 수정한다. PR #25 OPEN/develop 대상 확인 후 같은 브랜치에서만 진행하며 새 WBS/브랜치/PR은 만들지 않는다.
+- 완료 조건: 해요체/합쇼체 각각의 register·선호 표현·긍정 예시가 일치하고, API/평가 코드가 같은 수정 합쇼체 프로필을 사용해야 한다. 합쇼체는 불변 버전 1.0.0을 덮어쓰지 않고 1.0.1로 구분한다.
+- 정상 검사: 실제 조립된 developer 메시지와 Mock/가짜 Live transport에 선택 프로필/버전 전달, 실행 증빙 버전 일치. 오류/경계: 미승인 ID/과거 합쇼체 버전 거절, 두 문체 선택 시 계산 근거/analysisKey 불변 및 narrationKey 분리. 기존 기대값·검사기를 완화하지 않는다.
+- 검증 계획: 신규 회귀 및 관련 API/Live/페르소나 평가 테스트, 전체 npm test, 타입/린트/문서 검사, 변경된 합쇼체의 브라우저 Mock 경로. 실제 API 호출/키/실제 장부 변경은 하지 않는다.
+- 구현: `src/domain/persona/synthetic-formal.ts`에 해요체에서 파생하지 않는 합쇼체 프로필 1.0.1을 독립 정의했다. `src/server/api-test-catalog.ts`, `tests/evaluation/persona-fixtures.ts`가 공유한다. `src/server/api-test.ts`, `api-test-live.ts`는 승인 카탈로그의 버전을 선택/전달/기록해 기존 1.0.0 하드코딩을 제거했다. 해요체 프로필 1.0.0, 프롬프트/문체 검사 기준 및 코어 계산은 유지한다.
+- 회귀: `tests/api-test-catalog.test.ts` 4건 추가, `tests/api-test.test.ts`의 Mock 요청/증빙 검증 1건 추가, `tests/live-narration.test.ts`의 가짜 HTTP 본문/메타 검증 및 `tests/persona-evaluation.test.ts`, `tests/e2e/api-test.spec.ts`의 선택 버전 기대값을 정정했다. QA 보고서에서 QA-05는 수정으로 전환하고 수정 전 JSON 집계는 기준 기록으로 보존했다.
+- 최초 신규 회귀 4건 FAIL(선택 버전 조회 미구현)을 확인한 뒤 구현했다. `npm.cmd test -- tests/api-test-catalog.test.ts tests/api-test.test.ts tests/live-narration.test.ts tests/persona-evaluation.test.ts`: **4파일/76건 PASS**, 현재 합쇼체 1.0.1로 Mock **180/180 완료/실패·문체 플래그 0** 행렬 검사 포함.
+- 원래 작업 트리 전체 `npm.cmd test -- --maxWorkers=1`: **44개 파일/1079건 PASS**, exit 0(127.39초). 타입 검사/lint/로컬 문서 검사도 PASS, 경고 0. 사용자 두 수정 파일 SHA256 동일, 과거 평가 JSON/독립 골든 기대값 diff 없음. 실제 OpenAI 요청 **0회 / LIVE_NOT_RUN**.
+- 최종 `npm.cmd run test:e2e:api-test`: **exit 0, 개발 9/9 + production 차단 1/1 PASS**, 격리 production build/route typegen/tsc PASS. 실제 로컬 합쇼체 Mock 실행/partial 상태/최상위 및 결과 내부 personaVersion=1.0.1을 확인했다. 서버 키 빈 값/Live false 유지. 같은 PR #25를 업데이트하고 대기한다.

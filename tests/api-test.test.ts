@@ -26,6 +26,17 @@ const body = (requestId = crypto.randomUUID()) => ({ mode: "mock", scenario: "na
 beforeEach(() => { now = Date.parse("2026-10-23T00:00:00Z"); });
 
 describe("WBS-65 protected local API settings and Mock runs", () => {
+  it("uses the selected formal revision in the Mock request and exported result metadata", async () => {
+    const { handler, generate } = make(), { cookie, config } = await unlock(handler);
+    const response = await handler(request("runs", { ...body(), personaId: "synthetic-formal" }, cookie, config.csrfToken));
+    expect(response.status).toBe(200);
+    const run = await response.json();
+    expect(run).toMatchObject({ evidence: "MOCK_PASS", personaVersion: "1.0.1", result: { meta: { personaId: "synthetic-formal", personaVersion: "1.0.1" } } });
+    const profile = JSON.parse(generate.mock.calls[0][0].input[0].content.split("\n").at(-1)!).persona;
+    expect(profile.voice).toMatchObject({ register: "hapsyo", preferredExpressions: ["먼저 살펴보겠습니다"] });
+    expect(profile.examples[0].prefer).toBe("제공된 근거만으로 확정할 수는 없습니다.");
+  });
+
   it("requires an independent unlock session and returns no key/secret or raw birth input", async () => {
     const { handler, generate } = make({ OPENAI_API_KEY: "synthetic-api-value-not-a-real-key" });
     expect((await handler(request("config"))).status).toBe(401);

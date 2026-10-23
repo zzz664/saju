@@ -8,7 +8,7 @@ import type { createApiTestCatalog } from "./api-test-catalog";
 
 /** Called only after the HTTP session/Origin/CSRF/consent/fixture gates. */
 export async function runLivePersona(options: {
-  catalog: ReturnType<typeof createApiTestCatalog>; fixtureId: string; personaId: string; limits: ApiTestLimits;
+  catalog: ReturnType<typeof createApiTestCatalog>; fixtureId: string; selection: { personaId: string; personaVersion: string }; limits: ApiTestLimits;
   key: string; apiKey: string; now: () => number; allowed: () => boolean; budget: FileLiveBudget;
   transport?: typeof fetch; observe: (value: LiveObservation) => void; signal: AbortSignal;
   model: string;
@@ -28,5 +28,5 @@ export async function runLivePersona(options: {
     finally { lease.finish(observation); }
   } };
   return narratePersona(options.catalog.core(options.fixtureId), guarded, { ...options.catalog,
-    model: options.model, selection: { personaId: options.personaId, personaVersion: "1.0.0" } }, { signal: options.signal });
+    model: options.model, selection: options.selection }, { signal: options.signal });
 }

@@ -63,7 +63,10 @@ describe("WBS-25 fixed R01 mock quality matrix", () => {
       expect(rows[0].sections?.[0].evidenceIds).toEqual(rows[3].sections?.[0].evidenceIds);
     }
     expect(report.versions).toMatchObject({ commonPromptVersion: "1.0.0", promptVersion: "1.0.1", outputSchemaVersion: "1.0.0" });
-    expect(report.profiles.every(profile => profile.personaVersion === "1.0.0")).toBe(true);
+    expect(report.profiles).toEqual(expect.arrayContaining([
+      expect.objectContaining({ personaId: "synthetic-style", personaVersion: "1.0.0" }),
+      expect.objectContaining({ personaId: "synthetic-formal", personaVersion: "1.0.1" }),
+    ]));
   });
 
   it("exposes deterministic repeats and repeated openings instead of equating them with quality", () => {

@@ -45,6 +45,7 @@ test("unknown-time fixture preserves partial status and formal persona", async (
   const response = page.waitForResponse(response => response.url().endsWith("/runs") && response.request().method() === "POST");
   await page.getByRole("button", { name: "테스트 실행" }).click(); const run = await (await response).json();
   expect(run.result.sourceStatus).toBe("partial"); expect(run.result.meta.personaId).toBe("synthetic-formal");
+  expect(run.personaVersion).toBe("1.0.1"); expect(run.result.meta.personaVersion).toBe("1.0.1");
   await expect(page.getByRole("heading", { name: "MOCK_PASS" })).toBeVisible();
 });
 

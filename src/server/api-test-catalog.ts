@@ -1,5 +1,6 @@
 import { calculateCoreExport } from "../application/core-export/index";
-import { createApprovedPersonaRegistry } from "../domain/persona/index";
+import { createApprovedPersonaRegistry, PersonaError } from "../domain/persona/index";
+import { syntheticFormalProfile } from "../domain/persona/synthetic-formal";
 import { nodeSha256Adapter } from "../infrastructure/hashing/index";
 import { manseryeokCalendarConversionAdapter, manseryeokEquationOfTimeAdapter, manseryeokPolicyCalendarAdapter, manseryeokSymbolCatalogAdapter } from "../infrastructure/manseryeok/index";
 import { temporalTimeZoneAdapter } from "../infrastructure/timezone/index";
@@ -14,11 +15,16 @@ const profile = { schemaVersion: "1.0.0", personaId: "synthetic-style", personaV
   narrative: { introStrategy: "인사 없이 관찰부터", paragraphsPerSection: { min: 1, max: 3 }, sentencesPerParagraph: { min: 1, max: 4 }, preferredFlow: ["관찰", "한계"], avoid: ["과장과 예언"] },
   examples: [{ intent: "uncertainty", avoid: "반드시 성사됩니다.", prefer: "제공된 근거만으로 확정할 수는 없어요." }] };
 export function createApiTestCatalog() {
-  const profiles = [profile, { ...profile, personaId: "synthetic-formal", displayName: "합성 합쇼체", voice: { ...profile.voice, register: "hapsyo" } }];
+  const profiles = [profile, syntheticFormalProfile];
   const registry = createApprovedPersonaRegistry(profiles.map(item => ({ status: "approved", personaId: item.personaId, personaVersion: item.personaVersion, json: JSON.stringify(item) })));
   const fixtures = [{ id: "synthetic-known", label: "가상 사례 · 시각 있음" }, { id: "synthetic-unknown", label: "가상 사례 · 시각 미상" }, { id: "synthetic-unavailable", label: "가상 사례 · 경도 누락" }];
   const cache = new Map<string, ReturnType<typeof calculateCoreExport>>();
   return { registry, hash: nodeSha256Adapter, fixtures, personas: profiles.map(item => ({ id: item.personaId, label: item.displayName })),
+    selection(personaId: string) {
+      const selected = profiles.find(item => item.personaId === personaId);
+      if (!selected) throw new PersonaError("SELECTION_REJECTED");
+      return { personaId: selected.personaId, personaVersion: selected.personaVersion };
+    },
     spec: { specId: "developer-core-observations", specVersion: "1.0.0", featureId: "core-base", sections: [{ id: "overview", purpose: "기초 관찰과 한계", minFindings: 0 }],
       maxCharactersPerSection: 1200, readerLevel: "general", includeLimitations: true, allowFortuneScore: false },
     core(id: string) {

@@ -117,23 +117,24 @@ export function createApiTestHandler(options: { environment: () => Env; now?: ()
     if (!options.catalog.fixtures.some(item => item.id === input.fixtureId) || !options.catalog.personas.some(item => item.id === input.personaId)) return error(422, "SELECTION_REJECTED");
     if (input.scenario !== "narration" || input.featureId !== "core-base") return error(409, "FEATURE_NOT_READY");
     if (input.mode === "live" && (!input.acknowledgedCost || liveReason !== "READY")) return error(403, !input.acknowledgedCost ? "COST_ACK_REQUIRED" : liveReason, "LIVE_BLOCKED");
+    const selection = options.catalog.selection(input.personaId);
     const requestKey = session.id + ":" + input.requestId, digest = createHash("sha256").update(canonicalizeJson(input)).digest("hex");
     const previous = requests.get(requestKey);
     if (previous) return previous.digest !== digest ? error(409, "IDEMPOTENCY_CONFLICT") : previous.value.status === "running" ? error(409, "RUN_IN_PROGRESS") : json(ApiTestRunSchema.parse(previous.value), previous.httpStatus);
     if (runs.size >= 1000) return error(503, "RUN_STORE_FULL");
     const id = randomUUID(), run: Run = { owner: session.id, digest, id, httpStatus: 200,
       value: { testRunId: id, mode: input.mode, scenario: "narration", featureId: "core-base", modelId, personaId: input.personaId,
-        personaVersion: "1.0.0", promptVersion: PERSONA_PROMPT_VERSION, commonPromptVersion: COMMON_SYSTEM_PROMPT_VERSION, schemaVersion: "1.0.0",
+        personaVersion: selection.personaVersion, promptVersion: PERSONA_PROMPT_VERSION, commonPromptVersion: COMMON_SYSTEM_PROMPT_VERSION, schemaVersion: "1.0.0",
         status: "running", startedAt: new Date(time).toISOString(), inputTokens: null, outputTokens: null } };
     runs.set(id, run); requests.set(requestKey, run);
     const observation: LiveObservation = {};
     try {
-      const result = input.mode === "live" ? await runLivePersona({ catalog: options.catalog, fixtureId: input.fixtureId, personaId: input.personaId, limits, model: modelId,
+      const result = input.mode === "live" ? await runLivePersona({ catalog: options.catalog, fixtureId: input.fixtureId, selection, limits, model: modelId,
         key: createHash("sha256").update(requestKey).digest("hex"), apiKey: env.OPENAI_API_KEY!, budget: options.live!.budget, transport: options.live!.transport,
         now, signal: request.signal, observe: value => Object.assign(observation, value),
         allowed: () => { try { const current = options.environment(); return apiTestLocalEnvironment(current) && current.ENABLE_LIVE_API_TESTS === "true"
           && current.OPENAI_API_KEY === env.OPENAI_API_KEY && readOpenAiModel(current) === modelId; } catch { return false; } },
-      }) : await createPersonaExperiment({ ...options.catalog, model: modelId, selection: { personaId: input.personaId, personaVersion: "1.0.0" }, provider: options.provider,
+      }) : await createPersonaExperiment({ ...options.catalog, model: modelId, selection, provider: options.provider,
         store, policy: apiTestPolicy(limits, time), now, environment: () => apiTestLocalEnvironment(options.environment()) ? "development" : undefined,
         resolveAccess: async () => access }).run(options.catalog.core(input.fixtureId), { signal: request.signal });
       run.value = { ...run.value, status: result.styleEvaluation.passed ? "passed" : "failed", evidence: input.mode === "live" ? result.styleEvaluation.passed ? "LIVE_PASS" : "LIVE_FAILED" : result.styleEvaluation.passed ? "MOCK_PASS" : "MOCK_FAILED",

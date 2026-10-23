@@ -6,6 +6,7 @@ import { fingerprintDependencies } from "../helpers/fingerprint-input";
 import { calculateCoreExport } from "../../src/application/core-export/index";
 import { AnalysisInputSchema, BirthInputSchema, CalculationPolicySchema } from "../../src/domain/input/index";
 import { createApprovedPersonaRegistry } from "../../src/domain/persona/index";
+import { syntheticFormalProfile } from "../../src/domain/persona/synthetic-formal";
 import { createPersonaMockProvider } from "../../src/infrastructure/llm/persona-mock";
 import { MemoryExperimentBudgetStore } from "../../src/infrastructure/llm/experiment-budget";
 import { nodeSha256Adapter } from "../../src/infrastructure/hashing/index";
@@ -28,7 +29,7 @@ export function loadEvaluationCases() {
 }
 
 // Local evaluation registrations only; these are not approved product characters.
-export const evaluationProfiles = [profile, { ...profile, personaId: "synthetic-formal", displayName: "합성 합쇼체 검증용 (제품 캐릭터 아님)", voice: { ...profile.voice, register: "hapsyo" } }];
+export const evaluationProfiles = [profile, syntheticFormalProfile];
 export const evaluationSelections = evaluationProfiles.map(item => ({ personaId: item.personaId, personaVersion: item.personaVersion }));
 export const evaluationSpec = { specId: "quality-core-observations", specVersion: "1.0.0", featureId: "core-base",
   sections: [{ id: "overview", purpose: "기초 관찰과 한계", minFindings: 0 }], maxCharactersPerSection: 1200,
