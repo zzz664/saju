@@ -7,7 +7,7 @@ import {
   type CalendarRequest,
   type SolarCalendarAdapter,
 } from "@/domain/calendar";
-import { manseryeokSolarCalendarAdapter } from "@/infrastructure/manseryeok";
+import { manseryeokSolarCalendarAdapter } from "./support/manseryeok/solar-calendar";
 import golden from "./fixtures/solar-terms-golden.json";
 
 const adapter: SolarCalendarAdapter = manseryeokSolarCalendarAdapter;

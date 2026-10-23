@@ -157,6 +157,7 @@ export function fingerprintCoreExport(value: unknown, adapter: Sha256Adapter): H
 }
 
 /** Schema validation is separate from recomputing and checking the checksum. */
+/** Retained for WBS-54: verify persisted documents independently of their stored hash. */
 export function verifyCoreFingerprint(value: unknown, adapter: Sha256Adapter): boolean {
   const parsed = HashedCoreExportSchema.safeParse(value);
   return parsed.success && parsed.data.fingerprint.hash === digest(parsed.data.document, adapter);

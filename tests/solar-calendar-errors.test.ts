@@ -9,7 +9,7 @@ vi.mock("manseryeok", async (importOriginal) => ({
   getSolarTermsOfYear: sdk.getSolarTermsOfYear,
 }));
 
-import { manseryeokSolarCalendarAdapter } from "@/infrastructure/manseryeok/solar-calendar";
+import { manseryeokSolarCalendarAdapter } from "./support/manseryeok/solar-calendar";
 
 function validTerms() {
   return golden.terms.map(([name, time], index) => ({

@@ -35,6 +35,7 @@ export const CalculationResultSchema = z
 
 export type CalculationResult = z.infer<typeof CalculationResultSchema>;
 
+/** @deprecated Fixed UTC+9 CLI compatibility. New entry points use calculatePolicySaju. */
 export function calculateSajuSnapshot(value: unknown, adapter: CalendarAdapter): CalculationResult {
   const input = AnalysisInputSchema.parse(value);
   const { birthInput, calculationPolicy } = input;

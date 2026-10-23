@@ -119,6 +119,7 @@ export const MAX_CORE_JSON_BYTES = 1024 * 1024;
 export function serializeCoreExport(value: unknown): string {
   return JSON.stringify(document(value), null, 2) + "\n";
 }
+/** External JSON/storage boundary; retained for WBS-54 persisted document revalidation. */
 export function parseCoreExport(value: unknown): CoreExport {
   if (typeof value !== "string") throw new CoreExportError("JSON_REJECTED");
   if (new TextEncoder().encode(value).byteLength > MAX_CORE_JSON_BYTES)

@@ -8,7 +8,7 @@ vi.mock("manseryeok", async (importOriginal) => ({
   calculateFourPillars: sdk.calculateFourPillars,
 }));
 
-import { manseryeokDayCalendarAdapter } from "@/infrastructure/manseryeok/day-calendar";
+import { manseryeokDayCalendarAdapter } from "./support/manseryeok/day-calendar";
 
 const request: CalendarRequest = {
   year: 2024,

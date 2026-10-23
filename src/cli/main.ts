@@ -1,3 +1,4 @@
+import { INPUT_COMMANDS } from "@/cli/commands";
 import { createCoreDependencies } from "@/server/core-dependencies";
 import { manseryeokCalendarAdapter } from "@/infrastructure/manseryeok";
 import { nodeSha256Adapter } from "@/infrastructure/hashing";
@@ -20,20 +21,7 @@ process.stderr.on("error", () => {
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  const needsInput =
-    args.length === 1 &&
-    [
-      "validate",
-      "calculate",
-      "normalize-time",
-      "calculate-policy",
-      "derive-facts",
-      "judge-facts",
-      "arbitrate-facts",
-      "export-json",
-      "manual-prompt",
-      "hash-json",
-    ].includes(args[0]);
+  const needsInput = args.length === 1 && (INPUT_COMMANDS as readonly string[]).includes(args[0]);
   const text = needsInput ? await readUtf8Input(process.stdin) : "";
   writeResult(
     runCli(args, text, manseryeokCalendarAdapter, {

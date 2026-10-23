@@ -1,3 +1,5 @@
+> developer-json/narrateCore는 기존 Mock 비교 계약입니다. 현재 서버 실행 경로는 narratePersona와 승인형 페르소나 카탈로그를 사용합니다. 신규 제품 기능에 기존 비교 경로를 연결하지 않습니다.
+
 # WBS-23 — LLM provider·프롬프트·mock
 
 기존 코어의 확정·채택 기초 관찰을 설명하는 **개발자 내부 비스트리밍 JSON 평가 경로**다.

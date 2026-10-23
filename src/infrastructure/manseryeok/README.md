@@ -1,3 +1,5 @@
+> day/solar 전용 어댑터는 [테스트 지원 자산](../../../tests/support/manseryeok/README.md)으로 이동했습니다. 아래 해당 예시는 SDK 경계 검증용이며 제품 barrel에서 내보내지 않습니다. 제품 계산은 policy-calendar를 사용합니다.
+
 # 지정 manseryeok 패키지 어댑터
 
 공급자는 [yhj1024/manseryeok](https://github.com/yhj1024/manseryeok)로 고정한다.
@@ -6,7 +8,7 @@ npm `manseryeok@2.0.0`의 package.json, dist/index.d.ts, dist/types.d.ts 및 실
 별도 만세력 구현이나 대체 라이브러리는 추가하지 않는다.
 
 ```ts
-import { calculateManseryeokSnapshot } from "@/infrastructure/manseryeok";
+import { calculateManseryeokSnapshot } from "../../../tests/support/manseryeok/day-calendar";
 
 const snapshot = calculateManseryeokSnapshot({
   year: 1992,
@@ -121,7 +123,7 @@ const same = manseryeokCalendarConversionAdapter.convert({
 조회 범위는 1800~2300으로 제한하여 라이브러리의 범위 밖 근사 폴백을 허용하지 않는다.
 
 ```ts
-import { manseryeokSolarCalendarAdapter } from "@/infrastructure/manseryeok";
+import { manseryeokSolarCalendarAdapter } from "../../../tests/support/manseryeok/solar-calendar";
 
 const schedule = manseryeokSolarCalendarAdapter.getSolarTerms({ year: 2024 });
 // schedule.terms[2].startsAt === "2024-02-04T08:27:00.000Z"
@@ -179,7 +181,7 @@ KASI 음력 월건을 절기 월주로 사용하지 않았다. fixture에 출처
 ruleId=`calendar.day-pillar`, ruleVersion=`1.0.0`, timeReference, dayBoundary를 기록한다.
 
 ```ts
-import { manseryeokDayCalendarAdapter } from "@/infrastructure/manseryeok";
+import { manseryeokDayCalendarAdapter } from "../../../tests/support/manseryeok/day-calendar";
 
 const snapshot = manseryeokDayCalendarAdapter.calculateDay({
   year: 2024,

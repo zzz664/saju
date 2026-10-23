@@ -1,5 +1,6 @@
+import { isLocalDeveloperHost } from "@/server/developer-access";
 import { describe, expect, it, vi } from "vitest";
-import { createDeveloperAnalysisHandler, isLocalDeveloperHost } from "@/server/developer-analysis";
+import { createDeveloperAnalysisHandler } from "@/server/developer-analysis";
 import { DeveloperAnalysisResponseSchema } from "@/domain/developer-analysis";
 import { nodeSha256Adapter } from "@/infrastructure/hashing";
 import { verifyCoreFingerprint } from "@/domain/core-fingerprint";

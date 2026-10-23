@@ -5,7 +5,6 @@ import { calculateDeveloperAnalysis } from "@/application/developer-analysis";
 import type { NatalFactsDependencies } from "@/application/natal-facts";
 import type { Sha256Adapter } from "@/domain/core-fingerprint";
 import { isLocalDeveloperRequest } from "@/server/developer-access";
-export { isLocalDeveloperHost } from "@/server/developer-access";
 
 const headers = { "cache-control": "no-store, max-age=0", "x-robots-tag": "noindex, nofollow" };
 function error(status: number, code: string, message: string, extra = {}) {

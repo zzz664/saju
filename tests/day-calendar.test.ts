@@ -7,7 +7,7 @@ import {
   type DayCalendarAdapter,
   type DaySnapshot,
 } from "@/domain/calendar";
-import { manseryeokDayCalendarAdapter } from "@/infrastructure/manseryeok";
+import { manseryeokDayCalendarAdapter } from "./support/manseryeok/day-calendar";
 import golden from "./fixtures/day-pillar-golden.json";
 
 const adapter: DayCalendarAdapter = manseryeokDayCalendarAdapter;

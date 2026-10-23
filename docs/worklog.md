@@ -960,3 +960,10 @@
 - server/core-dependencies를 CLI·분석 route·API 테스트가 공유한다. infrastructure/io/bounded-utf8로 CLI/서버 본문 읽기를 통합했고 바이트 상한·엄격 UTF-8·스트림 취소를 검증했다.
 - 음력 변환 예외/잘못된 반환값은 CalendarAdapterError로 분류한다. 정상 시간대 오류는 기존 TimeZoneAdapterError를 유지하며 원문/cause를 보관하지 않는다.
 - 검증: 관련 8파일 388건 중 오류 분류 변경에 대한 기존 기대 1건 실패→CalendarAdapterError 검증으로 갱신. 해당 파일+신규 스트림 테스트 재검증 15건 PASS(기타 376건 기존 실행 PASS). tsc PASS, lint PASS. 실제 API 0회.
+
+## 2026-10-24 코드리뷰 리팩터링 C — 경계 테스트 자산·호환 경로 정리
+
+- day/solar 전용 SDK 어댑터는 tests/support/manseryeok로 이동하고 제품 barrel에서 제거. 기존 골든·오류 검증은 같은 테스트를 유지한다. 계약 DTO는 호환성을 위해 보존하고 향후 WBS-39/40에서의 검토 의도를 명시했다.
+- CLI 명령 목록을 commands.ts에서 공유. calculate는 공개 fixed-clock 호환 명령으로 명시적으로 deprecated하며 신규 경로는 calculate-policy다. 기존 CLI 응답/실패 계약을 깨는 삭제는 하지 않았다. developer-analysis의 테스트 편의 재export 및 항상 덮어쓰던 NARRATION_META.model 제거.
+- parseCoreExport/verifyCoreFingerprint는 WBS-54 저장 재검증 용도로 유지한다. developer-json Mock은 비교·호환 검증 경로이며 제품/R01 진입점으로 안내하지 않는다.
+- 검증: 타입/린트 PASS, 이동한 SDK 경계·CLI·분석 API 관련 6파일 179건 PASS. 실제 API 호출 0회.

@@ -127,7 +127,6 @@ export function validateNarrationOutput(
   });
 }
 export const NARRATION_META = Object.freeze({
-  model: DEFAULT_OPENAI_MODEL,
   promptVersion: NARRATION_PROMPT_VERSION,
   schemaVersion: "1.0.0",
 } as const);
