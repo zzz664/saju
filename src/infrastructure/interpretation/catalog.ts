@@ -18,6 +18,8 @@ export const PassagesFileSchema = z.strictObject({
       passage: z.string().min(1).max(4000),
       retrievedAt: z.iso.datetime(),
       passageDigest: HexDigestSchema,
+      /** Set by the collector when the passage was found on a sibling page, not the scaffold url. */
+      url: z.url().startsWith("https://zh.wikisource.org/").optional(),
     }),
   ),
 });
@@ -50,6 +52,7 @@ export function composeInterpretationCatalog(
       const collected = passages[entry.source.sourceId];
       return {
         ...entry.source,
+        url: collected?.url ?? entry.source.url,
         passage: collected?.passage ?? null,
         retrievedAt: collected?.retrievedAt ?? null,
         passageDigest: collected?.passageDigest ?? null,

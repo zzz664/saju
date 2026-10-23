@@ -14,7 +14,9 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import {
   boundPassage,
+  candidateLines,
   createWikitextLoader,
+  pageTextOf,
   digestText,
   extractFromPage,
   htmlToText,
@@ -60,8 +62,27 @@ async function main() {
   const file = JSON.parse(readFileSync(dataFile, "utf8"));
   // One request per page title (3 pages for the full scaffold), paced to respect Wikisource.
   const loader = createWikitextLoader();
-  const report = { collected: 0, skipped: 0, missing: [], pageErrors: new Map(), unavailable: 0 };
+  const report = {
+    collected: 0,
+    skipped: 0,
+    missing: [],
+    relocated: [],
+    pageErrors: new Map(),
+    unavailable: 0,
+  };
   const pages = new Map(); // title -> page, for --inspect / --dump
+  const missingByTitle = new Map(); // title -> locators, for --inspect candidates
+  async function loadPage(title) {
+    try {
+      const page = await loader.load(title);
+      pages.set(title, page);
+      return page;
+    } catch (error) {
+      const code = error instanceof WikisourcePageError ? error.code : "FETCH_FAILED";
+      report.pageErrors.set(title, code);
+      return null;
+    }
+  }
   for (const entry of scaffold) {
     const { sourceId, url, locator } = entry.source;
     if (only && only !== sourceId) continue;
@@ -70,27 +91,50 @@ async function main() {
       continue;
     }
     const title = titleFromUrl(url);
-    let page;
-    try {
-      page = await loader.load(title);
-      pages.set(title, page);
-    } catch (error) {
-      const code = error instanceof WikisourcePageError ? error.code : "FETCH_FAILED";
-      report.pageErrors.set(title, code);
+    const page = await loadPage(title);
+    if (!page) {
       report.unavailable++;
       continue;
     }
-    const section = extractFromPage(page, locator);
-    if (!section) {
+    // Each `·` part is resolved on its own: 三命通會 spreads 論正官 / 論印綬 over different 卷.
+    const parts = locator.split("·").map((part) => part.trim());
+    const found = [];
+    const foundTitles = new Set();
+    for (const part of parts) {
+      let section = extractFromPage(page, part);
+      let foundIn = title;
+      for (const sibling of siblingTitles(title)) {
+        if (section) break;
+        const other = await loadPage(sibling);
+        if (!other) continue;
+        section = extractFromPage(other, part);
+        if (section) foundIn = sibling;
+      }
+      if (!section) break;
+      found.push(section);
+      foundTitles.add(foundIn);
+    }
+    if (found.length !== parts.length) {
       report.missing.push(`${sourceId} (${title} › ${locator})`);
+      if (!missingByTitle.has(title)) missingByTitle.set(title, []);
+      missingByTitle.get(title).push(locator);
       continue;
     }
-    const passage = boundPassage(section);
-    file.passages[sourceId] = {
+    const passage = boundPassage(found.join("\n\n"));
+    const record = {
       passage,
       retrievedAt: new Date().toISOString(),
       passageDigest: digestText(passage),
     };
+    // Found on a sibling page only: keep the real page url with the passage and ask for a scaffold fix.
+    if (foundTitles.size === 1 && !foundTitles.has(title)) {
+      const [actual] = foundTitles;
+      record.url = WIKI + encodeURIComponent(actual);
+      report.relocated.push(
+        `${sourceId}: ${title} → ${actual} (scaffold.ts url을 이 제목으로 고친다)`,
+      );
+    }
+    file.passages[sourceId] = record;
     report.collected++;
   }
   if (!dryRun && report.collected > 0)
@@ -103,6 +147,7 @@ async function main() {
         collected: report.collected,
         skipped: report.skipped,
         missing: report.missing.length,
+        relocated: report.relocated.length,
         pagesFailed: report.pageErrors.size,
         slotsWithoutPage: report.unavailable,
       },
@@ -111,6 +156,18 @@ async function main() {
     ),
   );
   for (const line of report.missing) console.log("missing  " + line);
+  for (const line of report.relocated) console.log("moved    " + line);
+  if (inspect)
+    for (const [title, locators] of missingByTitle) {
+      const page = pages.get(title);
+      if (!page) continue;
+      const text = pageTextOf(page);
+      for (const locator of locators) {
+        const lines = candidateLines(text, locator);
+        console.log(`near     ${title} › ${locator}: ${lines.length ? "" : "(후보 줄 없음)"}`);
+        for (const line of lines) console.log(`         ${line}`);
+      }
+    }
   for (const [title, code] of report.pageErrors)
     console.log(
       `page     ${title}: ${code}` +
@@ -126,6 +183,23 @@ async function main() {
       "hint     locator가 하나도 안 맞으면 --dry-run --inspect 로 페이지의 소제목·본문 모양을 확인하고 scaffold.ts의 locator를 고친다.",
     );
   if (report.pageErrors.size) process.exitCode = 1;
+}
+
+const WIKI = "https://zh.wikisource.org/wiki/";
+const VOLUMES = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"];
+
+/**
+ * 三命通會 is split into 卷 pages and the scaffold may name the wrong one. For "三命通會/卷五"
+ * the neighbours 卷六, 卷四, 卷七, 卷三 are tried in that order; other titles have no siblings.
+ */
+function siblingTitles(title) {
+  const match = title.match(/^(.*\/卷)(.+)$/);
+  if (!match) return [];
+  const index = VOLUMES.indexOf(match[2]);
+  if (index < 0) return [];
+  return [index + 1, index - 1, index + 2, index - 2]
+    .filter((at) => at >= 0 && at < VOLUMES.length)
+    .map((at) => `${match[1]}${VOLUMES[at]}`);
 }
 
 /** Print what each page actually looks like so locators can be fixed without guessing. */

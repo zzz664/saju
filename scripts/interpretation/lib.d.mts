@@ -5,6 +5,12 @@ export function htmlToText(html: string): string;
 export function listHeadings(text: string): string[];
 export type WikisourcePage = { wikitext: string; text: string | null };
 export function extractFromPage(page: WikisourcePage, locator: string): string | null;
+export function monthsInPrefix(prefix: string): number[];
+export function monthLocator(
+  locator: string,
+): { month: number; subject: string; test(line: string): boolean } | null;
+export function candidateLines(text: string, locator: string, limit?: number): string[];
+export function pageTextOf(page: WikisourcePage): string;
 export function boundPassage(text: string, maxCharacters?: number): string;
 export function wikisourceApiUrl(title: string): string;
 export function titleFromUrl(url: string): string;

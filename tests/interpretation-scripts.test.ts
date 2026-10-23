@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   WikisourcePageError,
   boundPassage,
+  candidateLines,
   createWikitextLoader,
+  monthLocator,
+  monthsInPrefix,
   digestText,
   entailmentRequestBody,
   extractFromPage,
@@ -57,6 +60,32 @@ describe("interpretation collector helpers (offline)", () => {
     expect(extractSection(smth, "論印綬·論食神")).toBe("印者。\n\n食者。");
     expect(extractSection(smth, "論印綬·論偏印")).toBeNull();
   });
+  it("matches grouped-month paragraphs such as 五六月甲木 and 十一、十二月戊土", () => {
+    expect(monthsInPrefix("五六月")).toEqual([5, 6]);
+    expect(monthsInPrefix("十一、十二月")).toEqual([11, 12]);
+    expect(monthsInPrefix("十一二月")).toEqual([11, 12]);
+    expect(monthsInPrefix("正、二月")).toEqual([1, 2]);
+    expect(monthsInPrefix("十月十一月十二月")).toEqual([10, 11, 12]);
+    expect(monthsInPrefix("四五六月")).toEqual([4, 5, 6]);
+    const text = `== 三夏甲木 ==
+四月甲木，退氣。
+五六月甲木，木性虛焦。
+== 三冬戊土 ==
+十月戊土，時值小陽。
+十一、十二月戊土，嚴寒冰凍。
+== 三夏己土 ==
+四五六月己土，雜氣財官。`;
+    expect(extractSection(text, "五月甲木")).toBe("五六月甲木，木性虛焦。");
+    expect(extractSection(text, "六月甲木")).toBe("五六月甲木，木性虛焦。");
+    expect(extractSection(text, "四月甲木")).toBe("四月甲木，退氣。");
+    expect(extractSection(text, "十二月戊土")).toBe("十一、十二月戊土，嚴寒冰凍。");
+    expect(extractSection(text, "十月戊土")).toBe("十月戊土，時值小陽。");
+    expect(extractSection(text, "五月己土")).toBe("四五六月己土，雜氣財官。");
+    expect(extractSection(text, "七月己土")).toBeNull();
+    expect(monthLocator("論印綬")).toBeNull();
+    expect(candidateLines(text, "七月己土")).toEqual(["四五六月己土，雜氣財官。"]);
+    expect(candidateLines(text, "論印綬")).toEqual([]);
+  });
   it("normalizes rendered html and prefers it over raw wikitext", () => {
     const html = `<div class="mw-parser-output"><table><tr><td>上一卷</td></tr></table>
 <h2><span class="mw-headline" id="x">論印綬</span><span class="mw-editsection">[编辑]</span></h2>
@@ -65,6 +94,10 @@ describe("interpretation collector helpers (offline)", () => {
       "上一卷\n\n== 論印綬 ==\n\n印者 生我之物。\n二句。\n\n== 論食神 ==\n食者。",
     );
     expect(listHeadings(htmlToText(html))).toEqual(["# 論印綬", "# 論食神"]);
+    // Separate <p> blocks become separate paragraphs, so a month passage stops at the next one.
+    const months = htmlToText("<p>正月甲木，初春。</p><p>又一段。</p><p>二月甲木，陽升。</p>");
+    expect(extractSection(months, "正月甲木")).toBe("正月甲木，初春。");
+    expect(extractSection(months, "二月甲木")).toBe("二月甲木，陽升。");
     expect(extractFromPage({ wikitext: "<pages index=x />", text: html }, "論印綬")).toBe(
       "印者 生我之物。\n二句。",
     );
