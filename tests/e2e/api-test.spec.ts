@@ -33,7 +33,7 @@ test("Mock button reuses R01, shows prose and exports only evidence metadata", a
   expect(exported.suggestedFilename()).toBe("mock-test-evidence.json");
   const stream = await exported.createReadStream(); let content = ""; for await (const chunk of stream!) content += chunk.toString();
   expect(JSON.parse(content)).not.toHaveProperty("result"); expect(content).not.toMatch(/birthDate|synthetic-unlock-secret|csrfToken/);
-  expect(JSON.parse(content)).toMatchObject({ personaVersion: "1.0.0", promptVersion: "1.0.0", commonPromptVersion: "1.0.0", schemaVersion: "1.0.0" });
+  expect(JSON.parse(content)).toMatchObject({ personaVersion: "1.0.0", promptVersion: "1.0.1", commonPromptVersion: "1.0.0", schemaVersion: "1.0.0" });
   expect(await page.locator("body").innerText()).not.toContain("synthetic-unlock-secret");
 });
 
@@ -76,6 +76,30 @@ test("simulated Live UI requires consent and an explicit click, locks controls a
   const download = page.waitForEvent("download"); await page.getByRole("button", { name: "비식별 증빙 내보내기" }).click();
   expect((await download).suggestedFilename()).toBe("live-test-evidence.json");
   await page.reload(); await expect(page.getByRole("radio", { name: "Mock", exact: true })).toBeChecked(); expect(calls).toBe(1);
+});
+
+test("completed Live response shows quality failure reasons separately from API completion", async ({ page }) => {
+  await page.route("**/api/dev/api-test/config", async route => {
+    const response = await route.fetch(); if (!response.ok()) { await route.fulfill({ response }); return; }
+    await route.fulfill({ response, json: { ...await response.json(), keyStatus: "ready", liveAvailable: true, liveStatus: "LIVE_NOT_RUN", liveReason: "READY" } });
+  });
+  let calls = 0;
+  await page.route("**/api/dev/api-test/runs", async route => {
+    calls++;
+    await route.fulfill({ json: { testRunId: "00000000-0000-4000-8000-000000000002", mode: "live", scenario: "narration", featureId: "core-base", modelId: "gpt-4o-mini", personaId: "synthetic-style",
+      status: "failed", personaVersion: "1.0.0", promptVersion: "1.0.1", commonPromptVersion: "1.0.0", schemaVersion: "1.0.0", startedAt: "2026-10-23T00:00:00Z",
+      inputTokens: 100, outputTokens: 60, providerStatus: "completed", evidence: "LIVE_FAILED", expectedRegister: "haeyo",
+      styleIssues: [{ code: "REGISTER", sectionId: "overview" }], verdict: { evidenceIdsValid: true, styleHeuristicPassed: false },
+      result: { sections: [{ paragraphs: ["확인된 범위만 설명합니다."] }], styleEvaluation: { passed: false }, meta: { providerKind: "openai", modelId: "gpt-4o-mini" } } } });
+  });
+  await unlock(page); await page.getByRole("radio", { name: "Live", exact: true }).check(); await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "테스트 실행" }).click();
+  await expect(page.getByRole("heading", { name: "API 호출 완료 · 문체 검사 미통과" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "문체 검사 상세" })).toContainText("REGISTER");
+  await expect(page.getByRole("list", { name: "문체 검사 상세" })).toContainText("해요체");
+  const region = page.getByRole("region", { name: "Live 실행 결과" });
+  await expect(region).toContainText("종합 검증 결과: LIVE_FAILED"); await expect(region).toContainText("응답 상태: completed");
+  await expect(region).toContainText("자동 재호출하지 않습니다"); expect(calls).toBe(1);
 });
 
 for (const width of [320, 390, 768, 1440]) test(`settings layout fits ${width}px and keyboard can reach controls`, async ({ page }, testInfo) => {

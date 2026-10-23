@@ -34,6 +34,8 @@ export const ApiTestRunSchema = z.strictObject({ testRunId: z.uuid(), mode: z.en
   inputTokens: z.number().int().nonnegative().nullable(), outputTokens: z.number().int().nonnegative().nullable(),
   providerStatus: z.enum(["completed", "failed", "incomplete", "cancelled", "queued", "in_progress"]).optional(),
   verdict: z.strictObject({ evidenceIdsValid: z.boolean(), styleHeuristicPassed: z.boolean() }).optional(),
+  expectedRegister: z.enum(["haeyo", "hapsyo", "banmal"]).optional(),
+  styleIssues: z.array(z.strictObject({ code: z.enum(["STOCK_PHRASE", "DUPLICATE_PARAGRAPH", "CERTAINTY", "EMOJI", "REGISTER", "CATCHPHRASE_LIMIT", "PARAGRAPH_COUNT", "SENTENCE_COUNT", "INTERNAL_ID"]), sectionId: z.string().min(1).max(64) })).max(100).optional(),
   evidence: z.enum(["MOCK_PASS", "MOCK_FAILED", "LIVE_BLOCKED", "LIVE_PASS", "LIVE_FAILED"]).optional(), errorCode: z.string().regex(/^[A-Z_]+$/).optional(),
   // The shared R01 service validates its full draft. This view adds transport bounds
   // without importing the server's prompt composer into the client bundle.
@@ -41,3 +43,16 @@ export const ApiTestRunSchema = z.strictObject({ testRunId: z.uuid(), mode: z.en
     styleEvaluation: z.object({ passed: z.boolean() }).passthrough(), meta: z.object({ providerKind: z.enum(["mock", "openai"]), modelId: z.literal("gpt-4o-mini") }).passthrough() }).passthrough().optional(),
 });
 export type ApiTestRun = z.infer<typeof ApiTestRunSchema>;
+
+export function apiTestRunHeading(run: ApiTestRun): string {
+  return run.mode === "live" && run.providerStatus === "completed" && run.result && run.verdict?.styleHeuristicPassed === false
+    ? "API 호출 완료 · 문체 검사 미통과" : run.evidence ?? run.status;
+}
+export function apiTestStyleIssueMessage(code: NonNullable<ApiTestRun["styleIssues"]>[number]["code"], register?: ApiTestRun["expectedRegister"]): string {
+  const registerName = register === "haeyo" ? "해요체(문단 끝: 요)" : register === "hapsyo" ? "합쇼체(문단 끝: 니다)" : register === "banmal" ? "반말" : "선택한 문체";
+  const messages = { STOCK_PHRASE: "상투어 또는 금지 표현이 포함되어 있습니다.", DUPLICATE_PARAGRAPH: "동일한 문단이 반복됩니다.",
+    CERTAINTY: "확정·보장 표현이 포함되어 있습니다.", EMOJI: "허용되지 않은 이모지가 있습니다.", REGISTER: `${registerName} 종결 규칙과 맞지 않습니다.`,
+    CATCHPHRASE_LIMIT: "유행어 사용 횟수를 초과했습니다.", PARAGRAPH_COUNT: "섹션의 문단 수가 설정 범위를 벗어났습니다.",
+    SENTENCE_COUNT: "문단의 문장 수가 설정 범위를 벗어났습니다.", INTERNAL_ID: "내부 식별자나 정책 용어가 노출되었습니다." };
+  return messages[code];
+}

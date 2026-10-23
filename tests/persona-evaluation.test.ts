@@ -62,7 +62,7 @@ describe("WBS-25 fixed R01 mock quality matrix", () => {
       expect(rows[0].sections?.[0].paragraphs).not.toEqual(rows[3].sections?.[0].paragraphs);
       expect(rows[0].sections?.[0].evidenceIds).toEqual(rows[3].sections?.[0].evidenceIds);
     }
-    expect(report.versions).toMatchObject({ commonPromptVersion: "1.0.0", promptVersion: "1.0.0", outputSchemaVersion: "1.0.0" });
+    expect(report.versions).toMatchObject({ commonPromptVersion: "1.0.0", promptVersion: "1.0.1", outputSchemaVersion: "1.0.0" });
     expect(report.profiles.every(profile => profile.personaVersion === "1.0.0")).toBe(true);
   });
 

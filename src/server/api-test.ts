@@ -135,7 +135,8 @@ export function createApiTestHandler(options: { environment: () => Env; now?: ()
         store, policy: apiTestPolicy(limits, time), now, environment: () => apiTestLocalEnvironment(options.environment()) ? "development" : undefined,
         resolveAccess: async () => access }).run(options.catalog.core(input.fixtureId), { signal: request.signal });
       run.value = { ...run.value, status: result.styleEvaluation.passed ? "passed" : "failed", evidence: input.mode === "live" ? result.styleEvaluation.passed ? "LIVE_PASS" : "LIVE_FAILED" : result.styleEvaluation.passed ? "MOCK_PASS" : "MOCK_FAILED",
-        verdict: { evidenceIdsValid: true, styleHeuristicPassed: result.styleEvaluation.passed }, result };
+        verdict: { evidenceIdsValid: true, styleHeuristicPassed: result.styleEvaluation.passed }, expectedRegister: result.meta.register,
+        styleIssues: result.styleEvaluation.issues, result };
     } catch (cause) {
       const code = cause instanceof ExperimentError || cause instanceof NarrationError || cause instanceof PersonaError ? cause.code : "EXECUTION_FAILED";
       run.httpStatus = code === "BUDGET_EXCEEDED" || code === "RATE_LIMITED" ? 429 : code === "CONCURRENCY_LIMIT" ? 409 : code === "STORE_UNAVAILABLE" ? 503 : 502;

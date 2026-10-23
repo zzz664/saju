@@ -8,6 +8,7 @@ import { createPersonaMockProvider } from "@/infrastructure/llm/persona-mock";
 import { FileLiveBudget } from "@/infrastructure/openai/live-budget";
 import { createOpenAiNarrationProvider, type LiveObservation } from "@/infrastructure/openai/narration";
 import { preparePersonaNarration } from "@/domain/persona/narration";
+import { apiTestRunHeading, apiTestStyleIssueMessage, ApiTestRunSchema } from "@/application/dev-api-test/index";
 
 const folders: string[] = [], secret = "synthetic-unlock-secret-for-tests-only-0001", apiKey = "synthetic-key-never-used-for-network-0001";
 const origin = "http://127.0.0.1:3000", now = Date.parse("2026-10-23T00:00:00Z");
@@ -120,6 +121,25 @@ describe("WBS-66 Responses adapter with fake HTTP only", () => {
     }); const { cookie, config } = await unlock(handler);
     const result = await (await handler(req("runs", input(), cookie, config.csrfToken))).json();
     expect(result).toMatchObject({ status: "failed", evidence: "LIVE_FAILED", verdict: { evidenceIdsValid: true, styleHeuristicPassed: false } });
+    expect(result.styleIssues).toEqual(expect.arrayContaining([{ code: "REGISTER", sectionId: "overview" }, { code: "CERTAINTY", sectionId: "overview" }]));
+  });
+  it("explains a completed API call with a formal/haeyo mismatch without hiding failure or retrying", async () => {
+    const { handler, transport, budget } = setup({}, async (_url, options) => {
+      const value = await envelope(JSON.parse(String(options?.body))), draft = JSON.parse(value.output[0].content[0].text);
+      draft.sections[0].paragraphs = ["제공된 근거를 살펴보겠습니다. 확인된 범위만 설명합니다."];
+      value.output[0].content[0].text = JSON.stringify(draft); return Response.json(value);
+    }); const { cookie, config } = await unlock(handler);
+    const failed = ApiTestRunSchema.parse(await (await handler(req("runs", input(), cookie, config.csrfToken))).json());
+    expect(failed).toMatchObject({ status: "failed", evidence: "LIVE_FAILED", providerStatus: "completed", expectedRegister: "haeyo", inputTokens: 100, outputTokens: 60 });
+    expect(failed.styleIssues).toEqual([{ code: "REGISTER", sectionId: "overview" }]);
+    expect(apiTestRunHeading(failed)).toBe("API 호출 완료 · 문체 검사 미통과");
+    expect(apiTestStyleIssueMessage("REGISTER", failed.expectedRegister)).toContain("해요체");
+    expect(transport).toHaveBeenCalledTimes(1); expect(budget.inspect(now)).toEqual({ calls: 1, tokens: 160 });
+    const formal = await (await handler(req("runs", { ...input(), personaId: "synthetic-formal" }, cookie, config.csrfToken))).json();
+    expect(formal).toMatchObject({ evidence: "LIVE_PASS", expectedRegister: "hapsyo", styleIssues: [] });
+    const sent = JSON.parse(String(transport.mock.calls[0][1]!.body));
+    expect(sent.input[0].content).toContain("haeyo이면 해요체"); expect(sent.input[0].content).toContain("sentencesPerParagraph");
+    expect(failed.promptVersion).toBe("1.0.1");
   });
   it("compares Mock/Live with identical normalized data, profiles and prompts", async () => {
     const { handler, transport } = setup(), { cookie, config } = await unlock(handler);

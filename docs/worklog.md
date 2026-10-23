@@ -834,3 +834,14 @@
 - 실제 OpenAI 요청: **0회 / LIVE_NOT_RUN**. 가짜 응답의 LIVE_PASS/실패 값은 계약 테스트일 뿐 실제 계정/청구/품질 증빙이 아니다. 실제 Live는 사용자가 서버 환경을 설정하고 화면에서 비용 동의 후 실행해야 하며 의미상 품질 수동 검토도 남는다. 키/비밀 변경, CI/PG/SSE/DB 구현은 수행하지 않았다.
 - 최종 `npm.cmd run test:e2e:api-test`: **exit 0**, 개발 E2E **8/8 PASS**(Live 동의/명시 버튼/진행 중 입력 잠금/usage/증빙을 브라우저 응답으로 시뮬레이션), production 404 E2E **1/1 PASS**, 격리 production 빌드·route typegen·tsc **PASS**. 서버 OPENAI_API_KEY는 빈 값, ENABLE_LIVE_API_TESTS=false로 고정했다. 320/390/768/1440px·키보드·Mock 기본 복귀·무자동호출도 확인했다.
 - 보존 확인: 작업 전후 `next-env.d.ts`, `tests/fixtures/cli-input.json`의 SHA256 동일. 두 파일 및 .env는 PR에서 제외한다. 구현과 자동 검증 완료 후 develop 대상 PR 1건을 생성하며 다음 WBS는 시작하지 않는다.
+
+## WBS-66 PR #24 사용자 Live 결과에 따른 수정
+
+- PR #24는 GitHub OPEN, 동일 `feature/WBS-66-live-narration`에서 리뷰 수정. 새 브랜치/PR/다음 WBS는 생성하지 않는다.
+- 사용자 정정: 대시보드에서 호출 기록 확인됨. 사용자 보고 실행은 `completed`, 입력 3856/출력 277, 종합 `LIVE_FAILED`(문체 검사 실패). 이 기록은 사용자 제공 메타이며 응답 원문은 worklog에 복사하지 않는다. 대시보드 누락 문제는 현재 이슈가 아니다.
+- 진단: 공급자의 completed와 앱의 품질 검사는 별도다. 제시된 합쇼체 문장이 해요체 설정에서 REGISTER로 실패하는 경우를 가짜 HTTP로 재현했다. 당시 선택된 persona를 확인하지 않았으므로 실제 실행의 상세 코드가 REGISTER였다고 단정하지 않는다. UI가 구체적인 실패 항목을 숨긴 점을 수정한다.
+- 변경: `src/application/dev-api-test/index.ts`, `src/server/api-test.ts`, `src/application/narration/persona.ts`에 검사 사유/선택 종결 문체 메타를 추가하고 `test-form.tsx`에 API 호출 완료·문체 미통과 구분과 한국어 상세 목록을 표시한다. `LIVE_FAILED`, 실제 usage와 검사 기준을 유지한다. 비식별 내보내기에도 상세 메타가 포함되며 결과 원문은 제외한다.
+- R01 `src/domain/persona/prompt.ts`를 1.0.1로 버전업하여 해요체/합쇼체/반말의 문단 종결과 문장 수를 명시했다. 동일 Mock/Live 공통 경로와 캐시 버전 추적을 유지한다. 코어/명리 사실·페르소나 설정·문체 검사기를 완화하지 않는다. 실제 모델 준수 개선은 추가 Live 없이 보장하지 않는다.
+- 회귀: 관련 6파일 `npm.cmd test -- tests/live-narration.test.ts tests/api-test.test.ts tests/persona.test.ts tests/persona-evaluation.test.ts tests/experiment-guard.test.ts tests/narration.test.ts` **156/156 PASS**. 합쇼체 응답의 해요체 실패/합쇼체 통과, API completed/usage 유지, 실패 상세, 무자동재호출, 새 프롬프트 포함을 가짜 HTTP로 확인했다. 최초 실행에서 프롬프트 버전 고정 기대값 1건 실패 후 새 버전으로 기대값을 갱신해 재검증했다. 과거 평가 산출물의 1.0.0 기록은 변경하지 않는다.
+- `tsc --noEmit`, `npm.cmd run lint`: **PASS**. 추가 실 API 요청 **0회**. 서버/장부/키/환경변수 및 사용자 fixture는 수정하지 않는다. 수정 프롬프트의 Live 재검증은 사용자 화면에서 별도 실행할 때만 가능하다.
+- 최종 `npm.cmd run test:e2e:api-test`: **exit 0**, 개발 E2E **9/9**, production 차단 **1/1**, 격리 production 빌드·typegen·tsc **PASS**. API completed와 문체 실패 표시/상세를 브라우저 가짜 응답으로 검증했다. E2E 서버는 키 없음/Live false다. 사용자 파일 두 건은 작업 시작 전과 같은 SHA256 상태로 보존했다. 같은 PR #24를 업데이트하고 대기한다.

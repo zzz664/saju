@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ApiTestConfigSchema, ApiTestRunSchema, type ApiTestConfig, type ApiTestRun } from "../../../application/dev-api-test/index";
+import { ApiTestConfigSchema, ApiTestRunSchema, apiTestRunHeading, apiTestStyleIssueMessage, type ApiTestConfig, type ApiTestRun } from "../../../application/dev-api-test/index";
 import styles from "./test.module.css";
 
 async function fetchConfiguration(): Promise<ApiTestConfig | null> {
@@ -45,7 +45,7 @@ export default function ApiTestForm() {
         headers: { "content-type": "application/json", "x-api-test-csrf": config.csrfToken },
         body: JSON.stringify({ mode, scenario: "narration", fixtureId: fixture, featureId: "core-base", personaId: persona, acknowledgedCost: ack, requestId: crypto.randomUUID() }) });
       const raw = await response.json(), parsed = ApiTestRunSchema.safeParse(raw);
-      if (parsed.success) { setRun(parsed.data); setNotice(parsed.data.evidence ?? parsed.data.status); }
+      if (parsed.success) { setRun(parsed.data); setNotice(apiTestRunHeading(parsed.data)); }
       else { setNotice(response.status === 401 ? "잠금해제 세션이 만료되었습니다." : response.status === 429 ? "실행 횟수 또는 예약 토큰 한도입니다." : "요청이 차단되었거나 실행에 실패했습니다."); }
       const updated = await fetch("/api/dev/api-test/config", { cache: "no-store" });
       if (updated.ok) setConfig(ApiTestConfigSchema.parse(await updated.json())); else if (updated.status === 401) setConfig(null);
@@ -84,12 +84,15 @@ export default function ApiTestForm() {
       {busy && <button type="button" onClick={() => controller.current?.abort()}>중단</button>}
     </form>}
     <p role="status" aria-live="polite">{notice}</p>
-    {run && <section className={styles.card} aria-label={`${run.mode === "mock" ? "Mock" : "Live"} 실행 결과`}><h2>{run.evidence ?? run.status}</h2>
+    {run && <section className={styles.card} aria-label={`${run.mode === "mock" ? "Mock" : "Live"} 실행 결과`}><h2>{apiTestRunHeading(run)}</h2>
+      <p>종합 검증 결과: {run.evidence ?? run.status}</p>
+      {run.mode === "live" && run.providerStatus === "completed" && run.verdict?.styleHeuristicPassed === false && <p>OpenAI 응답 생성은 완료됐습니다. 아래 문체 검사 항목을 통과하지 못해 종합 결과는 LIVE_FAILED입니다. 사용 토큰은 그대로 반영되며 자동 재호출하지 않습니다.</p>}
       {run.result?.sections.flatMap(section => section.paragraphs).map((paragraph, index) => <p key={index}>{paragraph}</p>)}
       {run.errorCode && <p>오류 코드: {run.errorCode}</p>}
       <p>{run.mode === "mock" ? "실 API 토큰 사용량: 미측정 · 외부 호출 없음" : `실 API 입력 토큰: ${run.inputTokens ?? "미확인"} · 출력 토큰: ${run.outputTokens ?? "미확인"} · 응답 상태: ${run.providerStatus ?? "미확인"}`}</p>
       <p>소요 시간: {run.durationMs ?? "미확인"}ms</p>
       {run.verdict && <p>근거 ID 검사: {run.verdict.evidenceIdsValid ? "통과" : "실패"} · 문체 규칙 검사: {run.verdict.styleHeuristicPassed ? "통과" : "실패"}. 의미·자연스러움은 수동 검토가 필요합니다.</p>}
+      {!!run.styleIssues?.length && <ul aria-label="문체 검사 상세">{run.styleIssues.map(issue => <li key={`${issue.sectionId}:${issue.code}`}>{issue.code} · {apiTestStyleIssueMessage(issue.code, run.expectedRegister)} (섹션: {issue.sectionId})</li>)}</ul>}
       <button type="button" onClick={exportEvidence}>비식별 증빙 내보내기</button>
     </section>}
   </main>;
