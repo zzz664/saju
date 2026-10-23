@@ -1,4 +1,4 @@
-import { narratePersona } from "@/application/narration/persona";
+import { narrateFeature } from "@/application/narration/feature";
 import { type ApiTestLimits } from "@/application/dev-api-test";
 import { estimateNarrationTokens, ExperimentError } from "@/domain/experiment";
 import type { NarrationProvider } from "@/domain/narration";
@@ -7,13 +7,13 @@ import {
   type LiveObservation,
 } from "@/infrastructure/openai/narration";
 import type { FileLiveBudget } from "@/infrastructure/openai/live-budget";
-import type { createApiTestCatalog } from "@/server/api-test-catalog";
+import type { ApiTestFeatureId, createApiTestCatalog } from "@/server/api-test-catalog";
 
 /** Called only after the HTTP session/Origin/CSRF/consent/fixture gates. */
-export async function runLivePersona(options: {
+export async function runLiveNarration(options: {
   catalog: ReturnType<typeof createApiTestCatalog>;
   fixtureId: string;
-  featureId: "core-base" | "F03";
+  featureId: ApiTestFeatureId;
   selection: { personaId: string; personaVersion: string };
   limits: ApiTestLimits;
   key: string;
@@ -61,15 +61,10 @@ export async function runLivePersona(options: {
       }
     },
   };
-  return narratePersona(
+  return narrateFeature(
     options.catalog.source(options.fixtureId, options.featureId),
     guarded,
-    {
-      ...options.catalog,
-      spec: options.catalog.specFor(options.featureId),
-      model: options.model,
-      selection: options.selection,
-    },
+    { ...options.catalog, model: options.model, selection: options.selection },
     { signal: options.signal },
   );
 }

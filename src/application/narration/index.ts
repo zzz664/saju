@@ -1,10 +1,7 @@
 import { ExperimentError } from "@/domain/experiment";
 import {
-  createNarrationRequest,
   NarrationError,
-  NARRATION_META,
   NarrationProviderResponseSchema,
-  validateNarrationOutput,
   type NarrationProvider,
   type NarrationRequest,
 } from "@/domain/narration";
@@ -34,7 +31,7 @@ async function generate(
   }
 }
 
-/** Shared supplier boundary, independent of the selected developer JSON output contract. */
+/** Shared supplier boundary: provider status → text, with cancellation and sanitized failures. */
 export async function receiveNarrationText(
   request: NarrationRequest,
   provider: NarrationProvider,
@@ -60,32 +57,4 @@ export async function receiveNarrationText(
           : "INCOMPLETE",
     );
   return response.data.outputText;
-}
-
-/** Internal evaluation only. No UI, persistence, retries, budget gate or live adapter. */
-export async function narrateCore(
-  value: unknown,
-  provider: NarrationProvider,
-  options: { readonly signal?: AbortSignal; readonly model?: string } = {},
-) {
-  const { signal } = options;
-  if (signal?.aborted) throw new NarrationError("CANCELLED");
-  if (provider.kind !== "mock") throw new NarrationError("LIVE_DISABLED");
-  const request = createNarrationRequest(value, options.model);
-  const data = request.data;
-  const draft = validateNarrationOutput(
-    await receiveNarrationText(request, provider, signal),
-    data,
-  );
-  return Object.freeze({
-    mode: "developer-json" as const,
-    sourceStatus: data.status,
-    sections: draft.sections,
-    limitations: data.limitations,
-    meta: Object.freeze({
-      ...NARRATION_META,
-      model: request.modelId,
-      providerKind: "mock" as const,
-    }),
-  });
 }

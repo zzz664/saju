@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApiTestHandler } from "@/server/api-test";
 import { createApiTestCatalog } from "@/server/api-test-catalog";
-import { createPersonaMockProvider } from "@/infrastructure/llm/persona-mock";
+import { createPlanMockProvider } from "@/infrastructure/llm/plan-mock";
 import { FileLiveBudget } from "@/infrastructure/openai/live-budget";
 import { promptFromWire } from "./helpers/openai-wire";
 
@@ -15,7 +15,7 @@ const origin = "http://127.0.0.1:3000",
   now = Date.parse("2026-10-23T12:00:00Z");
 const folders: string[] = [];
 const catalog = createApiTestCatalog(),
-  mock = createPersonaMockProvider();
+  mock = createPlanMockProvider();
 function request(
   route: string,
   value?: unknown,
@@ -40,7 +40,7 @@ const input = () => ({
   mode: "live",
   scenario: "narration",
   fixtureId: "synthetic-known",
-  featureId: "core-base",
+  featureId: "F03",
   personaId: "synthetic-style",
   acknowledgedCost: true,
   requestId: crypto.randomUUID(),
@@ -122,7 +122,7 @@ describe("WBS-26 privacy and durable cost QA", () => {
     "blocks every developer API with key/Live enabled in %j without reading input or touching a ledger",
     async (extra) => {
       const { handler, transport, budget } = setup(complete, extra);
-      const core = vi.spyOn(catalog, "core");
+      const core = vi.spyOn(catalog, "source");
       for (const route of ["config", "unlock", "runs", "runs/synthetic-id"]) {
         const req = request(route, { ...input(), secret, raw: privateText });
         const response = await handler(req);
@@ -159,7 +159,8 @@ describe("WBS-26 privacy and durable cost QA", () => {
     expect(response.status).toBe(502);
     const run = await response.json();
     expect(run).toMatchObject({
-      errorCode: "OUTPUT_REJECTED",
+      errorCode: "OUTPUT_REJECTED_JSON_PARSE",
+      rejection: { code: "JSON_PARSE" },
       providerStatus: "completed",
       inputTokens: 220,
       outputTokens: 80,
@@ -217,7 +218,7 @@ describe("WBS-26 privacy and durable cost QA", () => {
     expect(await response.text()).not.toContain(privateText);
     const reserved = budget.inspect(now);
     expect(reserved.calls).toBe(1);
-    expect(reserved.tokens).toBeGreaterThan(1200);
+    expect(reserved.tokens).toBeGreaterThan(2000);
     const restarted = createHandler(),
       fresh = await unlock(restarted);
     expect((await restarted(request("runs", input(), fresh.cookie, fresh.csrf))).status).toBe(429);

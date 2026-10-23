@@ -34,13 +34,15 @@ function natalReferences(pillars: {
   readonly [K in (typeof positions)[number]]: PillarReference["pillar"];
 }): PillarReference[] {
   return positions
-    .map((position): PillarReference => ({
-      referenceId: `natal:${position}`,
-      source: "natal",
-      contextId: "native",
-      position,
-      pillar: pillars[position],
-    }))
+    .map(
+      (position): PillarReference => ({
+        referenceId: `natal:${position}`,
+        source: "natal",
+        contextId: "native",
+        position,
+        pillar: pillars[position],
+      }),
+    )
     .sort((a, b) => (a.referenceId < b.referenceId ? -1 : a.referenceId > b.referenceId ? 1 : 0));
 }
 

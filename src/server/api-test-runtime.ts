@@ -1,6 +1,6 @@
 import { createApiTestHandler } from "@/server/api-test";
 import { createApiTestCatalog } from "@/server/api-test-catalog";
-import { createPersonaMockProvider } from "@/infrastructure/llm/persona-mock";
+import { createPlanMockProvider } from "@/infrastructure/llm/plan-mock";
 import { FileLiveBudget } from "@/infrastructure/openai/live-budget";
 import path from "node:path";
 
@@ -11,7 +11,7 @@ const shared = globalThis as typeof globalThis & {
 export function apiTestHandler(request: Request) {
   shared.__sajuApiTestHandler ??= createApiTestHandler({
     environment: () => process.env,
-    provider: createPersonaMockProvider(),
+    provider: createPlanMockProvider(),
     catalog: createApiTestCatalog(),
     live: { budget: new FileLiveBudget(path.join(process.cwd(), ".local/api-test")) },
   });

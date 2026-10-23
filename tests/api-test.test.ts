@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApiTestHandler } from "@/server/api-test";
 import { createApiTestCatalog } from "@/server/api-test-catalog";
-import { createPersonaMockProvider } from "@/infrastructure/llm/persona-mock";
+import { createPlanMockProvider } from "@/infrastructure/llm/plan-mock";
 import { createApprovedPersonaCatalog } from "@/domain/persona/catalog";
 
 const secret = "synthetic-unlock-secret-for-tests-only-0001";
@@ -9,7 +9,7 @@ const origin = "http://127.0.0.1:3000";
 let now = Date.parse("2026-10-23T00:00:00Z");
 const make = (
   extra: Record<string, string | undefined> = {},
-  provider = createPersonaMockProvider(),
+  provider = createPlanMockProvider(),
 ) => {
   const env = {
     NODE_ENV: "development",
@@ -61,7 +61,7 @@ const body = (requestId = crypto.randomUUID()) => ({
   mode: "mock",
   scenario: "narration",
   fixtureId: "synthetic-known",
-  featureId: "core-base",
+  featureId: "F03",
   personaId: "synthetic-style",
   acknowledgedCost: false,
   requestId,
@@ -76,7 +76,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
     async (fixtureId) => {
       const { handler, generate } = make(),
         { cookie, config } = await unlock(handler);
-      expect(config.features.map((item: { id: string }) => item.id)).toEqual(["core-base", "F03"]);
+      expect(config.features.map((item: { id: string }) => item.id)).toEqual(["F03"]);
       expect(generate).not.toHaveBeenCalled();
       const input = { ...body(), featureId: "F03", fixtureId },
         response = await handler(request("runs", input, cookie, config.csrfToken));
@@ -138,7 +138,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
       })),
       profiles.map(({ personaId, personaVersion }) => ({ personaId, personaVersion })),
     );
-    const provider = createPersonaMockProvider(),
+    const provider = createPlanMockProvider(),
       generate = vi.spyOn(provider, "generate");
     const { env } = make();
     const handler = createApiTestHandler({
@@ -167,14 +167,13 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
       personaVersion: "1.0.1",
       result: { meta: { personaId: "synthetic-formal", personaVersion: "1.0.1" } },
     });
-    const profile = JSON.parse(
-      generate.mock.calls[0][0].messages[0].content.split("\n").at(-1)!,
-    ).persona;
-    expect(profile.voice).toMatchObject({
-      register: "hapsyo",
-      preferredExpressions: ["먼저 살펴보겠습니다"],
-    });
-    expect(profile.examples[0].prefer).toBe("제공된 근거만으로 확정할 수는 없습니다.");
+    const sent = generate.mock.calls[0][0];
+    expect(sent.persona).toMatchObject({ personaId: "synthetic-formal", personaVersion: "1.0.1" });
+    const developer = sent.messages[0].content;
+    expect(developer).toContain("[캐릭터 스타일 안내] synthetic-formal 1.0.1");
+    expect(developer).toContain("합쇼체");
+    expect(developer).toContain("먼저 살펴보겠습니다");
+    expect(developer).toContain("제공된 근거만으로 확정할 수는 없습니다.");
   });
 
   it("requires an independent unlock session and returns no key/secret or raw birth input", async () => {
@@ -381,7 +380,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
       ready = new Promise<void>((resolve) => {
         entered = resolve;
       });
-    const base = createPersonaMockProvider();
+    const base = createPlanMockProvider();
     const { handler, generate } = make(
       {},
       {
@@ -425,7 +424,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
       ready = new Promise<void>((resolve) => {
         entered = resolve;
       });
-    const base = createPersonaMockProvider();
+    const base = createPlanMockProvider();
     const { handler } = make(
       {},
       {

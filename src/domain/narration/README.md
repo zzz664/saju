@@ -1,104 +1,53 @@
-> developer-json/narrateCore는 기존 Mock 비교 계약입니다. 현재 서버 실행 경로는 narratePersona와 승인형 페르소나 카탈로그를 사용합니다. 신규 제품 기능에 기존 비교 경로를 연결하지 않습니다.
+# 서술 계획·렌더링·검증 — WBS-70
 
-서술 요청은 `modelId/instructions/messages/output/maxOutputTokens`와 구조화된 `data/style`을 갖는 공급자 중립 계약이다. `infrastructure/openai/request.ts`만 Responses HTTP 본문의 `model/input/text/max_output_tokens/store/stream`을 조립한다. R01의 `store:false/stream:false`는 그 어댑터가 강제한다. Mock은 프롬프트 문자열을 다시 파싱하지 않고 검증된 `data/style`을 읽는다. 실제 모델은 서버 `OPENAI_MODEL` 설정에서 주입하며 날짜 접미사 응답 매칭은 OpenAI 인프라에 둔다.
+`FeatureResult` → **서술 계획(NarrationPlan, 캐릭터 무관)** → **렌더링(캐릭터 적용)** → **검증(근거 hard / 문체 soft)**.
+R01 개발자 JSON 경로가 지금 이 계획을 소비하고, R02 말풍선 스트리밍과 음성 읽기는 같은 계획의 beat를 하나씩 소비할 예정이다.
+결정 배경은 [결정 메모](../../../docs/decisions/2026-10-24_해석층_재설계_결정.md).
 
-# WBS-23 — LLM provider·프롬프트·mock
+## 1. 서술 계획 (`plan.ts`)
 
-기존 코어의 확정·채택 기초 관찰을 설명하는 **개발자 내부 비스트리밍 JSON 평가 경로**다.
-P06이나 `/api/analysis`에 연결하지 않는다. 사용자 풀이의 R02/R03 자연어 스트리밍,
-R01 승인 캐릭터, F01~F11 전체 기능을 구현한 것으로 간주하지 않는다.
+`buildNarrationPlan({ input, facts, interpretations, analysisKey, featureCacheKey, interpretationCatalogVersion }, spec, hash)`
 
-```ts
-import { narrateCore } from "@/application/narration";
-import { createMockNarrationProvider } from "@/infrastructure/llm/mock";
+- `spec`(`NarrationPlanSpec`)은 서버 설정이다. 기능별로 어떤 말풍선(beat)을 어떤 순서로 쓰는지 정한다. F03은 `F03_PLAN_SPEC`: `chart → observation → interpretation → limitations`.
+- beat마다 `evidence[]`가 있고 각 근거는 `alias(E1…)`, `kind(fact|interpretation|limitation)`, `text`, `source`(고전 라벨 또는 null), `refId`(서버 전용)다. **모델은 alias와 text, source만 본다.**
+- `chart` beat는 사람이 읽는 원국 요약("일간은 갑(목)이다", "시주는 미상이어서 제외한다")이다. `observation`은 확정 관측(`verifiedFindings`)이다. `interpretation`은 `usable`한 해석 단위의 요약이며 **없으면 beat를 생략하고 한계에 적는다.** `limitations`는 항상 있다.
+- `status: unavailable`이면 한계 beat 하나만 남는다.
+- `planKey`는 계획 전체의 해시다. 캐릭터·모델이 바뀌어도 변하지 않는다.
 
-// core는 기존 calculateCoreExport의 검증된 결과. 원본 입력을 직접 보내지 않는다.
-const draft = await narrateCore(core, createMockNarrationProvider(), { signal });
-// draft.mode === "developer-json", draft.meta.providerKind === "mock"
-```
+## 2. 렌더링 (`render.ts`)
 
-## 입력과 프롬프트
+`composeNarrationRequest(plan, persona, modelId)`
 
-`buildManualPromptData`는 WBS-13의 기존 투영을 공유하는 순수 함수다. CoreExport를
-먼저 검증하고 중재에서 채택된 confirmed finding만 선택한다. 부분·억제·보류된 판단은
-서술 근거에 넣지 않는다. 미상·계산 실패·중재 제한과 제외 ID는 보존한다.
-기존 `buildManualPrompt`의 문자열과 복사 출력 계약은 유지한다.
+| 계층         | 내용                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| instructions | `COMMON_SYSTEM_PROMPT` 1.1.0 (docs/12와 테스트로 동기화)                                    |
+| developer    | `renderStyleGuide(persona)` 산문 + `R01_PLAN_CONTRACT` 2.0.0 + 좋은 출력 예시 1건           |
+| user         | `planForModel(plan)` JSON — featureId, status, chart, beats(alias/text/source), limitations |
+| output       | strict JSON Schema. `beatId`는 이 계획의 id enum, `usedAliases`는 이 계획의 alias enum      |
 
-`createNarrationRequest(core)`는 고정된 지시와 별도의 user 역할 JSON 데이터를 조립한다.
-새 계산/판단, 확정 사건 예측, 실제 상담사 사칭, 상투적 표현과 데이터 속 지시 실행을 금지한다.
-기존 공통 정책(`docs/12`)을 바탕으로 하며, 이 개발용 경로의 JSON 출력 지시만 추가한다.
-R02/R03 지시나 PersonaProfile 예시를 함께 조립하지 않는다. `<>&`와 Unicode 줄 구분자를
-이스케이프하지만 프롬프트만으로 주입 방지나 사실 준수를 보장하지 않는다.
+페르소나 JSON을 그대로 보내지 않는다. `schemaVersion`·`identityDisclosure`·`strength: 0.8` 같은 기계 필드는 산문 안내에 들어가지 않는다. 제목은 서버가 소유하므로 모델 출력에 없다.
 
-요청은 Responses 형식을 참고해 model=gpt-4o-mini, store=false, stream=false,
-text.format=json_schema/strict를 명시한다. SDK나 실 API 어댑터가 연결된 요청은 아니다.
-`NarrationProvider.generate(request, { signal })`가 공급자 포트이며 응답은 unknown으로 받는다.
-현재는 mock만 실행 가능하다. kind=openai는 generate 호출 전에 LIVE_DISABLED로 거절한다.
-환경변수·키가 있어도 자동 전환하지 않는다. NARRATION_META의 model은 대상 모델 식별자이며
-실제 모델이 실행됐다는 증빙이 아니다.
+## 3. 검증
 
-프롬프트/서술 스키마 버전은 각각 1.0.0이다. 원래 코어·수동 프롬프트 버전과 별도 관리한다.
-원본 출생일시·시간대·좌표·이름은 투영에 없지만 분석 자체도 민감할 수 있다.
-프롬프트·원국·질문 원문을 일반 로그로 남기지 않는다.
+- `validateNarrationDraft(text, plan)` — **hard**. 거절은 `NarrationRejection(code, beatId)`: `BYTES · JSON_PARSE · SCHEMA · BEAT_SET · ALIAS_UNKNOWN · ALIAS_MISSING · LENGTH · DATE_FORBIDDEN · INTERNAL_ID_LEAK`. 서버 실행 기록에는 `OUTPUT_REJECTED_<CODE>`로 남아 실측 루프에서 분포를 집계할 수 있다.
+- `scoreNarrationStyle(narration, persona)` — **soft**. 점수 0~1과 `issues[{code, beatId, detail}]`. 높임법은 인용부를 제외한 **문장 단위**로 판정하고 선택 문체 비율이 70% 미만일 때만 `REGISTER_MIX`를 낸다. `죠/네요/군요`는 해요체, `니다/니까/습니까`는 합쇼체로 인식한다. 실행을 실패시키지 않는다.
 
-## 응답 검증과 실패
+## 4. 캐시 키
 
-공급자 경계의 상태는 completed(outputText), refused, incomplete, failed다.
-이 completed는 공급자 응답 분류이며 **DB의 report.completed가 아니다**.
-유효한 JSON 구조는 아래와 같다.
+`narrationCacheKeys(plan, persona, modelId, hash)` → `analysisKey`(원국 해시) · `featureKey` · `planKey` · `narrationKey`(계획 + 캐릭터 digest + 모델 + 프롬프트 digest + 출력 스키마 버전). 실제 저장소 연결은 아직 없다.
 
-```json
-{
-  "schemaVersion": "1.0.0",
-  "sections": [
-    { "findingId": "finding:base.day-wood", "paragraph": "해당 확정 관찰을 설명한 문장" }
-  ]
-}
-```
+## 5. Mock과 평가
 
-이 ID와 문장은 구조 예시다. 실제 응답에는 해당 입력의 verifiedFindings를 모두 정확히
-한 번씩 참조해야 한다. 알 수 없는 ID·중복·누락은 거절하고 순서는 원래 근거 순서로 맞춘다.
-sections 0~20개, paragraph는 공백 제거 후 1~1500자, outputText는 실제 UTF-8 128 KiB 이하다.
-버전·추가 필드·잘림·비 JSON·과대 응답은 거절한다. 확정 근거가 없으면 빈 sections만 허용한다.
-`narrationJsonSchema()`는 구조 제약용이며 원래 근거와의 관계 검사는 서버 함수가 수행한다.
+`createPlanMockProvider()`는 계획의 beat마다 근거를 인용부로 재진술하고 캐릭터 register와 문단/문장 범위를 지킨다. 전체 계획 또는 모델용 투영 어느 쪽을 받아도 동작하므로 가짜 HTTP 테스트가 전송 본문에서 요청을 복원할 수 있다. **Mock 통과는 배선 검증이며 품질 기준선이 아니다.**
 
-반환값은 mode, sourceStatus, sections, 원래 limitations, 서버가 붙인 meta다.
-공급자가 제한·원본 상태·버전을 지우거나 바꿀 수 없게 별도 보존한다. partial/unavailable도
-승격하지 않는다. 이 검사는 문장의 의미·환각·안전성·한국어 품질을 입증하지 않는다.
-실제 서술의 의미 평가와 캐릭터/스트리밍 검증은 후속 작업이 필요하다.
-
-| 상황                               | 고정 오류 코드                         |
-| ---------------------------------- | -------------------------------------- |
-| 코어 입력 검증 실패                | INPUT_REJECTED                         |
-| 라이브 provider 선택               | LIVE_DISABLED                          |
-| 거절/잘림·중단/실패 응답           | REFUSED / INCOMPLETE / PROVIDER_FAILED |
-| 응답 구조·바이트·근거 ID 검증 실패 | OUTPUT_REJECTED                        |
-| 외부 예외                          | PROVIDER_FAILED, 원문 미노출           |
-| 시작 전·대기 중·종료 후 취소       | CANCELLED                              |
-
-자동 재시도나 성공 fallback은 없다. signal은 공급자에 전달하며 대기 중 취소 시 기다림을
-끝내고 늦은 결과를 채택하지 않는다. 실제 공급자의 내부 작업 중지는 그 어댑터의 책임이다.
-로컬 mock 실험은 WBS-24의 [서버 접근·예산·동시성 가드](../experiment/README.md)를 통해 실행한다.
-이 모듈의 narrateCore는 내부 구성요소이며 HTTP에 직접 노출하지 않는다. 실제 SSE/DB 완료는 후속 WBS의 별도 경계다.
-
-## Mock과 검증
-
-Mock은 각 허용 finding의 assertion에 검증용 접두어를 붙인다. 자연스러운 모델 풀이를
-흉내 내거나 새 주장을 만들지 않는다. 같은 입력/설정이면 동일 결과이며 키·시계·네트워크·
-환경변수·토큰/청구량 추정을 사용하지 않는다. 테스트용 refused/incomplete/failed 모드를 제공한다.
+`evaluateNarrationMatrix`(`npm run eval:persona`)는 30 합성 사례 × 2 문체 × 3회를 Mock으로 돌려 근거 검증 통과율·거절 코드 분포·문체 점수를 `docs/evaluations/narration-plan-mock-*`에 남긴다. 사람 평가는 별도다.
 
 ```sh
-npm test -- tests/narration.test.ts tests/developer-analysis-api.test.ts
-node node_modules/typescript/bin/tsc --noEmit
-npm run lint
+npm test -- tests/narration-plan.test.ts tests/narration-render.test.ts tests/feature-narration.test.ts tests/narration-evaluation.test.ts
+npm run eval:persona
 ```
 
-모든 테스트는 별도의 합성 입력을 사용한다. 실제 계정 혜택·공유 동의·환경 분리 및 실 API
-호출 승인은 WBS-22 기록에서 미확인 상태다. **실연동은 BLOCKED**이며 Mock 성공을
-OpenAI 실연동·모델 품질·무료 과금 검증 성공으로 표시하지 않는다. SDK 설치나 외부 호출은 없다.
+## 6. 다음 단계
 
-공식 참고(2026-10-23 확인): [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)는
-구조화 형식과 별도의 거절/불완전 응답 처리를 설명한다.
-[Prompt engineering](https://developers.openai.com/api/docs/guides/prompt-engineering)의
-상위 지시와 입력 문맥 분리를 참고했다. 지정 모델 가용성/종료 일정은
-[GPT-4o mini](https://developers.openai.com/api/docs/models/gpt-4o-mini)와 WBS-22 체크리스트에서 실험 전 재확인한다.
+- **WBS-71 실측 보정 루프**: 보호된 `/dev/api-test`에서 2 문체 × 3 사례 × 3회 = 18회 Live. 거절 코드 분포와 문체 점수를 `docs/evaluations`에 비식별로 기록하고, 그 결과로 프롬프트·검증기를 조정한다. 이 루프 전까지 어떤 Live 품질 주장도 하지 않는다.
+- R02 스트리밍은 beat 단위 텍스트 출력 계약(docs/20)으로 같은 계획을 소비한다. 음성 읽기는 완료된 beat 텍스트를 받는 어댑터다.

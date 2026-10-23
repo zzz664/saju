@@ -236,3 +236,4 @@ export type ModuleSnapshot = z.infer<typeof ModuleSnapshotSchema>;
 export type Component = z.infer<typeof ComponentSchema>;
 export type FeatureLimitation = z.infer<typeof FeatureLimitationSchema>;
 export type FeatureResult = z.infer<typeof FeatureResultSchema>;
+export type FeatureNarrationInput = z.infer<typeof FeatureNarrationInputSchema>;

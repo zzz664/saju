@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createApprovedPersonaCatalog } from "@/domain/persona/catalog";
 import { createApiTestCatalog } from "@/server/api-test-catalog";
-import { preparePersonaNarration } from "@/domain/persona/narration";
+import { prepareFeatureNarration } from "@/application/narration/feature";
 
 const base = () => {
   const catalog = createApiTestCatalog();
@@ -34,18 +34,23 @@ describe("approved persona catalog independent of character count", () => {
       all.map(({ personaId, personaVersion }) => ({ personaId, personaVersion })),
     );
     expect(catalog.personas).toHaveLength(3);
-    const core = source.core("synthetic-known");
-    const request = preparePersonaNarration(core, {
+    const result = source.source("synthetic-known", "F03");
+    const request = prepareFeatureNarration(result, {
       ...source,
       ...catalog,
       selection: catalog.selection(third.personaId),
     });
-    const supplied = JSON.parse(request.request.messages[0].content.split("\n").at(-1)!).persona;
-    expect(supplied).toEqual(third);
-    expect(request.cache.analysisKey).toBe(
-      preparePersonaNarration(core, { ...source, selection: source.selection("synthetic-style") })
-        .cache.analysisKey,
+    expect(request.persona).toEqual(third);
+    expect(request.request.messages[0].content).toContain(
+      "[캐릭터 스타일 안내] synthetic-third 1.0.0",
     );
+    const reference = prepareFeatureNarration(result, {
+      ...source,
+      selection: source.selection("synthetic-style"),
+    });
+    expect(request.cache.analysisKey).toBe(reference.cache.analysisKey);
+    expect(request.cache.planKey).toBe(reference.cache.planKey);
+    expect(request.cache.narrationKey).not.toBe(reference.cache.narrationKey);
   });
 
   it("pins an explicit active version while retaining exact historical registry versions", () => {

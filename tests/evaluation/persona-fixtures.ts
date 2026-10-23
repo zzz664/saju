@@ -2,14 +2,15 @@ import { z } from "zod";
 import golden from "../fixtures/independent-core-golden.json";
 import manifest from "../fixtures/persona-evaluation-cases.json";
 import { fingerprintDependencies } from "../helpers/fingerprint-input";
-import { calculateCoreExport } from "../../src/application/core-export/index";
+import { executeFeature } from "../../src/application/saju/features/index";
 import {
   AnalysisInputSchema,
   BirthInputSchema,
   CalculationPolicySchema,
 } from "../../src/domain/input/index";
 import { createSyntheticPersonaCatalog } from "../../src/infrastructure/persona/synthetic-catalog";
-import { createPersonaMockProvider } from "../../src/infrastructure/llm/persona-mock";
+import { loadInterpretationCatalog } from "../../src/infrastructure/interpretation/catalog";
+import { createPlanMockProvider } from "../../src/infrastructure/llm/plan-mock";
 import { MemoryExperimentBudgetStore } from "../../src/infrastructure/llm/experiment-budget";
 import { nodeSha256Adapter } from "../../src/infrastructure/hashing/index";
 
@@ -45,6 +46,9 @@ export const evaluationManifest = z
   })
   .parse(manifest);
 
+const dependencies = { ...fingerprintDependencies, hash: nodeSha256Adapter };
+
+/** Each synthetic case becomes an F03 FeatureResult through the real engine (no network). */
 export function loadEvaluationCases() {
   return evaluationManifest.cases.map((row) => {
     const source = row.sourceCase
@@ -63,7 +67,7 @@ export function loadEvaluationCases() {
       id: row.id,
       category: row.category,
       title: row.title,
-      core: calculateCoreExport(input, fingerprintDependencies),
+      result: executeFeature({ featureId: "F03", ...input }, dependencies),
     };
   });
 }
@@ -74,26 +78,16 @@ export const evaluationSelections = evaluationProfiles.map((item) => ({
   personaId: item.personaId,
   personaVersion: item.personaVersion,
 }));
-export const evaluationSpec = {
-  specId: "quality-core-observations",
-  specVersion: "1.0.0",
-  featureId: "core-base",
-  sections: [{ id: "overview", purpose: "기초 관찰과 한계", minFindings: 0 }],
-  maxCharactersPerSection: 1200,
-  readerLevel: "general",
-  includeLimitations: true,
-  allowFortuneScore: false,
-};
 
 export function evaluationOptions(now = Date.now()) {
   const budget = { calls: 180, tokens: 100_000_000, microUsd: 100_000_000 };
   return {
     registry: createSyntheticPersonaCatalog().registry,
+    interpretation: loadInterpretationCatalog(),
     selections: evaluationSelections,
-    spec: evaluationSpec,
     hash: nodeSha256Adapter,
     repetitions: evaluationManifest.repetitions,
-    provider: createPersonaMockProvider(),
+    provider: createPlanMockProvider(),
     store: new MemoryExperimentBudgetStore(),
     policy: {
       enabled: true,
@@ -101,7 +95,7 @@ export function evaluationOptions(now = Date.now()) {
       allowedPrincipalIds: ["quality-evaluator"],
       maxConcurrent: 1,
       maxRequestBytes: 131072,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 1600,
       rates: { inputMicroUsdPerMillionTokens: 1, outputMicroUsdPerMillionTokens: 1 },
       daily: budget,
       perPrincipalDaily: budget,

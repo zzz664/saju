@@ -11,14 +11,16 @@ import {
   ApiTestRunSchema,
   type ApiTestConfig,
 } from "@/application/dev-api-test";
-import { createPersonaExperiment } from "@/application/narration/persona";
+import { createFeatureNarrationExperiment } from "@/application/narration/feature";
 import { canonicalizeJson } from "@/domain/core-fingerprint";
 import { ExperimentError } from "@/domain/experiment";
 import { NarrationError, type NarrationProvider } from "@/domain/narration";
+import { NarrationPlanError } from "@/domain/narration/plan";
+import { NarrationRejection } from "@/domain/narration/render";
 import { MemoryExperimentBudgetStore } from "@/infrastructure/llm/experiment-budget";
-import { PERSONA_PROMPT_VERSION, COMMON_SYSTEM_PROMPT_VERSION } from "@/domain/persona/prompt";
+import { COMMON_SYSTEM_PROMPT_VERSION, R01_PLAN_CONTRACT_VERSION } from "@/domain/narration/prompt";
 import type { createApiTestCatalog } from "@/server/api-test-catalog";
-import { runLivePersona } from "@/server/api-test-live";
+import { runLiveNarration } from "@/server/api-test-live";
 import type { FileLiveBudget } from "@/infrastructure/openai/live-budget";
 import type { LiveObservation } from "@/infrastructure/openai/narration";
 import { PersonaError } from "@/domain/persona";
@@ -256,9 +258,10 @@ export function createApiTestHandler(options: {
       return error(422, "SELECTION_REJECTED");
     if (
       input.scenario !== "narration" ||
-      (input.featureId !== "core-base" && input.featureId !== "F03")
+      !options.catalog.features.some((item) => item.id === input.featureId)
     )
       return error(409, "FEATURE_NOT_READY");
+    const featureId = input.featureId as (typeof options.catalog.features)[number]["id"];
     if (input.mode === "live" && (!input.acknowledgedCost || liveReason !== "READY"))
       return error(403, !input.acknowledgedCost ? "COST_ACK_REQUIRED" : liveReason, "LIVE_BLOCKED");
     const selection = options.catalog.selection(input.personaId);
@@ -282,13 +285,13 @@ export function createApiTestHandler(options: {
           testRunId: id,
           mode: input.mode,
           scenario: "narration",
-          featureId: input.featureId,
+          featureId,
           modelId,
           personaId: input.personaId,
           personaVersion: selection.personaVersion,
-          promptVersion: PERSONA_PROMPT_VERSION,
+          promptVersion: R01_PLAN_CONTRACT_VERSION,
           commonPromptVersion: COMMON_SYSTEM_PROMPT_VERSION,
-          schemaVersion: "1.0.0",
+          schemaVersion: "2.0.0",
           status: "running",
           startedAt: new Date(time).toISOString(),
           inputTokens: null,
@@ -301,10 +304,10 @@ export function createApiTestHandler(options: {
     try {
       const result =
         input.mode === "live"
-          ? await runLivePersona({
+          ? await runLiveNarration({
               catalog: options.catalog,
               fixtureId: input.fixtureId,
-              featureId: input.featureId,
+              featureId,
               selection,
               limits,
               model: modelId,
@@ -329,9 +332,8 @@ export function createApiTestHandler(options: {
                 }
               },
             })
-          : await createPersonaExperiment({
+          : await createFeatureNarrationExperiment({
               ...options.catalog,
-              spec: options.catalog.specFor(input.featureId),
               model: modelId,
               selection,
               provider: options.provider,
@@ -341,32 +343,35 @@ export function createApiTestHandler(options: {
               environment: () =>
                 apiTestLocalEnvironment(options.environment()) ? "development" : undefined,
               resolveAccess: async () => access,
-            }).run(options.catalog.source(input.fixtureId, input.featureId), {
+            }).run(options.catalog.source(input.fixtureId, featureId), {
               signal: request.signal,
             });
+      // Grounding passed (otherwise narrateFeature threw). Style is a score, never a failure.
       run.value = {
         ...run.value,
-        status: result.styleEvaluation.passed ? "passed" : "failed",
-        evidence:
-          input.mode === "live"
-            ? result.styleEvaluation.passed
-              ? "LIVE_PASS"
-              : "LIVE_FAILED"
-            : result.styleEvaluation.passed
-              ? "MOCK_PASS"
-              : "MOCK_FAILED",
-        verdict: { evidenceIdsValid: true, styleHeuristicPassed: result.styleEvaluation.passed },
+        status: "passed",
+        evidence: input.mode === "live" ? "LIVE_PASS" : "MOCK_PASS",
+        verdict: {
+          groundingPassed: true,
+          styleScore: result.styleEvaluation.score,
+          styleIssueCount: result.styleEvaluation.issues.length,
+        },
         expectedRegister: result.meta.register,
         styleIssues: result.styleEvaluation.issues,
         result,
       };
     } catch (cause) {
       const code =
-        cause instanceof ExperimentError ||
-        cause instanceof NarrationError ||
-        cause instanceof PersonaError
-          ? cause.code
-          : "EXECUTION_FAILED";
+        cause instanceof NarrationRejection
+          ? `OUTPUT_REJECTED_${cause.code}`
+          : cause instanceof ExperimentError ||
+              cause instanceof NarrationError ||
+              cause instanceof NarrationPlanError ||
+              cause instanceof PersonaError
+            ? cause.code
+            : "EXECUTION_FAILED";
+      if (cause instanceof NarrationRejection)
+        run.value = { ...run.value, rejection: { code: cause.code, beatId: cause.beatId } };
       run.httpStatus =
         code === "BUDGET_EXCEEDED" || code === "RATE_LIMITED"
           ? 429

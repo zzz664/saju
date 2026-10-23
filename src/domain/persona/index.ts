@@ -78,41 +78,9 @@ export type PersonaProfile = z.infer<typeof PersonaProfileSchema>;
 export const PersonaSelectionSchema = z
   .strictObject({ personaId: Id, personaVersion: Version })
   .readonly();
-export const FeatureNarrationSpecSchema = z
-  .strictObject({
-    specId: Id,
-    specVersion: Version,
-    featureId: z.enum(["core-base", "F03"]),
-    sections: z
-      .array(
-        z
-          .strictObject({
-            id: Id,
-            purpose: Text.max(100),
-            minFindings: z.number().int().min(0).max(20),
-          })
-          .readonly(),
-      )
-      .min(1)
-      .max(8)
-      .readonly(),
-    maxCharactersPerSection: z.number().int().min(50).max(3000),
-    readerLevel: z.literal("general"),
-    includeLimitations: z.literal(true),
-    allowFortuneScore: z.literal(false),
-  })
-  .refine(
-    (spec) => new Set(spec.sections.map((section) => section.id)).size === spec.sections.length,
-  )
-  .readonly();
-export type FeatureNarrationSpec = z.infer<typeof FeatureNarrationSpecSchema>;
 const messages = {
   REGISTRY_REJECTED: "Persona registry was rejected.",
   SELECTION_REJECTED: "Persona selection was rejected.",
-  SPEC_REJECTED: "Persona narration spec was rejected.",
-  INPUT_REJECTED: "Persona narration input was rejected.",
-  OUTPUT_REJECTED: "Persona narration output was rejected.",
-  HASH_FAILED: "Persona narration hash failed.",
 } as const;
 export class PersonaError extends defineCodedError("PersonaError", messages) {}
 export interface ApprovedPersonaRegistry {

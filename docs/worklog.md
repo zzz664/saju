@@ -1053,3 +1053,31 @@
 - 실제 API 호출 **0회/LIVE_NOT_RUN**. 가짜 Responses 전송의 모델/usage/동의/예산/멱등 검증은 실호출 증거가 아니다. 실제 GPT 문장·의미/자연스러움은 사용자가 Live를 명시 실행한 뒤 검토한다. .env/실제 .local 예산 장부는 열람·변경하지 않았다. 기존 CRLF 파일 전체 재포맷 없음.
 - 변경 파일: README.md, docs/{21_실제_OpenAI_API_테스트_설계.md,evaluations/WBS-31-strengths.md,worklog.md}, src/domain/features/{strengths.ts,README.md}, src/domain/persona/{data.ts,index.ts,narration.ts}, src/domain/narration/index.ts, src/application/saju/features/{index.ts,registry.ts,profiles/strengths.ts,README.md}, src/application/{narration/persona.ts,dev-api-test/index.ts}, src/server/api-test{,-catalog,-live}.ts, src/infrastructure/llm/persona-mock.ts, src/app/dev/api-test/{test-form.tsx,README.md}, src/cli/README.md, tests/{strengths,strengths-narration,api-test,live-narration,features,features-orchestration,features-cli}.test.ts, tests/helpers/openai-wire.ts, tests/e2e/api-test.spec.ts.
 - AGENTS.md/next-env.d.ts/개인 cli-input.json 사용자 수정은 보존·커밋 제외한다. next-env/입력 fixture 해시는 작업 전과 같다. develop PR 한 건 생성 후 즉시 중지한다. PR은 [기능 브랜치 PR 조회](https://github.com/zzz664/saju/pulls?q=head%3Afeature%2FWBS-31-strengths-narration)와 최종 보고의 직접 URL로 확인한다.
+
+# 2026-10-24 — 해석 층 재설계 (WBS-69·70 구현, WBS-71 정의) · 브랜치 `claude/fervent-newton-z75xzm`
+
+## 배경과 결정
+
+- develop `8675d23`(WBS-33 머지) 진단: M03 판정이 전부 `partial/deferred`로 LLM에 도달하지 않아 F03 이후 기능이 "오행 개수표 + 점검 질문"만 남았고, 서술 검증기는 Mock에 과적합되어 실제 호출 1회가 실패했으며 모든 거절이 `OUTPUT_REJECTED` 하나로 뭉개져 있었다. 사용자 승인으로 기존 R01 경로를 **교체**하고 해석 카탈로그·서술 계획 층을 신설했다. 결정 메모: `docs/decisions/2026-10-24_해석층_재설계_결정.md`.
+- 목표 재정의: "환각 없음"이 아니라 **근거 추적(모든 해석 문장 → 원전 구절)·일관성(planKey)·금지 주장 차단(거절 사유 코드)·정직한 미감수 표시**를 공학적으로 보장한다.
+
+## 변경
+
+- 신규 `src/domain/interpretation/{schemas,index}.ts`: 조건 키(일간×월지·일간·십성군·십성군 쌍) → 퍼블릭 도메인 원전 구절 + AI 요약 조회. `usable`은 원문 수집·요약·함의 검사 PASS·digest 일치일 때만. `src/infrastructure/interpretation/{scaffold,catalog}.ts` + `data/{passages,summaries}.json`(141 슬롯, 현재 전부 `scaffold`).
+- 신규 `scripts/interpretation/{lib,collect-passages,summarize-units}.mjs`: Wikisource 수집(LLM 없음)과 명시 Live 요약(요약 1회 + 독립 함의 검사 1회, `ENABLE_INTERPRETATION_SUMMARY=true`+키+`--confirm`+`--max`). 이 환경은 Wikisource가 프록시에서 차단되어 **수집을 실행하지 않았다**.
+- 신규 `src/domain/narration/plan.ts`(캐릭터 무관 beat 계획, 별칭 E1…, 한계, `planKey`, `F03_PLAN_SPEC`), `render.ts`(페르소나 → 산문 스타일 가이드, R01 계약 2.0.0 + 예시 1건, 계획 고정 strict 스키마, 근거 검증 hard 9코드, 문체 soft 점수·문장 단위 높임법 70%), `codes.ts`(클라이언트 공유 enum), `prompt.ts`(공통 프롬프트 1.1.0, docs/12 동기화).
+- 교체 `src/application/narration/{feature,experiment,index,evaluation}.ts`, `src/infrastructure/llm/plan-mock.ts`, `src/server/api-test{,-live,-catalog,-runtime}.ts`, `src/application/dev-api-test/index.ts`(F03만, verdict=`groundingPassed/styleScore`, `rejection{code,beatId}`, 기본 출력 상한 2,000), `src/app/dev/api-test/test-form.tsx`(말풍선 표시·거절 사유·문체 점수).
+- 삭제 `domain/persona/{narration,data,prompt}.ts`, `application/narration/persona.ts`, `infrastructure/llm/{mock,persona-mock}.ts`, `FeatureNarrationSpec`, `core-base` 기능 ID, 관련 테스트 6개.
+- 문서: `AGENTS.md`(원칙 수정), `02`·`10`(IK/NP 모듈·디렉터리·착수 순서)·`11`(v2.6 변경 고지)·`12`(v1.1.0)·`20`(beat 단위 R02 입력)·`05`(E-2 절), 신규 `22_Codex_해석층_작업지시.md`, `WBS.csv`(WBS-69/70 DONE, 71 TODO, 32~35 재정의), README·모듈 README 4개, `docs/evaluations/narration-plan-mock-*`.
+
+## 검증
+
+- `npm test`: **67개 파일 / 1,416건 PASS**(신규 interpretation 4·scripts 3·plan 4·render 6·feature-narration 6·evaluation 3, 수정 live-narration 39·api-test 16·security 7·experiment-guard 등). `npm run typecheck`·`npm run lint`(경고 0)·`npm run format:check`·`npm run check:docs`(64 문서/106 링크/문제 0) PASS. 클라이언트 경계 테스트: `test-form.tsx` import 그래프에 엔진/전송 없음.
+- `npm run eval:persona`(Mock): 30 사례 × 2 문체 × 3회 = **180/180 근거 검증 통과, 거절 0, 문체 플래그 0**. 이는 배선 검증이며 품질 기준선이 아니다(Mock 도입문 반복 88회는 템플릿 한계로 기록).
+- 실제 OpenAI 호출 **0회 / LIVE_NOT_RUN**. 해석 카탈로그 원문·요약 **미수집**. E2E(Playwright)·`npm run build`는 이 세션에서 실행하지 않았다(spec은 새 계약으로 갱신).
+
+## 남은 것
+
+- 사용자 환경: `collect-passages.mjs --dry-run`으로 locator 적중 확인 → 수집 → 승인 후 `summarize-units.mjs`. 절차는 `docs/22` D절.
+- WBS-71 실측 보정 루프 18회 → 거절 코드 분포로 프롬프트/검증기 1회 조정. 그 전까지 Live 품질 주장 없음.
+- F02·F04 서술 연결(spec 등록), F05·F06은 NP 패턴으로 재정의됨. 사람 품질 평가 미실시.
