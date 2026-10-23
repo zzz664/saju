@@ -6,6 +6,7 @@ WBS-03의 CLI·어댑터 포트 사용법과 현재 지원 범위는 [CLI 문서
 OpenAI 실험 전 수동 점검은 [WBS-22 조직 설정 체크리스트](docs/checklists/WBS-22-openai-account-review.md)를 따른다. 계정 확인과 실호출 승인은 아직 수행하지 않았다.
 WBS-23의 [LLM provider·프롬프트·mock](src/domain/narration/README.md)은 기존 확정 판단의 내부 JSON 검증용이다. 실 API·P06·스트리밍에는 연결하지 않는다.
 WBS-24의 [실험 접근·예산·동시성 가드](src/domain/experiment/README.md)는 서버가 허용한 로컬 mock에 일/사용자/세션 예약 한도를 적용한다. 실 API는 계속 차단한다.
+WBS-47의 [승인형 R01 페르소나](src/domain/persona/README.md)는 세 계층 프롬프트·내부 서술 JSON·문체/근거·캐시 키를 mock으로 검증한다. 제품 캐릭터나 P06 스트리밍에 연결하지 않는다.
 
 입력 계약과 범위는 [src/domain/input/README.md](src/domain/input/README.md)를 참고한다.
 Zod 검증과 입력 한계 판정은 Next.js/외부 서비스 없이 실행할 수 있다.
