@@ -21,11 +21,12 @@ import {
   PERSONA_PROMPT_VERSION,
 } from "@/domain/persona/prompt";
 import { DEFAULT_NARRATION_MODEL, ModelIdSchema } from "@/domain/narration/model";
+import { PersonaNarrationDataSchema, type PersonaNarrationData } from "@/domain/persona/data";
 
 export const PersonaNarrationDraftSchema = z
   .strictObject({
     schemaVersion: z.literal("1.0.0"),
-    featureId: z.literal("core-base"),
+    featureId: z.enum(["core-base", "F03"]),
     sections: z
       .array(
         z
@@ -33,7 +34,7 @@ export const PersonaNarrationDraftSchema = z
             sectionId: z.string().min(1).max(64),
             title: z.string().trim().min(1).max(100),
             paragraphs: z.array(z.string().trim().min(1).max(3000)).min(1).max(4).readonly(),
-            evidenceIds: z.array(z.string().min(1).max(200)).max(20).readonly(),
+            evidenceIds: z.array(z.string().min(1).max(300)).max(20).readonly(),
           })
           .readonly(),
       )
@@ -43,8 +44,11 @@ export const PersonaNarrationDraftSchema = z
   })
   .readonly();
 export type PersonaNarrationDraft = z.infer<typeof PersonaNarrationDraftSchema>;
-export function personaNarrationJsonSchema() {
-  return z.toJSONSchema(PersonaNarrationDraftSchema, { target: "draft-2020-12" });
+export function personaNarrationJsonSchema(featureId: "core-base" | "F03" = "core-base") {
+  return z.toJSONSchema(
+    PersonaNarrationDraftSchema.unwrap().extend({ featureId: z.literal(featureId) }),
+    { target: "draft-2020-12" },
+  );
 }
 function json(value: unknown) {
   return escapeJsonForPrompt(value);
@@ -60,35 +64,45 @@ function hashValue(value: unknown, hash: Sha256Adapter): string {
     throw new PersonaError("HASH_FAILED");
   return result;
 }
-export function preparePersonaNarration(
-  core: unknown,
-  options: {
-    registry: ApprovedPersonaRegistry;
-    selection: unknown;
-    spec: unknown;
-    hash: Sha256Adapter;
-    model?: string;
-  },
-) {
-  const modelId = ModelIdSchema.parse(options.model ?? DEFAULT_NARRATION_MODEL);
-  const profile = options.registry.load(options.selection);
-  const parsed = FeatureNarrationSpecSchema.safeParse(options.spec);
-  if (!parsed.success) throw new PersonaError("SPEC_REJECTED");
-  const spec = parsed.data;
+export type PersonaPreparationOptions = {
+  registry: ApprovedPersonaRegistry;
+  selection: unknown;
+  spec: unknown;
+  hash: Sha256Adapter;
+  model?: string;
+};
+export function preparePersonaNarration(core: unknown, options: PersonaPreparationOptions) {
   let data: ReturnType<typeof buildManualPromptData>;
   try {
     data = buildManualPromptData(core);
   } catch {
     throw new PersonaError("INPUT_REJECTED");
   }
-  if (spec.sections.some((section) => section.minFindings > data.verifiedFindings.length))
-    throw new PersonaError("SPEC_REJECTED");
   let analysisKey: string;
   try {
     analysisKey = fingerprintCoreExport(core, options.hash).fingerprint.hash;
   } catch {
     throw new PersonaError("HASH_FAILED");
   }
+  return preparePersonaNarrationData(data, analysisKey, options);
+}
+/** Trusted application assembly validates the source result before calling this shared R01 composer. */
+export function preparePersonaNarrationData(
+  input: PersonaNarrationData,
+  analysisKey: string,
+  options: PersonaPreparationOptions,
+) {
+  const data = PersonaNarrationDataSchema.parse(input);
+  const modelId = ModelIdSchema.parse(options.model ?? DEFAULT_NARRATION_MODEL);
+  const profile = options.registry.load(options.selection);
+  const parsed = FeatureNarrationSpecSchema.safeParse(options.spec);
+  if (!parsed.success) throw new PersonaError("SPEC_REJECTED");
+  const spec = parsed.data;
+  if (
+    (data.scope === "feature-observations" ? data.featureId : "core-base") !== spec.featureId ||
+    spec.sections.some((section) => section.minFindings > data.verifiedFindings.length)
+  )
+    throw new PersonaError("SPEC_REJECTED");
   const descriptor = {
     policyId: "narration.persona-cache",
     policyVersion: "1.0.0",
@@ -127,7 +141,10 @@ export function preparePersonaNarration(
         content: json({ featureId: spec.featureId, ...data }),
       }),
     ]),
-    output: { name: "r01_internal_narration", jsonSchema: personaNarrationJsonSchema() },
+    output: {
+      name: "r01_internal_narration",
+      jsonSchema: personaNarrationJsonSchema(spec.featureId),
+    },
   });
   return Object.freeze({
     profile,
@@ -137,7 +154,7 @@ export function preparePersonaNarration(
     cache: Object.freeze({ analysisKey, narrationKey: hashValue(descriptor, options.hash) }),
   });
 }
-export type PreparedPersonaNarration = ReturnType<typeof preparePersonaNarration>;
+export type PreparedPersonaNarration = ReturnType<typeof preparePersonaNarrationData>;
 export function validatePersonaOutput(
   text: string,
   context: PreparedPersonaNarration,
@@ -151,7 +168,8 @@ export function validatePersonaOutput(
     throw new PersonaError("OUTPUT_REJECTED");
   }
   const parsed = PersonaNarrationDraftSchema.safeParse(raw);
-  if (!parsed.success) throw new PersonaError("OUTPUT_REJECTED");
+  if (!parsed.success || parsed.data.featureId !== context.spec.featureId)
+    throw new PersonaError("OUTPUT_REJECTED");
   const sections = new Map(parsed.data.sections.map((section) => [section.sectionId, section]));
   const valid = new Set(context.data.verifiedFindings.map((finding) => finding.findingId));
   if (

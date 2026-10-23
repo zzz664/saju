@@ -6,6 +6,40 @@ async function unlock(page: Page) {
   await page.getByRole("button", { name: "잠금해제", exact: true }).click();
   await expect(page.getByRole("button", { name: "테스트 실행" })).toBeEnabled();
 }
+
+test("F03 selection explicitly runs shared Mock prose and preserves partial/unknown limits", async ({
+  page,
+}) => {
+  let calls = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().endsWith("/runs")) calls++;
+  });
+  await unlock(page);
+  await page.getByLabel("기능", { exact: true }).selectOption("F03");
+  await page.getByLabel("가상 사례", { exact: true }).selectOption("synthetic-unknown");
+  await expect(page.getByText(/관측 사실을 바탕으로/)).toBeVisible();
+  expect(calls).toBe(0);
+  const pending = page.waitForResponse(
+    (r) => r.url().endsWith("/runs") && r.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "테스트 실행" }).click();
+  const response = await pending,
+    run = await response.json();
+  expect(response.request().postDataJSON().featureId).toBe("F03");
+  expect(run).toMatchObject({
+    featureId: "F03",
+    evidence: "MOCK_PASS",
+    result: { featureId: "F03", sourceStatus: "partial" },
+  });
+  await expect(page.getByRole("heading", { name: "MOCK_PASS" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Mock 실행 결과" })).toContainText(
+    "판단 상태: partial",
+  );
+  expect(calls).toBe(1);
+  await page.getByLabel("기능", { exact: true }).selectOption("core-base");
+  await expect(page.getByRole("region", { name: "Mock 실행 결과" })).toHaveCount(0);
+  expect(calls).toBe(1);
+});
 test("locked developer APIs require a session and no mode interaction automatically runs", async ({
   page,
   request,

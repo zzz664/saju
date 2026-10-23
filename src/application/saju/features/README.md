@@ -30,7 +30,8 @@ M01/M02/M05/M06, M08은 양쪽 M01/M02/M03에 의존한다. F01은 F02~F07과 so
 외부 영속 캐시는 이번에 구현하지 않는다.
 
 기본 구현은 기존 M01~M03 어댑터까지다. M04~M08은 MODULE_NOT_IMPLEMENTED,
-F02~F11 실행기는 EXECUTOR_NOT_IMPLEMENTED로 남긴다. F01은 하위 상태/근거를 합치는
+F02/F04~F11 실행기는 EXECUTOR_NOT_IMPLEMENTED로 남긴다. F03은 WBS-31의
+[관측·조건부 검토 실행기](../../../domain/features/README.md)를 등록했다. F01은 하위 상태/근거를 합치는
 프레임워크이며 WBS-38의 종합 풀이 완료가 아니다. 미구현 기능을 공개 활성화하지 않는다.
 
 서버가 신뢰하는 moduleExecutors/featureExecutors 포트로 후속 구현을 주입한다. 모듈 포트는
@@ -55,10 +56,11 @@ A/B 순서도 보존한다. 계산 캐시는 모델 ID에 의존하지 않으며
 buildFeatureNarrationInput은 엔진이 만든 검증된 불변 결과만 받는다. 구조 스키마를 통과한
 외부 JSON만으로 재사용할 수 없다. complete/confirmed/accepted 근거만 verifiedFindings에
 투영하며, 관법 충돌 M01은 deferred로, M03 후보/보류는 partial로 유지해 확정 근거에서 제외한다.
-실제 OpenAI나 R01/R02/R03에 연결하지 않으며 Mock 소비자의 계산 변경도 차단한다.
+WBS-31에서 F03은 공통 R01과 보호된 개발자 API 테스트의 Mock/Live 공급자에 연결했다.
+R02/R03/P06에는 연결하지 않으며 Mock 소비자의 계산 변경도 차단한다.
 
-검토 CLI feature-json은 FeatureRequest 한 개를 표준입력으로 받는다. 현재 실제 실행기는
-미구현이므로 정상 요청도 partial/unavailable·종료 2가 일반적이다. 입력/공급자 오류의 빈 stdout과
+검토 CLI feature-json은 FeatureRequest 한 개를 표준입력으로 받는다. F03도 상위 해석 한계를
+보존하므로 정상 요청이 partial·종료 2다. 그 외 실행기 미구현도 partial/unavailable을 명시한다. 입력/공급자 오류의 빈 stdout과
 고정 오류 stderr와 구분한다. complete에만 종료 0을 사용한다. M09는 새 명리 판단이나 문장을
 창작하지 않고 기존 판단의 구조 투영·선택·상태 조합만 담당한다.
 

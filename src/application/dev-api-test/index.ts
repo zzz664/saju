@@ -76,13 +76,17 @@ export const ApiTestConfigSchema = z.strictObject({
   remaining: Quota,
   fixtures: z.array(Choice).max(10),
   personas: z.array(Choice).max(50),
+  features: z
+    .array(z.strictObject({ id: z.enum(["core-base", "F03"]), label: z.string().min(1).max(100) }))
+    .min(1)
+    .max(2),
 });
 export type ApiTestConfig = z.infer<typeof ApiTestConfigSchema>;
 export const ApiTestRunSchema = z.strictObject({
   testRunId: z.uuid(),
   mode: z.enum(["mock", "live"]),
   scenario: z.literal("narration"),
-  featureId: z.literal("core-base"),
+  featureId: z.enum(["core-base", "F03"]),
   modelId: ModelIdSchema,
   personaId: z.string().min(1).max(64),
   status: z.enum(["blocked", "running", "passed", "failed", "interrupted"]),

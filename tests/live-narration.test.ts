@@ -147,6 +147,39 @@ async function unlock(handler: ReturnType<typeof createApiTestHandler>) {
 }
 
 describe("WBS-66 Responses adapter with fake HTTP only", () => {
+  it("routes F03 through the same guarded fake Responses transport with separate evidence and preserved budget", async () => {
+    const { handler, transport, budget } = setup(),
+      { cookie, config } = await unlock(handler);
+    const body = { ...input(), featureId: "F03" };
+    expect(transport).not.toHaveBeenCalled();
+    expect(
+      (await handler(req("runs", { ...body, acknowledgedCost: false }, cookie, config.csrfToken)))
+        .status,
+    ).toBe(403);
+    expect(transport).not.toHaveBeenCalled();
+    const response = await handler(req("runs", body, cookie, config.csrfToken)),
+      run = await response.json();
+    expect(response.status).toBe(200);
+    expect(run).toMatchObject({
+      featureId: "F03",
+      evidence: "LIVE_PASS",
+      providerStatus: "completed",
+      inputTokens: 100,
+      outputTokens: 60,
+      result: { sourceStatus: "partial", meta: { providerKind: "openai" } },
+    });
+    const wire = JSON.parse(String(transport.mock.calls[0][1]?.body));
+    expect(wire).toMatchObject({ store: false, stream: false, max_output_tokens: 1200 });
+    expect(wire.text.format.schema.properties.featureId.const).toBe("F03");
+    expect(JSON.stringify(wire)).not.toMatch(/birthDate|birthTime|2024-02-10/);
+    expect(
+      wire.input.find((message: { role: string }) => message.role === "user").content,
+    ).toContain("f03.observation.");
+    expect(budget.inspect(now)).toEqual({ calls: 1, tokens: 160 });
+    expect(await (await handler(req("runs", body, cookie, config.csrfToken))).json()).toEqual(run);
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it("sends the full shared R01 request, fixed endpoint, store:false and token cap with no retries", async () => {
     const { handler, transport, budget } = setup(),
       { cookie, config } = await unlock(handler);
