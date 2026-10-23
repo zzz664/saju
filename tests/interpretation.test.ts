@@ -39,6 +39,24 @@ const withData = (status: "passed" | "failed" = "passed") =>
   );
 
 describe("classical interpretation lookup catalog", () => {
+  it("lets a collected passage carry the page it was actually found on", () => {
+    const moved =
+      "https://zh.wikisource.org/wiki/%E4%B8%89%E5%91%BD%E9%80%9A%E6%9C%83%2F%E5%8D%B7%E5%85%AD";
+    const catalog = composeInterpretationCatalog(
+      {
+        schemaVersion: "1.0.0",
+        note: "test",
+        passages: {
+          "src.smth.resource": { passage, retrievedAt, passageDigest: digest(passage), url: moved },
+        },
+      },
+      { schemaVersion: "1.0.0", note: "test", summaries: {} },
+    );
+    expect(catalog.sources.find((s) => s.sourceId === "src.smth.resource")?.url).toBe(moved);
+    expect(catalog.sources.find((s) => s.sourceId === "src.smth.output")?.url).toContain(
+      "%E5%8D%B7%E4%BA%94",
+    );
+  });
   it("scaffolds every day-master×month, day-master, family and pair slot without any prose", () => {
     const scaffold = buildScaffold();
     expect(scaffold).toHaveLength(120 + 10 + 5 + 6);

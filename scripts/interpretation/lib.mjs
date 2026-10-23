@@ -36,7 +36,8 @@ export function htmlToText(html) {
       return `\n${bar} ${inner.replace(/<[^>]+>/g, "").trim()} ${bar}\n`;
     })
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|li|tr|dd|dt|blockquote|section|td|th)>/gi, "\n")
+    .replace(/<\/(p|blockquote|section|div)>/gi, "\n\n") // paragraph boundary = blank line
+    .replace(/<\/(li|tr|dd|dt|td|th)>/gi, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
     .replace(/&quot;/g, '"')
@@ -87,14 +88,84 @@ function extractHeadingSection(lines, locator) {
  */
 function extractParagraph(lines, locator) {
   const plain = lines.map((line) => (HEADING.test(line) ? "" : stripWikitext(line)));
+  const grouped = monthLocator(locator);
   let index = plain.findIndex((line) => line.startsWith(locator));
+  if (index < 0 && grouped) index = plain.findIndex((line) => grouped.test(line));
   if (index < 0) index = plain.findIndex((line) => line.length >= 20 && line.includes(locator));
   if (index < 0) return null;
+  // The paragraph ends at a blank line, a heading, or the next month paragraph of the same subject.
+  const nextMonth = grouped
+    ? new RegExp(`^[正一二三四五六七八九十、，\\s月]{1,16}月${grouped.subject}`)
+    : null;
   const body = [];
-  for (let cursor = index; cursor < lines.length && plain[cursor].length; cursor++)
+  for (let cursor = index; cursor < lines.length && plain[cursor].length; cursor++) {
+    if (cursor > index && nextMonth?.test(plain[cursor])) break;
     body.push(plain[cursor]);
+  }
   const text = body.join("\n").trim();
   return text.length ? text : null;
+}
+
+const MONTHS = ["正", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"];
+const MONTH_NUMERAL = /^[正一二三四五六七八九十]$/;
+
+/**
+ * Month numbers named in a prefix such as "五六月", "十一、十二月" or "正、二月". In a glued run a
+ * bare 一/二 right after a 十-token means 十一/十二 ("十一二月" = 11, 12).
+ */
+export function monthsInPrefix(prefix) {
+  const months = [];
+  const chars = [...prefix.replace(/月/g, "")].filter((char) => MONTH_NUMERAL.test(char));
+  for (let index = 0; index < chars.length; index++) {
+    const char = chars[index];
+    if (char === "十") {
+      const next = chars[index + 1];
+      if (next === "一" || next === "二") {
+        months.push(next === "一" ? 11 : 12);
+        index++;
+      } else months.push(10);
+      continue;
+    }
+    const value = MONTHS.indexOf(char) + 1;
+    const previous = months[months.length - 1];
+    if (value >= 1 && value <= 2 && previous >= 10) months.push(10 + value);
+    else if (value > 0) months.push(value);
+  }
+  return months;
+}
+
+/**
+ * "五月甲木" also matches a paragraph that starts "五六月甲木，…" or "四、五、六月甲木，…":
+ * 窮通寶鑑 groups months whose advice is shared. Returns null for non-month locators.
+ */
+export function monthLocator(locator) {
+  const match = locator.match(/^(正|二|三|四|五|六|七|八|九|十一|十二|十)月(.+)$/);
+  if (!match) return null;
+  const month = MONTHS.indexOf(match[1]) + 1;
+  const subject = match[2];
+  const prefixPattern = new RegExp(`^([正一二三四五六七八九十、，\\s月]{1,16}月)${subject}`);
+  return {
+    month,
+    subject,
+    test(line) {
+      const found = line.match(prefixPattern);
+      return Boolean(found) && monthsInPrefix(found[1]).includes(month);
+    },
+  };
+}
+
+/** Lines that name the locator's subject near their start — shown for slots that stay missing. */
+export function candidateLines(text, locator, limit = 6) {
+  const subject = monthLocator(locator)?.subject ?? locator;
+  return text
+    .split(/\r?\n/)
+    .map((line) => (HEADING.test(line) ? "" : stripWikitext(line)))
+    .filter((line) => {
+      const at = line.indexOf(subject);
+      return at >= 0 && at <= 20;
+    })
+    .slice(0, limit)
+    .map((line) => line.slice(0, 48));
 }
 
 /**
@@ -113,6 +184,11 @@ export function extractSection(text, locator) {
   }
   const lines = text.split(/\r?\n/);
   return extractHeadingSection(lines, locator) ?? extractParagraph(lines, locator);
+}
+
+/** Normalized rendered text when present, else the raw wikitext. */
+export function pageTextOf(page) {
+  return page.text ? htmlToText(page.text) : page.wikitext;
 }
 
 /** First match across several renderings of the same page (rendered zh-hant text, then wikitext). */
