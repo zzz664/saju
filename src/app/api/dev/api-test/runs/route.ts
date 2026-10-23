@@ -1,0 +1,10 @@
+import { apiTestHandler } from "../../../../../server/api-test-runtime";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const GET = apiTestHandler;
+export const POST = apiTestHandler;
+export const PUT = apiTestHandler;
+export const PATCH = apiTestHandler;
+export const DELETE = apiTestHandler;
+export const OPTIONS = apiTestHandler;
+export const HEAD = apiTestHandler;

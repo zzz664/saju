@@ -1,0 +1,14 @@
+.main { max-width: 48rem; margin: 0 auto; padding: 1rem; overflow-wrap: anywhere; color: #202330; }
+.main h1 { font-size: 1.6rem; margin: 1rem 0; }
+.main h2 { font-size: 1.2rem; }
+.card { border: 1px solid #d4d8e3; border-radius: 1rem; padding: 1rem; margin: 1rem 0; background: #fff; display: grid; gap: .7rem; }
+.card p { margin: .2rem 0; line-height: 1.6; }
+.card select, .card input[type="password"], .card button { min-height: 44px; width: 100%; min-width: 0; padding: .6rem; border: 1px solid #9099ac; border-radius: .5rem; font: inherit; }
+.card button { background: #273a68; color: #fff; cursor: pointer; }
+.card button:disabled { background: #e3e6ed; color: #555e70; cursor: default; }
+.card fieldset { min-width: 0; border: 1px solid #d4d8e3; border-radius: .5rem; }
+.card fieldset label { display: inline-flex; align-items: center; min-height: 44px; margin-right: 1.2rem; gap: .5rem; }
+.consent { display: flex; align-items: flex-start; gap: .5rem; line-height: 1.6; min-height: 44px; }
+.consent input { flex-shrink: 0; margin-top: .4rem; }
+.blocked { padding: .7rem; background: #fff1d8; border-radius: .5rem; }
+.main :focus-visible { outline: 3px solid #526cad; outline-offset: 3px; }
