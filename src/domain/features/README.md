@@ -1,5 +1,7 @@
 # F03 오행·십성 강점·약점 — WBS-31
 
+WBS-32의 [F02 성격·기질](temperament.md)은 별도 실행기와 정책으로 제공한다.
+
 `strengths.ts`의 순수 `observeStrengths`는 기존 검증된 facts를 재사용한다. 새로운 역법·십성
 계산을 하지 않는다. F03 실행기는 M03 strengths 투영과 기존 후보를 선택하고 M09가 원국·상태·버전을 조합한다.
 
