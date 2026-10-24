@@ -15,6 +15,7 @@ import {
   listHeadings,
   locate,
   outputTextOf,
+  partialTextOf,
   parseEntailmentVerdict,
   stripWikitext,
   summaryRequestBody,
@@ -217,7 +218,7 @@ describe("interpretation collector helpers (offline)", () => {
     expect(body).toMatchObject({ store: false, stream: false, model: "gpt-4o-mini" });
     expect(body.input[0].content).toContain("正月甲木");
     // Room for "FAIL: <이유>"; the Responses API minimum is 16 (5 failed every call with HTTP 400).
-    expect(entailmentRequestBody("gpt-4o-mini", "原文", "요약").max_output_tokens).toBe(80);
+    expect(entailmentRequestBody("gpt-4o-mini", "原文", "요약").max_output_tokens).toBe(200);
     // 800자 한국어 요약 + 한자 병기가 600 토큰을 넘어 status=incomplete로 잘렸다(1차 보정 errors 4).
     expect(summaryRequestBody("gpt-4o-mini", "原文", "正月甲木").max_output_tokens).toBe(1400);
     expect(parseEntailmentVerdict(" pass\n")).toBe("passed");
@@ -242,6 +243,21 @@ describe("interpretation collector helpers (offline)", () => {
       }),
     ).toBe("요약");
     expect(outputTextOf({ status: "incomplete", output: [] })).toBeNull();
+    const cut = {
+      status: "incomplete",
+      incomplete_details: { reason: "max_output_tokens" },
+      output: [
+        {
+          type: "message",
+          role: "assistant",
+          content: [{ type: "output_text", text: "FAIL: 丙을 정화로" }],
+        },
+      ],
+    };
+    expect(outputTextOf(cut)).toBeNull();
+    expect(partialTextOf(cut)).toBe("FAIL: 丙을 정화로");
+    expect(partialTextOf({ ...cut, incomplete_details: { reason: "content_filter" } })).toBeNull();
+    expect(partialTextOf({ ...cut, status: "completed" })).toBeNull();
   });
   it("fetches each page title once, caches failures and retries 429 once with Retry-After", async () => {
     const calls: string[] = [];

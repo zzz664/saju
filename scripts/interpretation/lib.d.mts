@@ -54,5 +54,6 @@ export function entailmentRequestBody(
   summary: string,
 ): ReturnType<typeof summaryRequestBody>;
 export function outputTextOf(envelope: unknown): string | null;
+export function partialTextOf(envelope: unknown): string | null;
 export function parseEntailmentVerdict(text: string | null | undefined): "passed" | "failed" | null;
 export function parseEntailmentReason(text: string | null | undefined): string | null;

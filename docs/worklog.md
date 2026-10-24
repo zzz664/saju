@@ -1168,3 +1168,8 @@
 
 - 판정 통과율은 5/6으로 올랐다(1차 2/10). errors 4건은 전부 `empty summary`: 요약 `max_output_tokens: 600`이 한국어 800자 + 한자 병기 출력에 모자라 응답이 `status: incomplete`로 잘리고 최종 텍스트가 없었다. 스크립트가 사유를 삼켜 "empty summary"로만 보였다.
 - 수정: 요약 상한 1,400 토큰. `call()`이 응답 `status`/`incomplete_details.reason`을 돌려 주어 오류 메시지에 `empty summary (incomplete/max_output_tokens)`처럼 적는다. Live 재검증은 사용자 환경(LIVE_NOT_RUN).
+
+### 후속 9 — 3차 보정(gpt-4.1): `--max 10` passed 9 / failed 1 → `--max 50` passed 46 / failed 3 / errors 1
+
+- 누적 통과율 약 93%. errors 1건(`iu.qtbj.jeong-sa`)은 `unreadable verdict (incomplete/max_output_tokens)`: 판정기가 80토큰을 넘겨 설명을 이어 써 응답이 잘렸고, 잘린 응답은 `completed`가 아니라 텍스트로 읽히지 않았다.
+- 수정: 판정 상한 200토큰. `partialTextOf`로 `incomplete/max_output_tokens` 응답의 본문을 판정에만 사용한다(첫 단어가 PASS/FAIL이면 충분, 사유는 잘려도 됨). 요약은 여전히 완결 응답만 받는다. Live 재검증은 사용자 환경(LIVE_NOT_RUN).

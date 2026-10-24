@@ -452,8 +452,9 @@ export function entailmentRequestBody(model, passage, summary) {
     stream: false,
     instructions: ENTAILMENT_INSTRUCTIONS,
     input: [{ role: "user", content: `[원문]\n${passage}\n\n[요약]\n${summary}` }],
-    // "PASS" or "FAIL: <30자 이유>"; the Responses API rejects values below 16 with HTTP 400.
-    max_output_tokens: 80,
+    // "PASS" or "FAIL: <30자 이유>". gpt-4.1 occasionally keeps explaining past 80 tokens; the verdict
+    // is still the first word, so the cap is generous and a cut-off reply is read by partialTextOf.
+    max_output_tokens: 200,
   };
 }
 
@@ -468,6 +469,19 @@ export function outputTextOf(envelope) {
     .join("")
     .trim();
   return text.length ? text : null;
+}
+
+/**
+ * Text of a reply cut off by max_output_tokens (status "incomplete"), else null. Only the entailment
+ * verdict uses this: its first word decides and a truncated reason is acceptable. Summaries never do.
+ */
+export function partialTextOf(envelope) {
+  if (
+    envelope?.status !== "incomplete" ||
+    envelope?.incomplete_details?.reason !== "max_output_tokens"
+  )
+    return null;
+  return outputTextOf({ ...envelope, status: "completed" });
 }
 
 /** "PASS" → passed, "FAIL" / "FAIL: 이유" → failed, anything else → null (unreadable). */
