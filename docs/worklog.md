@@ -1158,3 +1158,8 @@
 - 사용자 Live 실행(gpt-4o-mini, 프롬프트 1.0.0, `--max 10`): errors 0, **passed 2 / failed 8**. 함의 게이트는 의도대로 작동했다. 실패 요약에는 丙→"정화", 科甲→"과거의 성공", 殘疾→"장애인" 같은 글자·강도 오역이 있었고 판정기가 걸렀다. 통과 2건(十二月甲木·七月甲木)은 읽을 만했다. 요약 원문은 비식별 규칙에 따라 여기 적지 않는다.
 - 수정: 요약 프롬프트 **1.1.0**(천간·지지·오행 글자 불변 + 첫 등장 한자 병기, 모르는 구절·명식 예시 생략, 길흉 강도 유지, 첫 문장에 조건 명시). 판정 프롬프트는 FAIL 시 첫 위반을 30자 내로 쓰게 하고(`max_output_tokens` 80), `parseEntailmentReason`으로 `entailment.reason`(스키마 선택 필드, 보정용)으로 저장. `--retry-failed` 플래그(없으면 실패 단위 건너뜀). 스크립트 주석·README·docs/22에 강한 모델(`OPENAI_MODEL=gpt-4.1`) 권고.
 - 검증: `tests/interpretation-scripts.test.ts`·`interpretation`·`narration-plan` 18건 PASS, lint·typecheck PASS. Live 재검증은 사용자 환경에서 `--retry-failed --max 10`으로 한다(LIVE_NOT_RUN).
+
+### 후속 7 — `Cannot read properties of undefined (reading 'iu.qtbj.gap-ja')`
+
+- 원인: 사용자 로컬 `summaries.json`에서 최상위 `summaries` 객체가 사라진 상태(develop의 파일은 정상). `passages.json`의 키(`src.*`)와는 무관하다. 스크립트가 형식을 검사하지 않아 뒤늦게 모호한 오류로 죽었다.
+- 수정: `summarize-units.mjs`가 `passages.json`/`summaries.json`의 최상위 객체를 먼저 검사하고, 없으면 파일명·복구 명령(`git checkout -- <파일>`)을 적어 종료한다. Live 호출 전에 실패하므로 비용이 들지 않는다.

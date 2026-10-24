@@ -62,6 +62,18 @@ async function loadScaffold() {
   }
 }
 
+/** The data files must keep their top-level object; a hand edit that drops it fails here, not later. */
+function readDataFile(filePath, key) {
+  const parsed = JSON.parse(readFileSync(filePath, "utf8"));
+  if (!parsed || typeof parsed !== "object" || typeof parsed[key] !== "object" || !parsed[key]) {
+    console.error(
+      `${path.basename(filePath)}: 최상위 "${key}" 객체가 없다. 파일을 손으로 고쳤다면 git checkout -- ${path.relative(root, filePath)} 로 되돌린 뒤 다시 실행한다.`,
+    );
+    process.exit(1);
+  }
+  return parsed[key];
+}
+
 async function call(body) {
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -94,8 +106,9 @@ async function call(body) {
 
 async function main() {
   const scaffold = await loadScaffold();
-  const passages = JSON.parse(readFileSync(passagesFile, "utf8")).passages;
+  const passages = readDataFile(passagesFile, "passages");
   const file = JSON.parse(readFileSync(summariesFile, "utf8"));
+  readDataFile(summariesFile, "summaries"); // shape check only; `file` is written back as a whole
   const pending = scaffold.filter((entry) => {
     const passage = passages[entry.source.sourceId];
     const existing = file.summaries[entry.unit.unitId];
