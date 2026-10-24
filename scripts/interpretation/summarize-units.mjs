@@ -17,6 +17,7 @@ import {
   SUMMARY_PROMPT_VERSION,
   entailmentRequestBody,
   outputTextOf,
+  parseEntailmentReason,
   parseEntailmentVerdict,
   summaryRequestBody,
 } from "./lib.mjs";
@@ -27,8 +28,13 @@ const passagesFile = path.join(root, "src/infrastructure/interpretation/data/pas
 const summariesFile = path.join(root, "src/infrastructure/interpretation/data/summaries.json");
 const argv = process.argv.slice(2);
 const confirmed = argv.includes("--confirm");
+// --retry-failed: regenerate units whose last entailment verdict was FAIL (otherwise they are kept
+// as unusable and skipped, so a re-run never silently spends money on the same unit twice).
+const retryFailed = argv.includes("--retry-failed");
 const maxIndex = argv.indexOf("--max");
 const max = maxIndex >= 0 ? Number(argv[maxIndex + 1]) : 10;
+// OPENAI_MODEL picks the model for this offline batch (default gpt-4o-mini). gpt-4o-mini misread
+// 丙/丁 and 科甲 in the first calibration run (2/10 passed); a stronger model is recommended here.
 const model = (process.env.OPENAI_MODEL ?? "").trim() || "gpt-4o-mini";
 
 function refuse(reason) {
@@ -90,13 +96,13 @@ async function main() {
   const scaffold = await loadScaffold();
   const passages = JSON.parse(readFileSync(passagesFile, "utf8")).passages;
   const file = JSON.parse(readFileSync(summariesFile, "utf8"));
-  const pending = scaffold.filter(
-    (entry) =>
-      passages[entry.source.sourceId] &&
-      (!file.summaries[entry.unit.unitId] ||
-        file.summaries[entry.unit.unitId].passageDigest !==
-          passages[entry.source.sourceId].passageDigest),
-  );
+  const pending = scaffold.filter((entry) => {
+    const passage = passages[entry.source.sourceId];
+    const existing = file.summaries[entry.unit.unitId];
+    if (!passage) return false;
+    if (!existing || existing.passageDigest !== passage.passageDigest) return true;
+    return retryFailed && existing.entailment.status === "failed";
+  });
   const batch = pending.slice(0, max);
   const usage = { calls: 0, inputTokens: 0, outputTokens: 0, passed: 0, failed: 0, errors: 0 };
   for (const entry of batch) {
@@ -113,6 +119,7 @@ async function main() {
       usage.outputTokens += verdict.usage?.output_tokens ?? 0;
       const status = parseEntailmentVerdict(verdict.text);
       if (!status) throw new Error("unreadable verdict");
+      const reason = status === "failed" ? parseEntailmentReason(verdict.text) : null;
       const now = new Date().toISOString();
       file.summaries[entry.unit.unitId] = {
         text: summary.text.slice(0, 800),
@@ -120,7 +127,12 @@ async function main() {
         promptVersion: SUMMARY_PROMPT_VERSION,
         generatedAt: now,
         passageDigest: source.passageDigest,
-        entailment: { status, modelId: verdict.model, checkedAt: now },
+        entailment: {
+          status,
+          modelId: verdict.model,
+          checkedAt: now,
+          ...(reason ? { reason } : {}),
+        },
       };
       usage[status]++;
       // Persist after every unit so an interruption never loses paid work.

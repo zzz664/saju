@@ -8,6 +8,7 @@ import {
   monthsInPrefix,
   digestText,
   entailmentRequestBody,
+  parseEntailmentReason,
   extractFromPage,
   extractSection,
   htmlToText,
@@ -215,11 +216,20 @@ describe("interpretation collector helpers (offline)", () => {
     const body = summaryRequestBody("gpt-4o-mini", "原文", "正月甲木");
     expect(body).toMatchObject({ store: false, stream: false, model: "gpt-4o-mini" });
     expect(body.input[0].content).toContain("正月甲木");
-    // The Responses API minimum is 16; 5 made every entailment call fail with HTTP 400.
-    expect(entailmentRequestBody("gpt-4o-mini", "原文", "요약").max_output_tokens).toBe(16);
+    // Room for "FAIL: <이유>"; the Responses API minimum is 16 (5 failed every call with HTTP 400).
+    expect(entailmentRequestBody("gpt-4o-mini", "原文", "요약").max_output_tokens).toBe(80);
     expect(parseEntailmentVerdict(" pass\n")).toBe("passed");
     expect(parseEntailmentVerdict("FAIL")).toBe("failed");
-    expect(parseEntailmentVerdict("PASS. 근거 충분")).toBeNull();
+    expect(parseEntailmentVerdict("FAIL: 丙을 정화로 옮김")).toBe("failed");
+    expect(parseEntailmentVerdict("PASS. 근거 충분")).toBe("passed");
+    expect(parseEntailmentVerdict("PASSABLE")).toBeNull();
+    expect(parseEntailmentVerdict("요약이 좋습니다")).toBeNull();
+    expect(parseEntailmentReason("FAIL: 丙을 정화로 옮김")).toBe("丙을 정화로 옮김");
+    expect(parseEntailmentReason("FAIL")).toBeNull();
+    expect(parseEntailmentReason("PASS")).toBeNull();
+    expect(summaryRequestBody("gpt-4o-mini", "原文", "正月甲木").instructions).toContain(
+      "병화(丙火)",
+    );
     expect(
       outputTextOf({
         status: "completed",

@@ -417,15 +417,21 @@ export function titleFromUrl(url) {
   return decodeURIComponent(new URL(url).pathname.replace(/^\/wiki\//, ""));
 }
 
-export const SUMMARY_PROMPT_VERSION = "1.0.0";
+export const SUMMARY_PROMPT_VERSION = "1.1.0";
 export const SUMMARY_INSTRUCTIONS = `당신은 한문 고전 명리 원전 구절을 한국어로 요약하는 번역 보조자다.
-주어진 구절에 적힌 내용만 2~4문장의 한국어 평서문("~이다/~로 본다")으로 요약한다.
-구절에 없는 조건·사건·성격·길흉·현대적 해석을 추가하지 않는다. 사람에게 조언하지 않는다.
-구절이 특정 일간과 달에 대한 것이면 그 조건을 첫 문장에 명시한다. 요약은 800자 이내다.
-출력은 요약 문장만 쓴다. 제목·번호·인용부호·설명·메타데이터를 쓰지 않는다.`;
-export const ENTAILMENT_INSTRUCTIONS = `당신은 요약이 원문에서 벗어났는지 검사하는 판정자다.
-원문 구절과 한국어 요약을 받는다. 요약의 모든 주장이 원문 구절에서 직접 뒷받침되면 PASS, 하나라도 원문에 없는 조건·사건·성격·길흉·조언이 추가되었으면 FAIL이다.
-번역상의 자연스러운 표현 차이는 허용한다. 출력은 PASS 또는 FAIL 한 단어만 쓴다.`;
+주어진 구절에 적힌 내용만 2~4문장의 한국어 평서문("~이다/~로 본다")으로 요약한다. 원문에 없는 조건·사건·성격·길흉·현대적 해석을 추가하지 않는다. 사람에게 조언하지 않는다.
+
+지켜야 할 규칙:
+1. 천간·지지·오행 글자는 절대 바꾸지 않는다. 丙은 병화(丙火), 丁은 정화(丁火), 癸는 계수(癸水)다. 처음 나올 때 한자를 병기한다. 예: "병화(丙火)와 계수(癸水)가 함께 드러나면".
+2. 모르는 구절·인명·고사·사례(명식 예시)는 요약에서 뺀다. 추측으로 채우지 않는다.
+3. 길흉 표현은 원문 수준을 유지한다. 원문 "富貴"는 "부귀하다고 본다"로, "平常人"은 "평범하다고 본다"로 옮기고, 더 강하게도 약하게도 쓰지 않는다. "科甲"은 "과거에 합격한다"로 옮긴다.
+4. 첫 문장은 구절의 조건(어느 달의 어느 일간, 또는 어느 십성)을 명시한다.
+5. 요약은 800자 이내다. 출력은 요약 문장만 쓴다. 제목·번호·인용부호·설명·메타데이터를 쓰지 않는다.`;
+export const ENTAILMENT_INSTRUCTIONS = `당신은 한국어 요약이 한문 원문에서 벗어났는지 검사하는 판정자다.
+원문 구절과 한국어 요약을 받는다. 요약의 모든 주장이 원문에서 직접 뒷받침되면 PASS다.
+다음 하나라도 있으면 FAIL이다: 원문에 없는 조건·사건·성격·길흉·조언이 추가됨, 천간·지지·오행 글자가 바뀜(예: 丙을 정화로 옮김), 길흉의 강도가 바뀜, 원문과 반대로 옮김.
+번역상의 자연스러운 표현 차이와 생략은 허용한다.
+출력 형식: PASS 이면 "PASS" 한 단어만. FAIL 이면 "FAIL: " 뒤에 첫 번째 위반을 한국어 30자 이내로 쓴다. 다른 말은 쓰지 않는다.`;
 
 export function summaryRequestBody(model, passage, locator) {
   return {
@@ -444,8 +450,8 @@ export function entailmentRequestBody(model, passage, summary) {
     stream: false,
     instructions: ENTAILMENT_INSTRUCTIONS,
     input: [{ role: "user", content: `[원문]\n${passage}\n\n[요약]\n${summary}` }],
-    // The Responses API rejects anything below 16 with HTTP 400; the verdict itself is one word.
-    max_output_tokens: 16,
+    // "PASS" or "FAIL: <30자 이유>"; the Responses API rejects values below 16 with HTTP 400.
+    max_output_tokens: 80,
   };
 }
 
@@ -462,9 +468,17 @@ export function outputTextOf(envelope) {
   return text.length ? text : null;
 }
 
+/** "PASS" → passed, "FAIL" / "FAIL: 이유" → failed, anything else → null (unreadable). */
 export function parseEntailmentVerdict(text) {
-  const normalized = (text ?? "").trim().toUpperCase();
-  if (normalized === "PASS") return "passed";
-  if (normalized === "FAIL") return "failed";
+  const head = (text ?? "").trim().toUpperCase();
+  if (/^PASS\b/.test(head)) return "passed";
+  if (/^FAIL\b/.test(head)) return "failed";
   return null;
+}
+
+/** The judge's stated violation after "FAIL:", bounded, or null. */
+export function parseEntailmentReason(text) {
+  const match = (text ?? "").trim().match(/^FAIL\s*[:：]?\s*(.+)$/is);
+  const reason = match?.[1]?.trim().slice(0, 200);
+  return reason?.length ? reason : null;
 }

@@ -36,7 +36,8 @@ scaffold.ts (코드)         조건 키 141개: 궁통보감 120 + 적천수 10 
    - 141건 전부 `missing`이면 페이지는 열렸지만 locator 모양이 본문과 다른 것이다. `--dry-run --inspect`로 페이지별 소제목 목록·본문 앞부분을 보고, 필요하면 `--dump tmp/wikisource`로 정규화 본문을 저장해 확인한다(`tmp/`는 커밋 제외).
 2. `--dry-run`을 빼고 실행해 `passages.json`을 채운다. 커밋 전에 diff로 수집 범위를 확인한다.
 3. 요약 생성은 **비용이 드는 Live 실행**이다. `ENABLE_INTERPRETATION_SUMMARY=true`, `OPENAI_API_KEY`, `--confirm`, `--max <n>`이 모두 있어야 시작한다. 단위마다 2회 호출(요약 + 함의 검사)이며 매 단위 저장하므로 중단해도 유료 작업이 사라지지 않는다.
-4. 함의 검사 FAIL은 `summaries.json`에 `status: "failed"`로 남고 카탈로그에서 `usable=false`가 된다. 요약을 고쳐 쓰지 않고 다시 생성한다.
+4. 함의 검사 FAIL은 `summaries.json`에 `status: "failed"`와 판정기가 적은 첫 위반(`reason`, 30자 내외)으로 남고 카탈로그에서 `usable=false`가 된다. 요약을 고쳐 쓰지 않고 `--retry-failed`로 다시 생성한다(플래그가 없으면 실패 단위는 건너뛰어 같은 단위에 돈을 두 번 쓰지 않는다).
+   - 1차 보정(2026-10-24, gpt-4o-mini, 프롬프트 1.0.0): 10단위 중 **PASS 2 / FAIL 8**. 실패 원인은 판정기가 아니라 요약기였다. 丙을 "정화"로, 科甲을 "과거의 성공"으로 옮기는 식의 글자 오역이 있었고 판정기가 이를 걸렀다. 프롬프트 1.1.0은 천간·지지 한자 병기와 글자 불변, 길흉 강도 유지, 모르는 구절 생략을 명시한다. 한문 명리 원문 요약에는 **`OPENAI_MODEL`을 더 강한 모델(예: `gpt-4.1`)로 지정**하는 것을 권한다. 이 배치는 1회성 오프라인 작업이라 런타임 모델 설정과 무관하다.
 5. 모든 요약의 `reviewStatus`는 `ai-summarized-unreviewed`다. 사람이 검토하면 코드에서 `human-reviewed`로 올리는 절차를 그때 추가한다.
 
 이 저장소의 현재 상태: **141개 슬롯 전부 원문 수집 완료**(`passages.json`, 2026-10-24, LLM 없음), 요약은 아직 없어 `reviewStatus`는 전부 `scaffold`이고 `usable=false`다. 수집 특기 사항:
