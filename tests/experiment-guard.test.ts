@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { createExperimentRunner } from "@/application/narration/experiment";
 import { narrateFeature, prepareFeatureNarration } from "@/application/narration/feature";
-import { ExperimentPolicySchema, quoteExperimentRequest } from "@/domain/experiment";
+import { ExperimentPolicySchema } from "@/domain/experiment";
 import type { NarrationProvider } from "@/domain/narration";
 import { createPlanMockProvider } from "@/infrastructure/llm/plan-mock";
-import { MemoryExperimentBudgetStore } from "@/infrastructure/llm/experiment-budget";
+import { MemoryExperimentConcurrencyGate } from "@/infrastructure/llm/experiment-concurrency";
 import { createApiTestCatalog } from "@/server/api-test-catalog";
 
 const catalog = createApiTestCatalog();
@@ -17,18 +17,12 @@ const execute = (
 ) => narrateFeature(value, provider, narrationOptions, control);
 const request = () => prepareFeatureNarration(source, narrationOptions).request;
 const start = Date.parse("2026-10-23T12:00:00Z");
-const budget = { calls: 10, tokens: 1000000, microUsd: 1000000 };
 const policy = {
   enabled: true,
   expiresAt: start + 86400000,
   allowedPrincipalIds: ["dev-a", "dev-b"],
-  maxRequestBytes: 100000,
-  maxOutputTokens: 256,
+  maxRequestBytes: 131072,
   maxConcurrent: 2,
-  rates: { inputMicroUsdPerMillionTokens: 1000000, outputMicroUsdPerMillionTokens: 2000000 },
-  daily: budget,
-  perPrincipalDaily: budget,
-  perSession: budget,
 };
 const principal = { principalId: "dev-a", sessionId: "session-a" };
 const mock = createPlanMockProvider();
@@ -36,20 +30,20 @@ function setup(p: unknown = policy, provider: NarrationProvider = mock) {
   let now = start;
   let access: unknown = principal;
   let environment = "development";
-  const store = new MemoryExperimentBudgetStore();
+  const gate = new MemoryExperimentConcurrencyGate();
   const generate = vi.fn(provider.generate.bind(provider));
   const runner = createExperimentRunner({
     execute,
     policy: p,
     provider: { ...provider, generate },
-    store,
+    gate,
     environment: () => environment,
     now: () => now,
     resolveAccess: async () => access,
   });
   return {
     runner,
-    store,
+    gate,
     generate,
     time: (n: number) => {
       now = n;
@@ -80,31 +74,25 @@ function deferred() {
   };
   return { provider, ready, resolve };
 }
-const quote = quoteExperimentRequest(request(), ExperimentPolicySchema.parse(policy));
 
-describe("local mock experiment admission guard", () => {
-  it("reserves all scopes before one call and applies the server output cap", async () => {
+describe("local Mock access and concurrency without usage budgets", () => {
+  it("allows repeated full-catalog calls without token caps or usage reservations", async () => {
     const run = setup();
-    expect((await run.runner.run(source)).sourceStatus).toBe("partial");
-    expect(run.generate).toHaveBeenCalledTimes(1);
-    expect(run.generate.mock.calls[0][0].maxOutputTokens).toBe(256);
-    const usage = run.store.inspect(start, principal);
-    expect(usage.daily).toEqual({ calls: 1, tokens: quote.tokens, microUsd: quote.microUsd });
-    expect(usage.principal).toEqual(usage.daily);
-    expect(usage.session).toEqual(usage.daily);
-    expect(usage.active).toBe(0);
+    for (let i = 0; i < 20; i++)
+      expect((await run.runner.run(source)).sourceStatus).toBe("partial");
+    expect(run.generate).toHaveBeenCalledTimes(20);
+    expect(run.generate.mock.calls[0][0]).toEqual(request());
+    expect(run.generate.mock.calls[0][0].maxOutputTokens).toBeUndefined();
   });
-
   it.each(["production", "test", "", "preview"])(
     "denies %s before provider invocation",
-    async (environment) => {
+    async (env) => {
       const run = setup();
-      run.environment(environment);
+      run.environment(env);
       await expect(run.runner.run(source)).rejects.toMatchObject({ code: "ACCESS_DENIED" });
       expect(run.generate).not.toHaveBeenCalled();
     },
   );
-
   it.each([
     null,
     {},
@@ -116,64 +104,36 @@ describe("local mock experiment admission guard", () => {
     run.access(access);
     await expect(run.runner.run(source)).rejects.toMatchObject({ code: "ACCESS_DENIED" });
     expect(run.generate).not.toHaveBeenCalled();
-    expect(run.store.inspect(start, principal).daily.calls).toBe(0);
   });
-
-  it("disables experiments by policy and expires approval at the exact timestamp", async () => {
-    const disabled = setup({ ...policy, enabled: false });
-    await expect(disabled.runner.run(source)).rejects.toMatchObject({ code: "ACCESS_DENIED" });
+  it("disables experiments and expires approval at the exact timestamp", async () => {
+    await expect(setup({ ...policy, enabled: false }).runner.run(source)).rejects.toMatchObject({
+      code: "ACCESS_DENIED",
+    });
     const expired = setup();
     expired.time(policy.expiresAt);
     await expect(expired.runner.run(source)).rejects.toMatchObject({ code: "ACCESS_DENIED" });
     expect(expired.generate).not.toHaveBeenCalled();
   });
-
-  it("does not trust identity/budget fields in the core payload", async () => {
+  it("rejects forged source fields and Live providers before invocation", async () => {
     const run = setup();
-    await expect(
-      run.runner.run({ ...source, userId: "dev-a", remainingTokens: 999999 }),
-    ).rejects.toMatchObject({ code: "INPUT_REJECTED" });
+    await expect(run.runner.run({ ...source, userId: "dev-a" })).rejects.toMatchObject({
+      code: "INPUT_REJECTED",
+    });
     expect(run.generate).not.toHaveBeenCalled();
-    expect(run.store.inspect(start, principal).daily.calls).toBe(0);
-  });
-
-  it.each(["daily", "perPrincipalDaily", "perSession"] as const)(
-    "enforces %s across exact call/token/cost limits atomically",
-    async (scope) => {
-      for (const dimension of ["calls", "tokens", "microUsd"] as const) {
-        const cap = dimension === "calls" ? 1 : quote[dimension];
-        const run = setup({ ...policy, [scope]: { ...budget, [dimension]: cap } });
-        await run.runner.run(source);
-        await expect(run.runner.run(source)).rejects.toMatchObject({ code: "BUDGET_EXCEEDED" });
-        expect(run.generate).toHaveBeenCalledTimes(1);
-        expect(run.store.inspect(start, principal).daily.calls).toBe(1);
-      }
-    },
-  );
-
-  it("rejects zero budget and one token/cost unit below reservation without spending any scope", async () => {
-    for (const limit of [
-      { ...budget, calls: 0 },
-      { ...budget, tokens: quote.tokens - 1 },
-      { ...budget, microUsd: quote.microUsd - 1 },
-    ]) {
-      const run = setup({ ...policy, perSession: limit });
-      await expect(run.runner.run(source)).rejects.toMatchObject({ code: "BUDGET_EXCEEDED" });
-      expect(run.store.inspect(start, principal).daily.calls).toBe(0);
-      expect(run.generate).not.toHaveBeenCalled();
-    }
-  });
-
-  it("blocks oversize input and live providers before budget or supplier calls", async () => {
-    const oversized = setup({ ...policy, maxRequestBytes: 1 });
-    await expect(oversized.runner.run(source)).rejects.toMatchObject({ code: "REQUEST_TOO_LARGE" });
-    expect(oversized.generate).not.toHaveBeenCalled();
     const live = setup(policy, { kind: "openai", generate: vi.fn(async () => ({})) });
     await expect(live.runner.run(source)).rejects.toMatchObject({ code: "LIVE_DISABLED" });
     expect(live.generate).not.toHaveBeenCalled();
   });
-
-  it("keeps per-principal concurrency across sessions, releasing only when supplier settles", async () => {
+  it("keeps the byte-size resource boundary independently of financial budgets", async () => {
+    const bytes = new TextEncoder().encode(JSON.stringify(request())).byteLength;
+    const exact = setup({ ...policy, maxRequestBytes: bytes });
+    await exact.runner.run(source);
+    expect(exact.generate).toHaveBeenCalledTimes(1);
+    const over = setup({ ...policy, maxRequestBytes: bytes - 1 });
+    await expect(over.runner.run(source)).rejects.toMatchObject({ code: "REQUEST_TOO_LARGE" });
+    expect(over.generate).not.toHaveBeenCalled();
+  });
+  it("keeps per-principal concurrency across sessions until the provider settles", async () => {
     const pending = deferred();
     const run = setup(policy, pending.provider);
     const first = run.runner.run(source);
@@ -184,35 +144,22 @@ describe("local mock experiment admission guard", () => {
     expect(run.generate).toHaveBeenCalledTimes(1);
     pending.resolve({});
     await rejected;
-    expect(run.store.inspect(start, principal).active).toBe(0);
+    const lease = run.gate.acquire(principal.principalId, 2);
+    lease.release();
+    lease.release();
   });
-
-  it("racing principals cannot overspend the last daily reservation", async () => {
-    const pending = deferred();
-    const run = setup({ ...policy, daily: { ...budget, calls: 1 } }, pending.provider);
-    const first = run.runner.run(source);
-    const rejected = expect(first).rejects.toMatchObject({ code: "OUTPUT_REJECTED" });
-    await pending.ready;
-    run.access({ principalId: "dev-b", sessionId: "b" });
-    await expect(run.runner.run(source)).rejects.toMatchObject({ code: "BUDGET_EXCEEDED" });
-    expect(run.generate).toHaveBeenCalledTimes(1);
-    pending.resolve({});
-    await rejected;
-  });
-
-  it("enforces global concurrency independently of daily budgets", async () => {
+  it("enforces global concurrency for different principals", async () => {
     const pending = deferred();
     const run = setup({ ...policy, maxConcurrent: 1 }, pending.provider);
     const first = run.runner.run(source);
     const rejected = expect(first).rejects.toMatchObject({ code: "OUTPUT_REJECTED" });
     await pending.ready;
-    run.access({ principalId: "dev-b", sessionId: "b" });
+    run.access({ principalId: "dev-b", sessionId: "session-b" });
     await expect(run.runner.run(source)).rejects.toMatchObject({ code: "CONCURRENCY_LIMIT" });
     pending.resolve({});
     await rejected;
   });
-
-  it("does not release a pending supplier lock when the caller cancels", async () => {
+  it("keeps a cancelled call locked until its underlying provider settles", async () => {
     const pending = deferred();
     const run = setup(policy, pending.provider);
     const controller = new AbortController();
@@ -221,97 +168,60 @@ describe("local mock experiment admission guard", () => {
     await pending.ready;
     controller.abort();
     await cancelled;
-    expect(run.store.inspect(start, principal).active).toBe(1);
     await expect(run.runner.run(source)).rejects.toMatchObject({ code: "CONCURRENCY_LIMIT" });
     pending.resolve({});
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(run.store.inspect(start, principal).active).toBe(0);
-    expect(run.store.inspect(start, principal).daily.calls).toBe(1);
+    const lease = run.gate.acquire(principal.principalId, 2);
+    lease.release();
   });
-
   it.each(["refused", "incomplete", "failed"] as const)(
-    "retains attempted budget after %s without retry",
+    "releases concurrency after %s without retry",
     async (outcome) => {
       const run = setup(policy, createPlanMockProvider({ outcome }));
       await expect(run.runner.run(source)).rejects.toThrow();
-      expect(run.store.inspect(start, principal).daily.calls).toBe(1);
-      expect(run.store.inspect(start, principal).active).toBe(0);
       expect(run.generate).toHaveBeenCalledTimes(1);
+      const lease = run.gate.acquire(principal.principalId, 2);
+      lease.release();
     },
   );
-
-  it("UTC rollover resets daily counters but preserves session totals", async () => {
-    const run = setup({
-      ...policy,
-      daily: { ...budget, calls: 1 },
-      perSession: { ...budget, calls: 2 },
-    });
-    await run.runner.run(source);
-    run.time(Date.parse("2026-10-24T00:00:00Z"));
-    await run.runner.run(source);
-    expect(run.store.inspect(Date.parse("2026-10-24T00:00:00Z"), principal).daily.calls).toBe(1);
-    await expect(run.runner.run(source)).rejects.toMatchObject({ code: "BUDGET_EXCEEDED" });
-  });
-
-  it("fails closed on backwards clocks and store failures without leaking errors", async () => {
-    const run = setup();
-    await run.runner.run(source);
-    run.time(start - 1);
-    await expect(run.runner.run(source)).rejects.toMatchObject({ code: "CLOCK_INVALID" });
-    const generate = vi.fn(mock.generate.bind(mock));
-    const broken = createExperimentRunner({
-      execute,
-      policy,
-      provider: { kind: "mock", generate },
-      environment: () => "development",
-      now: () => start,
-      resolveAccess: async () => principal,
-      store: {
-        reserve: () => {
-          throw new Error("private secret");
-        },
-      },
-    });
-    await expect(broken.run(source)).rejects.toMatchObject({
-      code: "STORE_UNAVAILABLE",
-      message: "Experiment budget store is unavailable.",
-    });
-    expect(generate).not.toHaveBeenCalled();
-  });
-
-  it("validates immutable policy, safe integers, identities and fixed-point rates", () => {
+  it("rejects malformed policies and keeps a trusted immutable snapshot", async () => {
     for (const value of [
-      { ...policy, maxOutputTokens: -1 },
-      { ...policy, daily: { ...budget, tokens: NaN } },
+      { ...policy, maxRequestBytes: -1 },
       { ...policy, maxConcurrent: 1.5 },
       { ...policy, allowedPrincipalIds: ["a", "a"] },
-      { ...policy, rates: { ...policy.rates, inputMicroUsdPerMillionTokens: Infinity } },
-      { ...policy, rates: { ...policy.rates, outputMicroUsdPerMillionTokens: 0 } },
-    ]) {
+    ])
       expect(() => setup(value)).toThrow("Experiment policy was rejected.");
-    }
-    const parsed = ExperimentPolicySchema.parse(policy);
-    expect(Object.isFrozen(parsed.daily)).toBe(true);
-    expect(quote.microUsd).toBe(quote.tokens + policy.maxOutputTokens);
+    const copy = structuredClone(policy);
+    const run = setup(copy);
+    copy.enabled = false;
+    copy.allowedPrincipalIds.length = 0;
+    await run.runner.run(source);
+    expect(run.generate).toHaveBeenCalledTimes(1);
+    expect(Object.keys(ExperimentPolicySchema.parse(policy)).sort()).toEqual([
+      "allowedPrincipalIds",
+      "enabled",
+      "expiresAt",
+      "maxConcurrent",
+      "maxRequestBytes",
+    ]);
   });
-
-  it("defaults to denied access and hides resolver/environment exceptions", async () => {
+  it("defaults to denied access and sanitizes resolver, clock and gate errors", async () => {
     const generate = vi.fn(mock.generate.bind(mock));
     const base = {
       policy,
       provider: { kind: "mock" as const, generate },
-      store: new MemoryExperimentBudgetStore(),
+      gate: new MemoryExperimentConcurrencyGate(),
       now: () => start,
+      execute,
     };
-    await expect(createExperimentRunner({ ...base, execute }).run(source)).rejects.toMatchObject({
+    await expect(createExperimentRunner(base).run(source)).rejects.toMatchObject({
       code: "ACCESS_DENIED",
     });
     await expect(
-      createExperimentRunner({ ...base, execute, environment: () => "development" }).run(source),
+      createExperimentRunner({ ...base, environment: () => "development" }).run(source),
     ).rejects.toMatchObject({ code: "ACCESS_DENIED" });
     await expect(
       createExperimentRunner({
-        execute,
         ...base,
         environment: () => {
           throw new Error("private secret");
@@ -320,32 +230,44 @@ describe("local mock experiment admission guard", () => {
     ).rejects.toMatchObject({ message: "Experiment access was denied." });
     await expect(
       createExperimentRunner({
-        execute,
         ...base,
         environment: () => "development",
         resolveAccess: async () => {
           throw new Error("private secret");
         },
       }).run(source),
-    ).rejects.toMatchObject({ message: "Experiment access was denied." });
+    ).rejects.toMatchObject({ code: "ACCESS_DENIED" });
+    const broken = setup();
+    broken.time(NaN);
+    await expect(broken.runner.run(source)).rejects.toMatchObject({ code: "CLOCK_INVALID" });
+    await expect(
+      createExperimentRunner({
+        ...base,
+        environment: () => "development",
+        resolveAccess: async () => principal,
+        gate: {
+          acquire() {
+            throw new Error("private secret");
+          },
+        },
+      }).run(source),
+    ).rejects.toMatchObject({ code: "STORE_UNAVAILABLE" });
     expect(generate).not.toHaveBeenCalled();
   });
-
-  it("rechecks expiry after async authorization and consumes nothing on pre-cancel", async () => {
+  it("rechecks expiry after authorization and respects pre-cancellation", async () => {
     const run = setup();
     const controller = new AbortController();
     controller.abort();
     await expect(run.runner.run(source, { signal: controller.signal })).rejects.toMatchObject({
       code: "CANCELLED",
     });
-    expect(run.store.inspect(start, principal).daily.calls).toBe(0);
     let clock = start;
     const generate = vi.fn(mock.generate.bind(mock));
     const runner = createExperimentRunner({
       execute,
       policy,
       provider: { kind: "mock", generate },
-      store: run.store,
+      gate: run.gate,
       environment: () => "development",
       now: () => clock,
       resolveAccess: async () => {
@@ -355,109 +277,8 @@ describe("local mock experiment admission guard", () => {
     });
     await expect(runner.run(source)).rejects.toMatchObject({ code: "ACCESS_DENIED" });
     expect(generate).not.toHaveBeenCalled();
-    expect(run.store.inspect(start, principal).daily.calls).toBe(0);
   });
-
-  it("cannot bypass principal budgets with a fresh server session", async () => {
-    const run = setup({ ...policy, perPrincipalDaily: { ...budget, calls: 1 } });
-    await run.runner.run(source);
-    run.access({ ...principal, sessionId: "fresh-session" });
-    await expect(run.runner.run(source)).rejects.toMatchObject({ code: "BUDGET_EXCEEDED" });
-    expect(run.generate).toHaveBeenCalledTimes(1);
-  });
-
-  it("keeps active locks across UTC midnight and retains rejected-attempt counters", async () => {
-    const pending = deferred();
-    const run = setup(policy, pending.provider);
-    const first = run.runner.run(source);
-    const failed = expect(first).rejects.toMatchObject({ code: "OUTPUT_REJECTED" });
-    await pending.ready;
-    const midnight = Date.parse("2026-10-24T00:00:00Z");
-    run.time(midnight);
-    await expect(run.runner.run(source)).rejects.toMatchObject({ code: "CONCURRENCY_LIMIT" });
-    expect(run.store.inspect(midnight, principal).daily.calls).toBe(0);
-    pending.resolve({});
-    await failed;
-    expect(run.store.inspect(start, principal).daily.calls).toBe(1);
-    expect(run.store.inspect(midnight, principal).session.calls).toBe(1);
-  });
-
-  it("bounds ledger memory without evicting spent budget and makes release idempotent", () => {
-    const store = new MemoryExperimentBudgetStore(3);
-    const input = {
-      now: start,
-      access: principal,
-      allocation: quote,
-      policy: ExperimentPolicySchema.parse(policy),
-    };
-    const lease = store.reserve(input);
-    lease.release();
-    lease.release();
-    expect(store.inspect(start, principal).active).toBe(0);
-    expect(() => store.reserve({ ...input, access: { ...principal, sessionId: "new" } })).toThrow(
-      "Experiment budget store is unavailable.",
-    );
-    expect(store.inspect(start, principal).daily.calls).toBe(1);
-    for (const allocation of [
-      { ...quote, calls: 0 },
-      { ...quote, tokens: -1 },
-      { ...quote, microUsd: Number.MAX_SAFE_INTEGER + 1 },
-    ])
-      expect(() => store.reserve({ ...input, allocation })).toThrow(
-        "Experiment policy was rejected.",
-      );
-  });
-
-  it("keeps trusted policy snapshots and charges rounded-up simulated rates", async () => {
-    const copy = structuredClone(policy);
-    const run = setup(copy);
-    copy.enabled = false;
-    copy.daily.calls = 0;
-    await run.runner.run(source);
-    expect(run.generate).toHaveBeenCalledTimes(1);
-    const fractional = quoteExperimentRequest(
-      request(),
-      ExperimentPolicySchema.parse({
-        ...policy,
-        rates: { inputMicroUsdPerMillionTokens: 1, outputMicroUsdPerMillionTokens: 1 },
-      }),
-    );
-    expect(fractional.microUsd).toBe(2);
-    expect(
-      ExperimentPolicySchema.safeParse({ ...policy, daily: { ...budget, microUsd: 0.5 } }).success,
-    ).toBe(false);
-  });
-
-  it("admits exactly the remaining budget during a simultaneous burst", async () => {
-    const ids = Array.from({ length: 10 }, (_, i) => `burst-${i}`);
-    const store = new MemoryExperimentBudgetStore();
-    const generate = vi.fn(mock.generate.bind(mock));
-    let caller = 0;
-    const runner = createExperimentRunner({
-      execute,
-      policy: {
-        ...policy,
-        allowedPrincipalIds: ids,
-        maxConcurrent: 32,
-        daily: { ...budget, calls: 3 },
-      },
-      provider: { kind: "mock", generate },
-      store,
-      environment: () => "development",
-      now: () => start,
-      resolveAccess: async () => ({ principalId: ids[caller++], sessionId: "session" }),
-    });
-    const results = await Promise.allSettled(ids.map(() => runner.run(source)));
-    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(3);
-    const rejected = results.filter((result) => result.status === "rejected");
-    expect(rejected).toHaveLength(7);
-    expect(rejected.every((result) => result.reason.code === "BUDGET_EXCEEDED")).toBe(true);
-    expect(generate).toHaveBeenCalledTimes(3);
-    expect(store.inspect(start, principal).daily.calls).toBe(3);
-    expect(store.inspect(start, principal).active).toBe(0);
-  });
-
-  it("emits no network calls or raw input logs through the guarded mock", async () => {
+  it("emits no network calls or raw input logs", async () => {
     const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("forbidden"));
     const log = vi.spyOn(console, "log");
     const error = vi.spyOn(console, "error");
@@ -465,17 +286,5 @@ describe("local mock experiment admission guard", () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(log).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
-  });
-
-  it("uses the full request byte boundary including the server output cap", async () => {
-    const bytes = new TextEncoder().encode(
-      JSON.stringify({ ...request(), maxOutputTokens: policy.maxOutputTokens }),
-    ).byteLength;
-    const exact = setup({ ...policy, maxRequestBytes: bytes });
-    await exact.runner.run(source);
-    expect(exact.generate).toHaveBeenCalledTimes(1);
-    const over = setup({ ...policy, maxRequestBytes: bytes - 1 });
-    await expect(over.runner.run(source)).rejects.toMatchObject({ code: "REQUEST_TOO_LARGE" });
-    expect(over.store.inspect(start, principal).daily.calls).toBe(0);
   });
 });

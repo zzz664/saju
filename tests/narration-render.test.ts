@@ -34,35 +34,41 @@ async function mockDraft(persona = "synthetic-style") {
 }
 
 describe("narration request rendering", () => {
-  it("keeps the common policy in sync with docs/12 and separates style guide, contract and data", () => {
-    const documented = readFileSync("docs/12_공통_시스템_프롬프트.md", "utf8").match(
-      /```text\n([\s\S]*?)\n```/,
-    )![1];
-    expect(COMMON_SYSTEM_PROMPT).toBe(documented);
-    expect(context.request.instructions).toBe(COMMON_SYSTEM_PROMPT);
-    const [developer, user] = context.request.messages;
-    expect(developer.role).toBe("developer");
-    expect(developer.content.startsWith("[캐릭터 스타일 안내] synthetic-style 1.0.0")).toBe(true);
-    expect(developer.content).toContain("해요체");
-    expect(developer.content).toContain("[출력 형식]");
-    expect(developer.content).toContain("[좋은 출력의 예");
-    expect(developer.content).not.toMatch(/"schemaVersion"|identityDisclosure|"strength":/);
-    expect(user.role).toBe("user");
-    const data = JSON.parse(user.content);
-    expect(Object.keys(data).sort()).toEqual([
-      "beats",
-      "chart",
-      "featureId",
-      "limitations",
-      "status",
-    ]);
-    expect(JSON.stringify(data)).not.toMatch(
-      /refId|planKey|provenance|primary:M03|sourceRefs|ruleId/,
-    );
-    expect(data.beats.map((beat: { beatId: string }) => beat.beatId)).toEqual(
-      context.plan.beats.map((beat) => beat.beatId),
-    );
-  });
+  it.each(["LF", "CRLF"])(
+    "keeps the common policy in sync with docs/12 (%s) and separates style, contract and data",
+    (lineEnding) => {
+      const normalized = readFileSync("docs/12_공통_시스템_프롬프트.md", "utf8").replace(
+        /\r\n?/g,
+        "\n",
+      );
+      const document = lineEnding === "CRLF" ? normalized.replace(/\n/g, "\r\n") : normalized;
+      const documented = document.replace(/\r\n?/g, "\n").match(/```text\n([\s\S]*?)\n```/)![1];
+      expect(COMMON_SYSTEM_PROMPT).toBe(documented);
+      expect(context.request.instructions).toBe(COMMON_SYSTEM_PROMPT);
+      const [developer, user] = context.request.messages;
+      expect(developer.role).toBe("developer");
+      expect(developer.content.startsWith("[캐릭터 스타일 안내] synthetic-style 1.0.0")).toBe(true);
+      expect(developer.content).toContain("해요체");
+      expect(developer.content).toContain("[출력 형식]");
+      expect(developer.content).toContain("[좋은 출력의 예");
+      expect(developer.content).not.toMatch(/"schemaVersion"|identityDisclosure|"strength":/);
+      expect(user.role).toBe("user");
+      const data = JSON.parse(user.content);
+      expect(Object.keys(data).sort()).toEqual([
+        "beats",
+        "chart",
+        "featureId",
+        "limitations",
+        "status",
+      ]);
+      expect(JSON.stringify(data)).not.toMatch(
+        /refId|planKey|provenance|primary:M03|sourceRefs|ruleId/,
+      );
+      expect(data.beats.map((beat: { beatId: string }) => beat.beatId)).toEqual(
+        context.plan.beats.map((beat) => beat.beatId),
+      );
+    },
+  );
   it("pins the strict output schema to this plan's beat ids and aliases", () => {
     const schema = context.request.output.jsonSchema as {
       properties: {

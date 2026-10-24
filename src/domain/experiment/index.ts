@@ -1,9 +1,7 @@
-import type { BudgetLedger, BudgetLease } from "@/domain/budget-ledger";
 import { defineCodedError } from "@/domain/utilities";
 import { z } from "zod";
 import type { NarrationRequest } from "@/domain/narration";
 
-const Amount = z.number().int().min(0).max(1_000_000_000_000);
 const Identity = z
   .string()
   .min(1)
@@ -13,10 +11,6 @@ export const ExperimentAccessSchema = z
   .strictObject({ principalId: Identity, sessionId: Identity })
   .readonly();
 export type ExperimentAccess = z.infer<typeof ExperimentAccessSchema>;
-export const ExperimentBudgetSchema = z
-  .strictObject({ calls: Amount, tokens: Amount, microUsd: Amount })
-  .readonly();
-export type ExperimentBudget = z.infer<typeof ExperimentBudgetSchema>;
 export const ExperimentPolicySchema = z
   .strictObject({
     enabled: z.boolean(),
@@ -27,17 +21,7 @@ export const ExperimentPolicySchema = z
       .refine((ids) => new Set(ids).size === ids.length)
       .readonly(),
     maxRequestBytes: z.number().int().min(1).max(1048576),
-    maxOutputTokens: z.number().int().min(1).max(16384),
     maxConcurrent: z.number().int().min(1).max(32),
-    rates: z
-      .strictObject({
-        inputMicroUsdPerMillionTokens: Amount.min(1),
-        outputMicroUsdPerMillionTokens: Amount.min(1),
-      })
-      .readonly(),
-    daily: ExperimentBudgetSchema,
-    perPrincipalDaily: ExperimentBudgetSchema,
-    perSession: ExperimentBudgetSchema,
   })
   .readonly();
 export type ExperimentPolicy = z.infer<typeof ExperimentPolicySchema>;
@@ -56,7 +40,7 @@ export function experimentDay(now: number): string {
     throw new ExperimentError("CLOCK_INVALID");
   return new Date(now).toISOString().split("T")[0];
 }
-/** Conservative local envelope estimate; not a tokenizer or actual billing usage. */
+/** Conservative Live reservation estimate; never used to admit Mock calls. Not actual usage. */
 export function estimateNarrationTokens(
   request: NarrationRequest,
   policy: { maxRequestBytes: number; maxOutputTokens: number },
@@ -65,39 +49,12 @@ export function estimateNarrationTokens(
     JSON.stringify({ ...request, maxOutputTokens: policy.maxOutputTokens }),
   ).byteLength;
   if (bytes > policy.maxRequestBytes) throw new ExperimentError("REQUEST_TOO_LARGE");
-  const inputTokens = bytes + 256; // Explicit request-envelope allowance, versioned below.
+  const inputTokens = bytes + 256; // Explicit request-envelope allowance for Live admission.
   const outputTokens = policy.maxOutputTokens;
 
   return { inputTokens, outputTokens, tokens: inputTokens + outputTokens };
 }
-/** Mock admission estimate, not tokenizer usage or a billing measurement. */
-export function quoteExperimentRequest(
-  request: NarrationRequest,
-  policy: ExperimentPolicy,
-): ExperimentBudget {
-  const { inputTokens, outputTokens } = estimateNarrationTokens(request, policy);
-  const million = BigInt(1000000);
-  const ceil = (tokens: number, rate: number) =>
-    (BigInt(tokens) * BigInt(rate) + million - BigInt(1)) / million;
-  const cost =
-    ceil(inputTokens, policy.rates.inputMicroUsdPerMillionTokens) +
-    ceil(outputTokens, policy.rates.outputMicroUsdPerMillionTokens);
-  const parsed = ExperimentBudgetSchema.safeParse({
-    calls: 1,
-    tokens: inputTokens + outputTokens,
-    microUsd: Number(cost),
-  });
-  if (!parsed.success) throw new ExperimentError("REQUEST_TOO_LARGE");
-  return parsed.data;
-}
-export const EXPERIMENT_RESERVATION_POLICY = "neutral-utf8-envelope-plus-output-v2";
-export interface ExperimentBudgetStore extends BudgetLedger<ExperimentReservation> {
-  /** Atomic all-or-nothing admission; release frees concurrency, never spent allocation. */
-  reserve(input: ExperimentReservation): BudgetLease & { release(): void };
-}
-export interface ExperimentReservation {
-  readonly now: number;
-  readonly access: ExperimentAccess;
-  readonly allocation: ExperimentBudget;
-  readonly policy: ExperimentPolicy;
+/** Active Mock calls only: no usage accounting, token estimate or financial reservation. */
+export interface ExperimentConcurrencyGate {
+  acquire(principalId: string, maxConcurrent: number): { release(): void };
 }

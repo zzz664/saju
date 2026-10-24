@@ -74,6 +74,8 @@ function setup(response: typeof fetch = complete, extra: Record<string, string |
     OPENAI_API_KEY: key,
     DEV_TEST_SESSION_SECRET: secret,
     LIVE_API_TEST_MAX_REQUESTS_PER_DAY: "1",
+    // Allow the full synthetic catalog to reach fake HTTP; the one-call limit still applies.
+    LIVE_API_TEST_MAX_TOKENS_PER_DAY: "2000000",
     ...extra,
   };
   const transport = vi.fn<typeof fetch>(response),

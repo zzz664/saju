@@ -23,6 +23,7 @@ const reasons: Record<string, string> = {
   KEY_MISSING: "서버 API 키가 설정되지 않았습니다.",
   LIVE_PROVIDER_UNAVAILABLE: "서버 Provider가 준비되지 않았습니다.",
   STORE_UNAVAILABLE: "영속 예산 장부를 확인해 주세요.",
+  LIMITS_INVALID: "서버의 Live 예산 설정을 확인해 주세요.",
 };
 export default function ApiTestForm() {
   const [config, setConfig] = useState<ApiTestConfig | null>(null),
@@ -183,15 +184,9 @@ export default function ApiTestForm() {
             모델: <strong>{config.modelId}</strong> · 서버 키:{" "}
             {config.keyStatus === "ready" ? "준비됨" : "없음"}
           </p>
-          <p>
-            Mock 실행: {config.used.calls}/{config.limits.calls}회 · 예약 추정 토큰:{" "}
-            {config.used.tokens}/{config.limits.tokens}
-          </p>
-          <p>
-            최대 출력: {config.limits.outputTokens}토큰 · 잔여 예약량: {config.remaining.tokens}.
-            실제 API 사용량이 아닌 로컬 Mock 예약값입니다.
-          </p>
-          {config.liveUsed && (
+          <p>Mock은 외부 호출 없이 실행하며 횟수·토큰·비용 예산을 적용하지 않습니다.</p>
+          {config.limits && <p>Live 최대 출력: {config.limits.outputTokens}토큰</p>}
+          {config.liveUsed && config.limits && (
             <p>
               Live 실행: {config.liveUsed.calls}/{config.limits.calls}회 · 사용/미정산 예약 토큰:{" "}
               {config.liveUsed.tokens}/{config.limits.tokens} · 잔여: {config.liveRemaining?.tokens}

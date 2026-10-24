@@ -17,7 +17,7 @@ import { ExperimentError } from "@/domain/experiment";
 import { NarrationError, type NarrationProvider } from "@/domain/narration";
 import { NarrationPlanError } from "@/domain/narration/plan";
 import { NarrationRejection } from "@/domain/narration/render";
-import { MemoryExperimentBudgetStore } from "@/infrastructure/llm/experiment-budget";
+import { MemoryExperimentConcurrencyGate } from "@/infrastructure/llm/experiment-concurrency";
 import { COMMON_SYSTEM_PROMPT_VERSION, R01_PLAN_CONTRACT_VERSION } from "@/domain/narration/prompt";
 import type { createApiTestCatalog } from "@/server/api-test-catalog";
 import { runLiveNarration } from "@/server/api-test-live";
@@ -115,7 +115,7 @@ type Run = {
   value: Record<string, unknown>;
 };
 
-/** Mock ledger is in memory; Live uses a separate durable local ledger. */
+/** Mock execution state is local; only Live uses a durable usage reservation ledger. */
 export function createApiTestHandler(options: {
   environment: () => Env;
   now?: () => number;
@@ -124,7 +124,7 @@ export function createApiTestHandler(options: {
   live?: { budget: FileLiveBudget; transport?: typeof fetch };
 }) {
   const now = options.now ?? Date.now,
-    store = new MemoryExperimentBudgetStore();
+    gate = new MemoryExperimentConcurrencyGate();
   const runs = new Map<string, Run>(),
     requests = new Map<string, Run>();
   let unlockWindow = 0,
@@ -151,7 +151,7 @@ export function createApiTestHandler(options: {
     try {
       limits = apiTestLimits(env);
     } catch {
-      return error(503, "LIMITS_INVALID");
+      limits = null;
     }
     let modelId: string;
     try {
@@ -190,8 +190,9 @@ export function createApiTestHandler(options: {
       !/replace|placeholder|example/i.test(env.OPENAI_API_KEY)
         ? ("ready" as const)
         : ("missing" as const);
-    let liveReason =
-      env.ENABLE_LIVE_API_TESTS !== "true"
+    let liveReason = !limits
+      ? "LIMITS_INVALID"
+      : env.ENABLE_LIVE_API_TESTS !== "true"
         ? "LIVE_FLAG_DISABLED"
         : keyStatus === "missing"
           ? "KEY_MISSING"
@@ -207,7 +208,6 @@ export function createApiTestHandler(options: {
       }
     }
     if (path === "config" && request.method === "GET") {
-      const used = store.inspect(time, access).daily;
       const config: ApiTestConfig = {
         defaultMode: "mock",
         modelId,
@@ -217,7 +217,7 @@ export function createApiTestHandler(options: {
         liveReason,
         csrfToken: session.csrf,
         limits,
-        ...(liveUsed
+        ...(liveUsed && limits
           ? {
               liveUsed,
               liveRemaining: {
@@ -226,11 +226,6 @@ export function createApiTestHandler(options: {
               },
             }
           : {}),
-        used: { calls: used.calls, tokens: used.tokens },
-        remaining: {
-          calls: Math.max(0, limits.calls - used.calls),
-          tokens: Math.max(0, limits.tokens - used.tokens),
-        },
         fixtures: options.catalog.fixtures,
         personas: options.catalog.personas,
         features: options.catalog.features,
@@ -309,7 +304,7 @@ export function createApiTestHandler(options: {
               fixtureId: input.fixtureId,
               featureId,
               selection,
-              limits,
+              limits: limits!,
               model: modelId,
               key: createHash("sha256").update(requestKey).digest("hex"),
               apiKey: env.OPENAI_API_KEY!,
@@ -337,8 +332,8 @@ export function createApiTestHandler(options: {
               model: modelId,
               selection,
               provider: options.provider,
-              store,
-              policy: apiTestPolicy(limits, time),
+              gate,
+              policy: apiTestPolicy(time),
               now,
               environment: () =>
                 apiTestLocalEnvironment(options.environment()) ? "development" : undefined,

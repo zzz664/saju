@@ -119,6 +119,9 @@ function setup(
     DEV_TEST_SESSION_SECRET: secret,
     ENABLE_LIVE_API_TESTS: "true",
     OPENAI_API_KEY: apiKey,
+    // Full catalog requests exceed the old empty-catalog fixture's 30k envelope estimate.
+    // This fake-HTTP fixture uses an explicit budget; boundary tests override it below.
+    LIVE_API_TEST_MAX_TOKENS_PER_DAY: "2000000",
     ...extra,
   };
   const transport = vi.fn<typeof fetch>(
