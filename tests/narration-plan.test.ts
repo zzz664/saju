@@ -35,7 +35,13 @@ const summarized = composeInterpretationCatalog(
     },
   },
 );
-const scaffold = composeInterpretationCatalog();
+// An explicitly empty catalog: the repository data files fill up over time, and this test is about
+// the plan with no usable interpretation, not about the current batch.
+const empty = { schemaVersion: "1.0.0", note: "test" };
+const scaffold = composeInterpretationCatalog(
+  { ...empty, passages: {} },
+  { ...empty, summaries: {} },
+);
 
 function planFor(request: unknown, catalog = scaffold) {
   const result = executeFeature(request, featureDependencies);
