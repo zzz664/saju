@@ -440,7 +440,9 @@ export function summaryRequestBody(model, passage, locator) {
     stream: false,
     instructions: SUMMARY_INSTRUCTIONS,
     input: [{ role: "user", content: `[출처 위치] ${locator}\n[원문]\n${passage}` }],
-    max_output_tokens: 600,
+    // 800 Korean characters plus hanja glosses run past 600 tokens; a cut-off reply comes back as
+    // status "incomplete" with no final text and used to surface only as "empty summary".
+    max_output_tokens: 1400,
   };
 }
 export function entailmentRequestBody(model, passage, summary) {

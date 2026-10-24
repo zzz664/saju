@@ -1163,3 +1163,8 @@
 
 - 원인: 사용자 로컬 `summaries.json`에서 최상위 `summaries` 객체가 사라진 상태(develop의 파일은 정상). `passages.json`의 키(`src.*`)와는 무관하다. 스크립트가 형식을 검사하지 않아 뒤늦게 모호한 오류로 죽었다.
 - 수정: `summarize-units.mjs`가 `passages.json`/`summaries.json`의 최상위 객체를 먼저 검사하고, 없으면 파일명·복구 명령(`git checkout -- <파일>`)을 적어 종료한다. Live 호출 전에 실패하므로 비용이 들지 않는다.
+
+### 후속 8 — 2차 보정(gpt-4.1, 프롬프트 1.1.0, `--retry-failed --max 10`): passed 5 / failed 1 / errors 4
+
+- 판정 통과율은 5/6으로 올랐다(1차 2/10). errors 4건은 전부 `empty summary`: 요약 `max_output_tokens: 600`이 한국어 800자 + 한자 병기 출력에 모자라 응답이 `status: incomplete`로 잘리고 최종 텍스트가 없었다. 스크립트가 사유를 삼켜 "empty summary"로만 보였다.
+- 수정: 요약 상한 1,400 토큰. `call()`이 응답 `status`/`incomplete_details.reason`을 돌려 주어 오류 메시지에 `empty summary (incomplete/max_output_tokens)`처럼 적는다. Live 재검증은 사용자 환경(LIVE_NOT_RUN).

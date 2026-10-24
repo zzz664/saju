@@ -99,6 +99,8 @@ async function call(body) {
   const envelope = await response.json();
   return {
     text: outputTextOf(envelope),
+    // Why there is no text, when there is none: "incomplete/max_output_tokens", "failed/…", etc.
+    why: `${envelope?.status ?? "no-status"}${envelope?.incomplete_details?.reason ? `/${envelope.incomplete_details.reason}` : ""}`,
     usage: envelope?.usage ?? null,
     model: typeof envelope?.model === "string" ? envelope.model : model,
   };
@@ -125,13 +127,13 @@ async function main() {
       usage.calls++;
       usage.inputTokens += summary.usage?.input_tokens ?? 0;
       usage.outputTokens += summary.usage?.output_tokens ?? 0;
-      if (!summary.text) throw new Error("empty summary");
+      if (!summary.text) throw new Error(`empty summary (${summary.why})`);
       const verdict = await call(entailmentRequestBody(model, source.passage, summary.text));
       usage.calls++;
       usage.inputTokens += verdict.usage?.input_tokens ?? 0;
       usage.outputTokens += verdict.usage?.output_tokens ?? 0;
       const status = parseEntailmentVerdict(verdict.text);
-      if (!status) throw new Error("unreadable verdict");
+      if (!status) throw new Error(`unreadable verdict (${verdict.why})`);
       const reason = status === "failed" ? parseEntailmentReason(verdict.text) : null;
       const now = new Date().toISOString();
       file.summaries[entry.unit.unitId] = {
