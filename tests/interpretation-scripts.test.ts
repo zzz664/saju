@@ -218,6 +218,8 @@ describe("interpretation collector helpers (offline)", () => {
     expect(body.input[0].content).toContain("正月甲木");
     // Room for "FAIL: <이유>"; the Responses API minimum is 16 (5 failed every call with HTTP 400).
     expect(entailmentRequestBody("gpt-4o-mini", "原文", "요약").max_output_tokens).toBe(80);
+    // 800자 한국어 요약 + 한자 병기가 600 토큰을 넘어 status=incomplete로 잘렸다(1차 보정 errors 4).
+    expect(summaryRequestBody("gpt-4o-mini", "原文", "正月甲木").max_output_tokens).toBe(1400);
     expect(parseEntailmentVerdict(" pass\n")).toBe("passed");
     expect(parseEntailmentVerdict("FAIL")).toBe("failed");
     expect(parseEntailmentVerdict("FAIL: 丙을 정화로 옮김")).toBe("failed");
