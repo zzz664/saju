@@ -79,9 +79,15 @@ describe("classical interpretation lookup catalog", () => {
       "十二月癸水",
     );
     const catalog = loadInterpretationCatalog();
-    // Passages are collected for every slot (Wikisource, no LLM); no summary exists yet, so every
-    // unit is still `scaffold` and nothing is usable until summarize-units.mjs runs.
-    expect(catalog.units.every((unit) => unit.reviewStatus === "scaffold")).toBe(true);
+    // Passages are collected for every slot (Wikisource, no LLM). Summaries arrive in batches from
+    // summarize-units.mjs, so the test checks consistency, not a fixed count: a unit is `scaffold`
+    // exactly when it has no summary, and every summary is bound to its passage digest.
+    const sourceById = new Map(catalog.sources.map((source) => [source.sourceId, source]));
+    for (const unit of catalog.units) {
+      expect(unit.reviewStatus).toBe(unit.summary ? "ai-summarized-unreviewed" : "scaffold");
+      if (unit.summary)
+        expect(unit.summary.passageDigest).toBe(sourceById.get(unit.sourceId)?.passageDigest);
+    }
     expect(catalog.sources.every((source) => source.passage !== null)).toBe(true);
     expect(
       catalog.sources.every(
@@ -106,7 +112,10 @@ describe("classical interpretation lookup catalog", () => {
     expect(ids).toContain("iu.smth.pair.resource-output");
     expect(ids).not.toContain("iu.qtbj.gap-ja");
     expect(ids).not.toContain("iu.dts.eul");
-    expect(matched.every((entry) => entry.usable === false)).toBe(true);
+    // usable ⇔ summary present, entailment passed and digest bound (whatever the data batch holds).
+    const units = new Map(loadInterpretationCatalog().units.map((unit) => [unit.unitId, unit]));
+    for (const entry of matched)
+      expect(entry.usable).toBe(units.get(entry.unitId)?.summary?.entailment.status === "passed");
     const month = matched.find((entry) => entry.unitId === "iu.qtbj.gap-in")!;
     expect(month.evidence).toEqual([
       { inputPath: "facts.dayMaster", value: "갑" },

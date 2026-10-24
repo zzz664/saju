@@ -1173,3 +1173,9 @@
 
 - 누적 통과율 약 93%. errors 1건(`iu.qtbj.jeong-sa`)은 `unreadable verdict (incomplete/max_output_tokens)`: 판정기가 80토큰을 넘겨 설명을 이어 써 응답이 잘렸고, 잘린 응답은 `completed`가 아니라 텍스트로 읽히지 않았다.
 - 수정: 판정 상한 200토큰. `partialTextOf`로 `incomplete/max_output_tokens` 응답의 본문을 판정에만 사용한다(첫 단어가 PASS/FAIL이면 충분, 사유는 잘려도 됨). 요약은 여전히 완결 응답만 받는다. Live 재검증은 사용자 환경(LIVE_NOT_RUN).
+
+### 후속 10 — 요약 생성 완료 직전: 테스트를 데이터 상태와 무관하게
+
+- 사용자 Live 누적(gpt-4.1, 프롬프트 1.1.0): passed 134 / failed 7 / errors 0 (141단위). 통과율 95%. `summaries.json`은 사용자 로컬에 있고 아직 커밋 전이다.
+- 문제: `tests/interpretation.test.ts`가 "요약 없음·전부 scaffold·usable 없음"을, `tests/narration-plan.test.ts`가 `composeInterpretationCatalog()` 기본값(저장소 데이터)을 빈 카탈로그로 가정해, 요약이 커밋되면 깨진다. 141단위 가짜 요약(7단위 failed)을 넣고 전체 스위트를 돌려 재현했다(1건 실패).
+- 수정: 카탈로그 테스트는 일관성만 검사(`scaffold` ⇔ 요약 없음, 요약 digest = 원문 digest, `usable` ⇔ entailment passed). 계획 테스트는 명시적으로 빈 카탈로그를 만든다. 가짜 요약 상태와 실제(빈) 상태 모두에서 73파일 1,463건 PASS. 가짜 데이터는 커밋하지 않았다.
