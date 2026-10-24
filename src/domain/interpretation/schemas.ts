@@ -75,6 +75,8 @@ export const InterpretationSummarySchema = z
         status: z.enum(["passed", "failed"]),
         modelId: z.string().min(1).max(128),
         checkedAt: z.iso.datetime(),
+        /** The judge's first stated violation on FAIL; feeds prompt calibration, never the UI. */
+        reason: z.string().min(1).max(200).optional(),
       })
       .readonly(),
   })
