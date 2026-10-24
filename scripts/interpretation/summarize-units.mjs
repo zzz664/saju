@@ -67,7 +67,17 @@ async function call(body) {
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(60_000),
   });
-  if (!response.ok) throw new Error(`provider ${response.status}`);
+  if (!response.ok) {
+    // Surface the provider's reason (its error body carries no key or prompt text), bounded.
+    const detail = await response.text().catch(() => "");
+    let reason = "";
+    try {
+      reason = JSON.parse(detail)?.error?.message ?? "";
+    } catch {
+      reason = "";
+    }
+    throw new Error(`provider ${response.status}${reason ? ` — ${reason.slice(0, 200)}` : ""}`);
+  }
   const envelope = await response.json();
   return {
     text: outputTextOf(envelope),
