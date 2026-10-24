@@ -17,6 +17,7 @@ import {
   buildNarrationPlan,
   F02_PLAN_SPEC,
   F03_PLAN_SPEC,
+  F04_PLAN_SPEC,
   NarrationPlanError,
   type NarrationPlan,
 } from "@/domain/narration/plan";
@@ -39,8 +40,8 @@ export type FeatureNarrationOptions = {
   readonly spec?: unknown;
 };
 
-const SPECS = { F02: F02_PLAN_SPEC, F03: F03_PLAN_SPEC } as const;
-const TOPICS = { F02: ["temperament"], F03: ["strengths"] } as const;
+const SPECS = { F02: F02_PLAN_SPEC, F03: F03_PLAN_SPEC, F04: F04_PLAN_SPEC } as const;
+const TOPICS = { F02: ["temperament"], F03: ["strengths"], F04: ["career"] } as const;
 
 /**
  * FeatureResult → persona-independent plan → persona-specific request. The plan is the single

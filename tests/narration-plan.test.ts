@@ -5,46 +5,23 @@ import {
   buildNarrationPlan,
   F02_PLAN_SPEC,
   F03_PLAN_SPEC,
+  F04_PLAN_SPEC,
   NarrationPlanSchema,
   type NarrationPlanInput,
 } from "@/domain/narration/plan";
-import { composeInterpretationCatalog } from "@/infrastructure/interpretation/catalog";
 import { nodeSha256Adapter } from "@/infrastructure/hashing";
 import { featureDependencies, featureRequest } from "./helpers/feature-input";
+import { CAREER_PREDICTION_PATTERN } from "./helpers/career-predictions";
 
-const passage = "正月甲木。初春尚有餘寒。得丙癸透。富貴雙全。";
-const digest = nodeSha256Adapter.digest(passage);
-const stamp = "2026-10-24T00:00:00.000Z";
-const summarized = composeInterpretationCatalog(
-  {
-    schemaVersion: "1.0.0",
-    note: "test",
-    passages: { "src.qtbj.gap-in": { passage, retrievedAt: stamp, passageDigest: digest } },
-  },
-  {
-    schemaVersion: "1.0.0",
-    note: "test",
-    summaries: {
-      "iu.qtbj.gap-in": {
-        text: "정월의 갑목은 초봄의 추위가 남아 병화와 계수가 함께 드러나는 것을 귀하게 본다는 구절이다.",
-        modelId: "gpt-4o-mini",
-        promptVersion: "1.0.0",
-        generatedAt: stamp,
-        passageDigest: digest,
-        entailment: { status: "passed", modelId: "gpt-4o-mini", checkedAt: stamp },
-      },
-    },
-  },
-);
-// An explicitly empty catalog: the repository data files fill up over time, and this test is about
-// the plan with no usable interpretation, not about the current batch.
-const empty = { schemaVersion: "1.0.0", note: "test" };
-const scaffold = composeInterpretationCatalog(
-  { ...empty, passages: {} },
-  { ...empty, summaries: {} },
-);
+import {
+  summarizedCatalog as summarized,
+  unsummarizedCatalog as scaffold,
+  emptyCatalog,
+} from "./helpers/narration-catalog";
 
-function planFor(request: unknown, catalog = scaffold, featureId: "F02" | "F03" = "F03") {
+const specs = { F02: F02_PLAN_SPEC, F03: F03_PLAN_SPEC, F04: F04_PLAN_SPEC };
+const topics = { F02: "temperament", F03: "strengths", F04: "career" } as const;
+function planFor(request: unknown, catalog = scaffold, featureId: keyof typeof specs = "F03") {
   const result = executeFeature(request, featureDependencies);
   const input = buildFeatureNarrationInput(result);
   const facts = result.core.document.facts;
@@ -53,7 +30,7 @@ function planFor(request: unknown, catalog = scaffold, featureId: "F02" | "F03" 
     facts,
     interpretations: facts
       ? matchInterpretations(facts, catalog, {
-          topics: [featureId === "F02" ? "temperament" : "strengths"],
+          topics: [topics[featureId]],
         })
       : [],
     analysisKey: result.core.fingerprint.hash,
@@ -62,11 +39,7 @@ function planFor(request: unknown, catalog = scaffold, featureId: "F02" | "F03" 
   };
   return {
     result,
-    plan: buildNarrationPlan(
-      source,
-      featureId === "F02" ? F02_PLAN_SPEC : F03_PLAN_SPEC,
-      nodeSha256Adapter,
-    ),
+    plan: buildNarrationPlan(source, specs[featureId], nodeSha256Adapter),
   };
 }
 
@@ -166,7 +139,6 @@ describe("persona-independent narration plan", () => {
 });
 
 describe("F02 temperament narration plan", () => {
-  const emptyCatalog = { ...scaffold, sources: [], units: [] };
   it.each([
     ["summarized", summarized],
     ["empty", emptyCatalog],
@@ -223,4 +195,83 @@ describe("F02 temperament narration plan", () => {
       }
     },
   );
+});
+
+describe("F04 career narration plan", () => {
+  it("defines ordered beats with one limitations beat and an explicit non-prediction boundary", () => {
+    expect(F04_PLAN_SPEC.beats.map((beat) => beat.role)).toEqual([
+      "chart",
+      "observation",
+      "interpretation",
+      "limitations",
+    ]);
+    expect(F04_PLAN_SPEC.beats.filter((beat) => beat.role === "limitations")).toHaveLength(1);
+    expect(F04_PLAN_SPEC.beats.map((beat) => beat.guidance).join(" ")).toContain(
+      "직업·직장·수입을 예측하거나 특정 직업을 권하지 않는다, 관측된 성향만 서술한다",
+    );
+  });
+  for (const [name, catalog] of [
+    ["summarized", summarized],
+    ["empty", emptyCatalog],
+  ] as const) {
+    it.each(["known", "unknown", "unavailable"])(
+      `builds a deterministic %s plan with ${name} catalog`,
+      (scenario) => {
+        const request = featureRequest("F04");
+        const input =
+          scenario === "known"
+            ? request
+            : scenario === "unknown"
+              ? {
+                  ...request,
+                  birthInput: { ...request.birthInput, birthTime: { status: "unknown" } },
+                }
+              : {
+                  ...request,
+                  calculationPolicy: { ...request.calculationPolicy, solarTime: "true-solar" },
+                  birthInput: { ...request.birthInput, longitudeDeg: null },
+                };
+        const { result, plan } = planFor(input, catalog, "F04");
+        expect(plan.specId).toBe("f04-career-plan");
+        expect(plan.featureId).toBe("F04");
+        expect(plan.status).toBe(scenario === "unavailable" ? "unavailable" : "partial");
+        expect(planFor(input, catalog, "F04").plan.planKey).toBe(plan.planKey);
+        const aliases = plan.beats.flatMap((beat) => beat.evidence.map((entry) => entry.alias));
+        expect(aliases).toEqual(aliases.map((_, index) => `E${index + 1}`));
+        expect(plan.beats.filter((beat) => beat.role === "limitations")).toHaveLength(1);
+        expect(JSON.stringify(plan)).not.toMatch(CAREER_PREDICTION_PATTERN);
+        if (scenario === "unavailable") {
+          expect(plan.chart).toBeNull();
+          expect(plan.beats.map((beat) => beat.role)).toEqual(["limitations"]);
+          expect(plan.provenance.usableInterpretations).toBe(0);
+          return;
+        }
+        expect(plan.chart?.unknownPositions).toEqual(scenario === "unknown" ? ["시주"] : []);
+        if (scenario === "unknown")
+          expect(plan.limitations.some((line) => line.includes("시주 정보가 없어"))).toBe(true);
+        expect(plan.beats.map((beat) => beat.role)).toEqual(
+          catalog === summarized
+            ? ["chart", "observation", "interpretation", "limitations"]
+            : ["chart", "observation", "limitations"],
+        );
+        expect(
+          plan.beats
+            .find((beat) => beat.role === "observation")
+            ?.evidence.map((entry) => entry.refId),
+        ).toEqual(
+          result.judgments
+            .filter(
+              (judgment) =>
+                judgment.precision === "confirmed" && judgment.disposition === "accepted",
+            )
+            .map((judgment) => judgment.judgmentId),
+        );
+        expect(plan.provenance.usableInterpretations).toBe(catalog === summarized ? 1 : 0);
+        if (catalog === emptyCatalog)
+          expect(plan.limitations.some((line) => line.includes("카탈로그에 없다"))).toBe(true);
+        else
+          expect(plan.limitations.some((line) => line.includes("감수를 받지 않았다"))).toBe(true);
+      },
+    );
+  }
 });

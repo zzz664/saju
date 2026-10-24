@@ -8,6 +8,7 @@ import { AnalysisInputSchema } from "@/domain/input/schemas";
 export const API_TEST_FEATURES = [
   { id: "F02" as const, label: "성격·기질 (F02)" },
   { id: "F03" as const, label: "오행·십성 강점·약점 (F03)" },
+  { id: "F04" as const, label: "직업 적성·업무 성향 (F04)" },
 ];
 export type ApiTestFeatureId = (typeof API_TEST_FEATURES)[number]["id"];
 
