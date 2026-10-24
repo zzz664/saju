@@ -35,7 +35,7 @@ WBS-32,확장-A,F02 성격·기질,WBS-31,"F02 실행기 완료; 서술 연결�
 WBS-33,확장-A,F04 직업 적성·업무 성향,WBS-32,"F04 실행기 완료; 서술 연결은 NP 패턴으로 F04 NarrationPlanSpec 등록 시 재검증; F04 규칙·과장 방지·JSON 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,34,명리확장
 WBS-69,확장-A,IK 해석 카탈로그 조회·원문 수집/요약 생성 스크립트,WBS-29,"조건 키(일간×월지/일간/십성군/쌍) 141 슬롯·usable 판정·digest 바인딩·수집/요약 스크립트 오프라인 테스트; 원문 수집은 개발자 환경에서 실행, 요약은 명시 Live; 1PR",P1,DONE,,claude/fervent-newton-z75xzm,,32a,명리확장
 WBS-70,확장-A,NP 서술 계획·렌더링·근거 검증(hard)/문체 점수(soft) 재작성 및 F03 재연결,WBS-69;WBS-31,"NarrationPlan(beat·별칭·한계·planKey)·스타일 가이드 산문·strict 출력 스키마·거절 사유 코드·/dev/api-test 연결; 기존 R01 sections 계약 삭제; 1PR",P1,DONE,,claude/fervent-newton-z75xzm,,32b,명리확장
-WBS-71,확장-A,실측 보정 루프 — 2 문체 × 3 사례 × 3회 Live 기준선,WBS-70;WBS-66,"보호된 /dev/api-test에서 18회 Live, 거절 사유 코드 분포·문체 점수를 비식별로 docs/evaluations에 기록, 그 결과로 프롬프트/검증기 1회 조정; 실호출 없으면 LIVE_NOT_RUN; 1PR",P1,TODO,,,,32c,명리확장
+WBS-71,확장-A,실측 보정 루프 — 2 문체 × 3 사례 × 3회 Live 기준선,WBS-70;WBS-66,"보호된 /dev/api-test에서 18회 Live, 거절 사유 코드 분포·문체 점수를 비식별로 docs/evaluations에 기록, 그 결과로 프롬프트/검증기 1회 조정; 실호출 없으면 LIVE_NOT_RUN; 1PR",P1,DONE,,,,32c,명리확장
 WBS-34,확장-A,F05 재물 성향·금전 관리 성향 (NP 패턴),WBS-71,"F05 실행기 + 해석 카탈로그 topics wealth + F05 NarrationPlanSpec 등록·불확실성·금융 예측 금지 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,35,명리확장
 WBS-35,확장-A,F06 연애 성향·관계 패턴 (NP 패턴),WBS-34,"F06 실행기 + NarrationPlanSpec 등록·관계 규칙·성별 고정관념·부분 입력 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,36,명리확장
 WBS-36,확장-B,M04 신살 규칙·판정표,WBS-28,"채택 신살표/출처·양성/음성/관법 테스트; 기능 브랜치 1개·PR 1개, develop 머지 후 다음 진행",P1,TODO,,,,37,명리확장

@@ -1179,3 +1179,14 @@
 - 사용자 Live 누적(gpt-4.1, 프롬프트 1.1.0): passed 134 / failed 7 / errors 0 (141단위). 통과율 95%. `summaries.json`은 사용자 로컬에 있고 아직 커밋 전이다.
 - 문제: `tests/interpretation.test.ts`가 "요약 없음·전부 scaffold·usable 없음"을, `tests/narration-plan.test.ts`가 `composeInterpretationCatalog()` 기본값(저장소 데이터)을 빈 카탈로그로 가정해, 요약이 커밋되면 깨진다. 141단위 가짜 요약(7단위 failed)을 넣고 전체 스위트를 돌려 재현했다(1건 실패).
 - 수정: 카탈로그 테스트는 일관성만 검사(`scaffold` ⇔ 요약 없음, 요약 digest = 원문 digest, `usable` ⇔ entailment passed). 계획 테스트는 명시적으로 빈 카탈로그를 만든다. 가짜 요약 상태와 실제(빈) 상태 모두에서 73파일 1,463건 PASS. 가짜 데이터는 커밋하지 않았다.
+
+## 2026-10-24 WBS-71 — 사용자 보고 Live 실측 기준선 기록
+
+- AGENTS.md·docs/22_Codex_해석층_작업지시.md E절·WBS.csv를 읽었다. 직전 PR #48의 develop MERGED(`311f07d`)와 origin/develop 반영을 확인하고 develop pull --ff-only 후 feature/WBS-71-live-calibration 한 개를 만들었다. 선행 WBS-70의 PR #36(`0ae46fc`), WBS-66의 PR #24(`b529342`)도 origin/develop에 포함되어 있다. 정리할 이전 로컬 기능 브랜치는 없었다.
+- 사용자가 이미 실행한 2 문체×3 가상 사례×3회=18회의 비식별 집계를 docs/evaluations/WBS-71-live-calibration.md에 기록했다. 경도 누락 6회는 의도된 음성 사례로 엔진 unavailable·한계 말풍선만 출력·OUTPUT_REJECTED 없음이다. 유효 12회는 엔진 partial·근거 검증 거절 0회·해석 말풍선의 카탈로그 요약 인용 출현이며, 문체 점수 1.0이 11회/0.8이 1회다.
+- 개별 점수의 사례/문체/회차 매핑이 제공되지 않아 표에서는 미기록으로 두고 분포만 보존했다. 출력 원문·출생 입력·토큰 수는 기록하지 않는다. 사용자 보고와 원시 실행 로그 검증을 구분하고 출시 전 재측정 필요를 명시했다. 결론은 **거절 사유 분포가 비어 있어 프롬프트·검증기 조정 없음**이다.
+- WBS.csv의 WBS-71 상태만 TODO→DONE으로 변경했다. prompt.ts/render.ts·버전·검증 기준·문체 soft 정책은 변경하지 않았다. Codex의 실제 OpenAI 호출은 0회이며 사용자 실행 18회를 자동 테스트 성공/신규 실호출로 재분류하지 않는다.
+- 지정 검증 5개를 모두 실행했다. npm test **FAIL**: 73파일 중 7실패/66통과, 1,463건 중 55실패/1,408통과. Mock LENGTH, 예산 차단(BUDGET_EXCEEDED/429), 일부 타임아웃, 문서 LF 정규식 오류 등이 관측됐다. 실패 내역은 평가 문서에 별도로 기록했으며 사용자 Live 거절 분포에 섞지 않는다. 실패 무시/skip·테스트 기준 변경 없음.
+- npm run typecheck **PASS**(Next typegen+tsc), npm run lint **PASS**(경고 0), npm run check:docs **PASS**(69파일/114링크/0오류). npm run format:check **FAIL**: 기존 249파일 서식 불일치. core.autocrlf=true의 CRLF 작업 트리와 LF 설정을 확인했다. 소스/테스트/카탈로그 데이터를 수정하거나 전체 재포맷하지 않았다.
+- 포맷 보충 진단: HEAD의 LF Git 본문 252파일을 같은 설정으로 메모리에서 검사한 결과 application/relations/index.ts와 infrastructure/manseryeok/adapter.ts 두 곳은 줄바꿈 외 기존 포맷 불일치가 있었다. 원본 파일·포맷 설정을 바꾸지 않았으며 보충 결과로 기본 format:check 실패를 덮지 않는다.
+- 변경 파일은 docs/evaluations/WBS-71-live-calibration.md, docs/WBS.csv, docs/worklog.md 세 개다. 기존 next-env.d.ts 사용자 변경은 typecheck 실행 후 바이트 단위로 복원하고 커밋에서 제외한다. .env·실제 .local 예산 장부 열람/수정, OpenAI 호출, 코드/CI/DB/PG 변경 없음. develop 대상 PR 한 건 생성 후 즉시 중지한다.
