@@ -76,7 +76,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
     async (fixtureId) => {
       const { handler, generate } = make(),
         { cookie, config } = await unlock(handler);
-      expect(config.features.map((item: { id: string }) => item.id)).toEqual(["F03"]);
+      expect(config.features.map((item: { id: string }) => item.id)).toEqual(["F02", "F03"]);
       expect(generate).not.toHaveBeenCalled();
       const input = { ...body(), featureId: "F03", fixtureId },
         response = await handler(request("runs", input, cookie, config.csrfToken));
@@ -104,7 +104,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
           await handler(
             request(
               "runs",
-              { ...input, featureId: "F02", requestId: crypto.randomUUID() },
+              { ...input, featureId: "F04", requestId: crypto.randomUUID() },
               cookie,
               config.csrfToken,
             ),
@@ -118,6 +118,44 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
           )
         ).status,
       ).toBe(403);
+      expect(generate).toHaveBeenCalledTimes(1);
+    },
+  );
+  it.each(["synthetic-known", "synthetic-unknown", "synthetic-unavailable"])(
+    "routes F02 %s through the protected shared endpoint with existing summary data",
+    async (fixtureId) => {
+      const catalog = createApiTestCatalog();
+      const provider = createPlanMockProvider();
+      const generate = vi.spyOn(provider, "generate");
+      const { env } = make();
+      const handler = createApiTestHandler({
+        environment: () => env,
+        now: () => now,
+        provider,
+        catalog: {
+          ...catalog,
+          interpretation: {
+            ...catalog.interpretation,
+            units: catalog.interpretation.units.filter((unit) => unit.unitId === "iu.qtbj.gap-in"),
+          },
+        },
+      });
+      const { cookie, config } = await unlock(handler);
+      const input = { ...body(), featureId: "F02", fixtureId };
+      const response = await handler(request("runs", input, cookie, config.csrfToken));
+      const run = await response.json();
+      expect(response.status).toBe(200);
+      expect(run).toMatchObject({
+        featureId: "F02",
+        evidence: "MOCK_PASS",
+        result: {
+          featureId: "F02",
+          sourceStatus: fixtureId === "synthetic-unavailable" ? "unavailable" : "partial",
+        },
+      });
+      expect(
+        await (await handler(request("runs", input, cookie, config.csrfToken))).json(),
+      ).toEqual(run);
       expect(generate).toHaveBeenCalledTimes(1);
     },
   );

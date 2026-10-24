@@ -5,7 +5,10 @@ import { nodeSha256Adapter } from "@/infrastructure/hashing";
 import { executeFeature } from "@/application/saju/features";
 import { AnalysisInputSchema } from "@/domain/input/schemas";
 
-export const API_TEST_FEATURES = [{ id: "F03" as const, label: "오행·십성 강점·약점 (F03)" }];
+export const API_TEST_FEATURES = [
+  { id: "F02" as const, label: "성격·기질 (F02)" },
+  { id: "F03" as const, label: "오행·십성 강점·약점 (F03)" },
+];
 export type ApiTestFeatureId = (typeof API_TEST_FEATURES)[number]["id"];
 
 function fixtureInput(id: string) {

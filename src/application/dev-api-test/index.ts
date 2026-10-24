@@ -49,7 +49,7 @@ const Quota = z.strictObject({
   tokens: z.number().int().nonnegative(),
 });
 const Choice = z.strictObject({ id: z.string().min(1).max(64), label: z.string().min(1).max(100) });
-export const ApiTestFeatureIdSchema = z.enum(["F03"]);
+export const ApiTestFeatureIdSchema = z.enum(["F02", "F03"]);
 export const ApiTestConfigSchema = z.strictObject({
   defaultMode: z.literal("mock"),
   modelId: ModelIdSchema,

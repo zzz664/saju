@@ -119,6 +119,45 @@ export const NarrationPlanSpecSchema = z
   .readonly();
 export type NarrationPlanSpec = z.infer<typeof NarrationPlanSpecSchema>;
 
+export const F02_PLAN_SPEC: NarrationPlanSpec = NarrationPlanSpecSchema.parse({
+  specId: "f02-temperament-plan",
+  specVersion: "1.0.0",
+  featureId: "F02",
+  beats: [
+    {
+      beatId: "chart",
+      role: "chart",
+      title: "성격·기질을 살펴볼 원국",
+      guidance: "일간과 네 기둥을 소개하고 미상인 기둥이 있으면 그 사실을 먼저 말한다.",
+      maxCharacters: 500,
+    },
+    {
+      beatId: "observation",
+      role: "observation",
+      title: "성격·기질의 관측 근거",
+      guidance:
+        "계산으로 확정된 관측 사실만 풀어 쓴다. 오행·십성의 개수나 노출만으로 성격·기질을 단정하지 않는다.",
+      maxCharacters: 900,
+    },
+    {
+      beatId: "interpretation",
+      role: "interpretation",
+      title: "전통 해석으로 살펴보는 성격·기질",
+      guidance:
+        "제공된 고전 요약 안에서 성격·기질을 조건부로 설명한다. 책과 해당 부분을 한 번 언급하고 개인의 성격을 확정하지 않는다.",
+      maxCharacters: 1200,
+    },
+    {
+      beatId: "limitations",
+      role: "limitations",
+      title: "성격·기질 해석의 범위와 한계",
+      guidance:
+        "출생 정보와 분석의 한계를 설명하고, 제공된 근거로 확정할 수 없는 성격·기질은 단정하지 않는다.",
+      maxCharacters: 600,
+    },
+  ],
+});
+
 export const F03_PLAN_SPEC: NarrationPlanSpec = NarrationPlanSpecSchema.parse({
   specId: "f03-strengths-plan",
   specVersion: "1.0.0",
