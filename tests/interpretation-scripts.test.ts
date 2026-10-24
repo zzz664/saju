@@ -215,7 +215,8 @@ describe("interpretation collector helpers (offline)", () => {
     const body = summaryRequestBody("gpt-4o-mini", "原文", "正月甲木");
     expect(body).toMatchObject({ store: false, stream: false, model: "gpt-4o-mini" });
     expect(body.input[0].content).toContain("正月甲木");
-    expect(entailmentRequestBody("gpt-4o-mini", "原文", "요약").max_output_tokens).toBe(5);
+    // The Responses API minimum is 16; 5 made every entailment call fail with HTTP 400.
+    expect(entailmentRequestBody("gpt-4o-mini", "原文", "요약").max_output_tokens).toBe(16);
     expect(parseEntailmentVerdict(" pass\n")).toBe("passed");
     expect(parseEntailmentVerdict("FAIL")).toBe("failed");
     expect(parseEntailmentVerdict("PASS. 근거 충분")).toBeNull();

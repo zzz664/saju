@@ -1147,3 +1147,8 @@
 - 사용자가 세션 네트워크를 전체 허용으로 바꿔 이 세션에서 Wikisource를 직접 읽었다(Node `fetch`가 프록시를 무시해 `NODE_USE_ENV_PROXY=1` 필요). 본문을 보고 확정한 것: 궁통보감은 계절 절 안에서 "六月之丁"(원소 생략)·"十一二月嚴寒冰凍"(주어 생략)·"冬月之木"(계절 전체)·"正二月甲木"(공유 단락)을 쓰고 명식 예시표(`時日月年`+간지 두 줄)가 끼어 있다. 삼명통회에는 論比肩 장이 없고 卷六 `論建祿`이 월지 비견을 다룬다.
 - 수정: 월 locator는 계절 절 안에서 축약형까지 읽고, 그 달을 이름으로 부른 단락 전부를 순서대로 이어 붙인다(이름 부른 단락이 없을 때만 계절형 단락). 예시표 줄 제거. peer locator `論比肩|論建祿`. 수집 결과 `collected 141 / missing 0 / adjusted 13`(계절 절 9 + 建祿 4). `passages.json` 141건 커밋: 길이 최소 65·중앙값 215·최대 4,000(상한 3건), `url` 보정 0건, `locator` 기록 13건.
 - 검증: `tests/interpretation-scripts.test.ts` 9건·`tests/interpretation.test.ts` 5건(수집 완료 상태·digest·locator 기록 검사로 갱신) PASS, lint·typecheck·format·check:docs PASS. 요약 생성(`summarize-units.mjs`)은 사용자 승인·키가 있을 때만 실행하므로 미실행(LIVE_NOT_RUN).
+
+### 후속 5 — 요약 생성 `provider 400` 10건
+
+- 사용자 Live 실행(`--max 10`)에서 10단위 모두 `provider 400`. 원인: 함의 검사 요청의 `max_output_tokens: 5`. Responses API는 16 미만을 400으로 거절한다. 요약 호출은 성공했으나 함의 검사가 실패해 단위가 저장되지 않았고, 요약 10회 비용은 소실되었다.
+- 수정: `entailmentRequestBody`의 `max_output_tokens`를 16으로 올리고, `summarize-units.mjs`가 400 계열 응답의 `error.message`(키·원문 없음, 200자 상한)를 함께 출력하도록 했다. 테스트 기대값 갱신. 이 환경에는 키가 없어 Live 재검증은 하지 않았다(LIVE_NOT_RUN).

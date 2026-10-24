@@ -444,7 +444,8 @@ export function entailmentRequestBody(model, passage, summary) {
     stream: false,
     instructions: ENTAILMENT_INSTRUCTIONS,
     input: [{ role: "user", content: `[원문]\n${passage}\n\n[요약]\n${summary}` }],
-    max_output_tokens: 5,
+    // The Responses API rejects anything below 16 with HTTP 400; the verdict itself is one word.
+    max_output_tokens: 16,
   };
 }
 
