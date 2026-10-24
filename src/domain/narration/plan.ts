@@ -196,6 +196,45 @@ export const F03_PLAN_SPEC: NarrationPlanSpec = NarrationPlanSpecSchema.parse({
   ],
 });
 
+export const F04_PLAN_SPEC: NarrationPlanSpec = NarrationPlanSpecSchema.parse({
+  specId: "f04-career-plan",
+  specVersion: "1.0.0",
+  featureId: "F04",
+  beats: [
+    {
+      beatId: "chart",
+      role: "chart",
+      title: "업무 성향을 살펴볼 원국",
+      guidance: "일간과 네 기둥을 소개하고 미상인 기둥이 있으면 그 사실을 먼저 말한다.",
+      maxCharacters: 500,
+    },
+    {
+      beatId: "observation",
+      role: "observation",
+      title: "업무 성향의 관측 근거",
+      guidance:
+        "계산으로 확정된 관측 사실만 풀어 쓴다. 오행·십성의 개수나 노출만으로 직업 적성이나 업무 성과를 단정하지 않는다.",
+      maxCharacters: 900,
+    },
+    {
+      beatId: "interpretation",
+      role: "interpretation",
+      title: "전통 해석으로 살펴보는 업무 성향",
+      guidance:
+        "제공된 고전 요약과 출처를 조건부로 전달한다. 직업·직장·수입을 예측하거나 특정 직업을 권하지 않는다, 관측된 성향만 서술한다.",
+      maxCharacters: 1200,
+    },
+    {
+      beatId: "limitations",
+      role: "limitations",
+      title: "직업 적성·업무 성향 해석의 범위와 한계",
+      guidance:
+        "출생 정보와 분석의 한계를 설명하고, 제공된 근거로 확정할 수 없는 직업 적성·업무 성향은 단정하지 않는다.",
+      maxCharacters: 600,
+    },
+  ],
+});
+
 export class NarrationPlanError extends defineCodedError("NarrationPlanError", {
   INPUT_REJECTED: "Narration plan input was rejected.",
   SPEC_REJECTED: "Narration plan spec was rejected.",

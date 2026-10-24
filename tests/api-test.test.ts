@@ -3,6 +3,7 @@ import { createApiTestHandler } from "@/server/api-test";
 import { createApiTestCatalog } from "@/server/api-test-catalog";
 import { createPlanMockProvider } from "@/infrastructure/llm/plan-mock";
 import { createApprovedPersonaCatalog } from "@/domain/persona/catalog";
+import { summarizedCatalog } from "./helpers/narration-catalog";
 
 const secret = "synthetic-unlock-secret-for-tests-only-0001";
 const origin = "http://127.0.0.1:3000";
@@ -76,7 +77,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
     async (fixtureId) => {
       const { handler, generate } = make(),
         { cookie, config } = await unlock(handler);
-      expect(config.features.map((item: { id: string }) => item.id)).toEqual(["F02", "F03"]);
+      expect(config.features.map((item: { id: string }) => item.id)).toEqual(["F02", "F03", "F04"]);
       expect(generate).not.toHaveBeenCalled();
       const input = { ...body(), featureId: "F03", fixtureId },
         response = await handler(request("runs", input, cookie, config.csrfToken));
@@ -104,7 +105,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
           await handler(
             request(
               "runs",
-              { ...input, featureId: "F04", requestId: crypto.randomUUID() },
+              { ...input, featureId: "F05", requestId: crypto.randomUUID() },
               cookie,
               config.csrfToken,
             ),
@@ -121,9 +122,16 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
       expect(generate).toHaveBeenCalledTimes(1);
     },
   );
-  it.each(["synthetic-known", "synthetic-unknown", "synthetic-unavailable"])(
-    "routes F02 %s through the protected shared endpoint with existing summary data",
-    async (fixtureId) => {
+  it.each(
+    (["F02", "F04"] as const).flatMap((featureId) =>
+      ["synthetic-known", "synthetic-unknown", "synthetic-unavailable"].map((fixtureId) => ({
+        featureId,
+        fixtureId,
+      })),
+    ),
+  )(
+    "routes $featureId $fixtureId through the protected shared endpoint with fixed summary data",
+    async ({ featureId, fixtureId }) => {
       const catalog = createApiTestCatalog();
       const provider = createPlanMockProvider();
       const generate = vi.spyOn(provider, "generate");
@@ -134,22 +142,19 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
         provider,
         catalog: {
           ...catalog,
-          interpretation: {
-            ...catalog.interpretation,
-            units: catalog.interpretation.units.filter((unit) => unit.unitId === "iu.qtbj.gap-in"),
-          },
+          interpretation: summarizedCatalog,
         },
       });
       const { cookie, config } = await unlock(handler);
-      const input = { ...body(), featureId: "F02", fixtureId };
+      const input = { ...body(), featureId, fixtureId };
       const response = await handler(request("runs", input, cookie, config.csrfToken));
       const run = await response.json();
       expect(response.status).toBe(200);
       expect(run).toMatchObject({
-        featureId: "F02",
+        featureId,
         evidence: "MOCK_PASS",
         result: {
-          featureId: "F02",
+          featureId,
           sourceStatus: fixtureId === "synthetic-unavailable" ? "unavailable" : "partial",
         },
       });

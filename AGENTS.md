@@ -15,7 +15,6 @@
 - **GitHub Actions CI는 초기 필수 아님**. 각 WBS의 로컬 테스트, 결과 기록(`docs/worklog.md`), 사용자 리뷰는 필수. 릴리스 전 `npm test`, 타입·린트·빌드, 연동·보안 QA를 실시.
 - 기존 저장소를 보관·아카이브하는 워크플로는 요구하지 않는다. **삭제·강제 푸시·DB 파괴·시크릿 변경은 대상과 범위를 명시해 별도 승인**받는다.
 
-
 ## 작업 시작 전 점검
 
 1. `WBS.csv`의 현재 `실행순서`, `ID`, 선행 작업, 인수 조건과 `05_Codex_작업지시_프롬프트.md`를 읽는다.
@@ -69,3 +68,13 @@
 - 사용자가 실행 허용하지 않았으면 `LIVE_NOT_RUN`/`LIVE_BLOCKED`; 실제 호출 증거 없는 `LIVE_PASS` 표기 금지. CI에서는 절대 OpenAI 실호출 금지.
 - 신규 WBS 65~68도 정확히 1WBS·1기능 브랜치·1PR, 병합 확인 전 다음 작업 금지. 자세한 내용은 `21_실제_OpenAI_API_테스트_설계.md`.
 - **Mock 통과는 배선 검증이다.** 프롬프트·검증기 품질 주장은 WBS-71 실측 보정 루프(거절 사유 코드 분포 기록) 결과로만 한다.
+
+## v2.6 — 해석 카탈로그·서술 계획 작업 규칙
+
+- 기능에 서술을 붙이는 작업은 `docs/22_Codex_해석층_작업지시.md` C절 절차만 따른다. 수정 범위는 `plan.ts`(spec 추가), `application/narration/feature.ts`(등록), `api-test-catalog.ts`·`dev-api-test/index.ts`(기능 ID), 테스트, worklog, WBS.csv다. `prompt.ts`·`render.ts`·`codes.ts`·`scaffold.ts`·`data/*.json`은 해당 WBS가 명시하지 않으면 수정하지 않는다.
+- `R01_PLAN_CONTRACT`에 금지 지시를 더 쌓아 문제를 풀지 않는다. 거절 사유 코드 분포(`docs/evaluations`)를 먼저 본다. 문체 점수는 soft이며 실패 사유로 되돌리지 않는다.
+- 모델에게 `refId`·`planKey`·`provenance`·페르소나 JSON을 보내지 않는다. `planForModel`과 `renderStyleGuide` 산문만 통과한다.
+- 해석 요약을 `confirmed` 사실로 승격하거나 `reviewStatus`를 손으로 `human-reviewed`로 올리지 않는다. `passages.json`·`summaries.json`·scaffold locator는 `scripts/interpretation/*`로만 바꾼다.
+- 기능별 UI 분기·캐릭터별 프롬프트 분기를 만들지 않는다. spec·profile·catalog 데이터로 해결한다.
+- 서술 테스트는 "해석 있음"과 "빈 카탈로그" 두 경우를 모두 검사한다. 저장소 데이터 상태에 의존하는 고정값 단언을 쓰지 않는다.
+- WBS 선행 조건 확인 시 CSV 상태가 TODO라도 develop에 머지된 작업은 완료로 간주하고 CSV를 DONE으로 고친다. 머지 여부는 git 이력으로 확인한다.
