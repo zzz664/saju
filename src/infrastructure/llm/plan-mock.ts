@@ -3,7 +3,7 @@ import { NarrationError, type NarrationProvider } from "@/domain/narration";
 
 /**
  * Deterministic test double that writes every planned beat from the structured plan.
- * It restates evidence verbatim in the persona's register; it is not a quality proxy.
+ * It quotes bounded evidence snippets in the persona's register; it is not a quality proxy.
  * It accepts the full server plan or the reduced model-facing projection, so fake-HTTP tests
  * can reconstruct a request from the wire without re-running the engine.
  */
@@ -82,14 +82,28 @@ export function createPlanMockProvider(
                     "확정하지 않은 부분도 있습니다.",
                     "확정하지 않은 부분도 있어.",
                   );
-        const sentences = [
-          intro,
-          ...beat.evidence.map((entry) =>
-            entry.source
-              ? `${entry.source}에서는 “${entry.text}”라고 ${end("전해요.", "전합니다.", "전해.")}`
-              : `“${entry.text}”${end("라고 확인됐어요.", "라고 확인되었습니다.", "라고 확인됐어.")}`,
-          ),
-        ];
+        const sentences = [intro];
+        const usedAliases: string[] = [];
+        let remaining = beat.maxCharacters - intro.length;
+        for (const entry of beat.evidence) {
+          // Reserve the separator, closing quote and register ending before taking a snippet.
+          // Paragraph separators replace these spaces below, so both count as one character.
+          let prefix = entry.source ? `${entry.source}에서는 “` : "“";
+          const suffix = entry.source
+            ? `”라고 ${end("전해요.", "전합니다.", "전해.")}`
+            : `”${end("라고 확인됐어요.", "라고 확인되었습니다.", "라고 확인됐어.")}`;
+          if (usedAliases.length === 0 && remaining <= prefix.length + suffix.length + 1)
+            prefix = "“";
+          const available = remaining - 1 - prefix.length - suffix.length;
+          if (available <= 0) break;
+          const snippet = entry.text.slice(0, available).replace(/[\uD800-\uDBFF]$/, "");
+          if (!snippet) break;
+          const sentence = prefix + snippet + suffix;
+          sentences.push(sentence);
+          usedAliases.push(entry.alias);
+          remaining -= 1 + sentence.length;
+          if (snippet.length < entry.text.length) break;
+        }
         // Respect the persona's paragraph/sentence bounds so the mock baseline carries no style noise.
         const paragraphs: string[] = [];
         for (let index = 0; index < sentences.length; index += perParagraph)
@@ -100,15 +114,10 @@ export function createPlanMockProvider(
             2,
             paragraphs.slice(maxParagraphs - 1, maxParagraphs + 1).join(" "),
           );
-        let budget = beat.maxCharacters;
         return {
           beatId: beat.beatId,
-          paragraphs: paragraphs.map((paragraph) => {
-            const bounded = paragraph.slice(0, Math.max(1, budget));
-            budget -= bounded.length + 1;
-            return bounded;
-          }),
-          usedAliases: beat.evidence.map((entry) => entry.alias),
+          paragraphs,
+          usedAliases,
         };
       });
       return { status: "completed", outputText: JSON.stringify({ beats }) };

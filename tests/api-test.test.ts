@@ -76,7 +76,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
     async (fixtureId) => {
       const { handler, generate } = make(),
         { cookie, config } = await unlock(handler);
-      expect(config.features.map((item: { id: string }) => item.id)).toEqual(["F03"]);
+      expect(config.features.map((item: { id: string }) => item.id)).toEqual(["F02", "F03"]);
       expect(generate).not.toHaveBeenCalled();
       const input = { ...body(), featureId: "F03", fixtureId },
         response = await handler(request("runs", input, cookie, config.csrfToken));
@@ -104,7 +104,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
           await handler(
             request(
               "runs",
-              { ...input, featureId: "F02", requestId: crypto.randomUUID() },
+              { ...input, featureId: "F04", requestId: crypto.randomUUID() },
               cookie,
               config.csrfToken,
             ),
@@ -118,6 +118,44 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
           )
         ).status,
       ).toBe(403);
+      expect(generate).toHaveBeenCalledTimes(1);
+    },
+  );
+  it.each(["synthetic-known", "synthetic-unknown", "synthetic-unavailable"])(
+    "routes F02 %s through the protected shared endpoint with existing summary data",
+    async (fixtureId) => {
+      const catalog = createApiTestCatalog();
+      const provider = createPlanMockProvider();
+      const generate = vi.spyOn(provider, "generate");
+      const { env } = make();
+      const handler = createApiTestHandler({
+        environment: () => env,
+        now: () => now,
+        provider,
+        catalog: {
+          ...catalog,
+          interpretation: {
+            ...catalog.interpretation,
+            units: catalog.interpretation.units.filter((unit) => unit.unitId === "iu.qtbj.gap-in"),
+          },
+        },
+      });
+      const { cookie, config } = await unlock(handler);
+      const input = { ...body(), featureId: "F02", fixtureId };
+      const response = await handler(request("runs", input, cookie, config.csrfToken));
+      const run = await response.json();
+      expect(response.status).toBe(200);
+      expect(run).toMatchObject({
+        featureId: "F02",
+        evidence: "MOCK_PASS",
+        result: {
+          featureId: "F02",
+          sourceStatus: fixtureId === "synthetic-unavailable" ? "unavailable" : "partial",
+        },
+      });
+      expect(
+        await (await handler(request("runs", input, cookie, config.csrfToken))).json(),
+      ).toEqual(run);
       expect(generate).toHaveBeenCalledTimes(1);
     },
   );
@@ -341,7 +379,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
     expect(generate).not.toHaveBeenCalled();
   });
 
-  it("uses the shared daily cap across newly unlocked sessions without spending on denials", async () => {
+  it("does not apply Live call limits to Mock across newly unlocked sessions", async () => {
     const { handler, generate } = make({ LIVE_API_TEST_MAX_REQUESTS_PER_DAY: "1" });
     const first = await unlock(handler);
     expect(
@@ -350,13 +388,34 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
     const second = await unlock(handler);
     expect(
       (await handler(request("runs", body(), second.cookie, second.config.csrfToken))).status,
-    ).toBe(429);
-    expect(generate).toHaveBeenCalledTimes(1);
+    ).toBe(200);
+    expect(generate).toHaveBeenCalledTimes(2);
   });
 
-  it("fails closed on malformed budget settings and sanitizes provider failures", async () => {
+  it("keeps Mock usable with malformed Live limits and sanitizes provider failures", async () => {
     const invalid = make({ LIVE_API_TEST_MAX_TOKENS_PER_DAY: "-1" });
-    expect((await invalid.handler(request("unlock", { secret }))).status).toBe(503);
+    const unlocked = await unlock(invalid.handler);
+    expect(unlocked.config).toMatchObject({
+      limits: null,
+      liveAvailable: false,
+      liveReason: "LIMITS_INVALID",
+    });
+    expect(
+      (await invalid.handler(request("runs", body(), unlocked.cookie, unlocked.config.csrfToken)))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        await invalid.handler(
+          request(
+            "runs",
+            { ...body(), mode: "live", acknowledgedCost: true },
+            unlocked.cookie,
+            unlocked.config.csrfToken,
+          ),
+        )
+      ).status,
+    ).toBe(403);
     const provider = {
       kind: "mock" as const,
       generate: async () => {
@@ -372,7 +431,7 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
     expect(JSON.stringify(run)).not.toContain("private-upstream");
   });
 
-  it("blocks request races and new concurrent runs without double reservations", async () => {
+  it("blocks request races and new concurrent Mock runs", async () => {
     let release!: () => void, entered!: () => void;
     const gate = new Promise<void>((resolve) => {
         release = resolve;
@@ -405,18 +464,17 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
     expect(generate).toHaveBeenCalledTimes(1);
   });
 
-  it("does not reserve or call the provider when even one request exceeds the token cap", async () => {
+  it("does not apply Live token limits or report simulated usage for Mock", async () => {
     const { handler, generate } = make({ LIVE_API_TEST_MAX_TOKENS_PER_DAY: "1" });
     const { cookie, config } = await unlock(handler);
-    expect((await handler(request("runs", body(), cookie, config.csrfToken))).status).toBe(429);
-    expect(generate).not.toHaveBeenCalled();
-    expect((await (await handler(request("config", undefined, cookie))).json()).used).toEqual({
-      calls: 0,
-      tokens: 0,
-    });
+    expect((await handler(request("runs", body(), cookie, config.csrfToken))).status).toBe(200);
+    expect(generate).toHaveBeenCalledTimes(1);
+    const updated = await (await handler(request("config", undefined, cookie))).json();
+    expect(updated).not.toHaveProperty("used");
+    expect(updated).not.toHaveProperty("remaining");
   });
 
-  it("cancels a run without refunding reservations or prematurely unlocking the supplier", async () => {
+  it("cancels a Mock run without prematurely unlocking the supplier", async () => {
     let release!: () => void, entered!: () => void;
     const gate = new Promise<void>((resolve) => {
         release = resolve;
@@ -446,7 +504,9 @@ describe("WBS-65 protected local API settings and Mock runs", () => {
     const result = await (await running).json();
     expect(result).toMatchObject({ status: "interrupted", errorCode: "CANCELLED" });
     expect((await handler(request("runs", body(), cookie, config.csrfToken))).status).toBe(409);
-    expect((await (await handler(request("config", undefined, cookie))).json()).used.calls).toBe(1);
+    expect(await (await handler(request("config", undefined, cookie))).json()).not.toHaveProperty(
+      "used",
+    );
     release();
   });
 });

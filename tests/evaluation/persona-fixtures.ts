@@ -11,7 +11,7 @@ import {
 import { createSyntheticPersonaCatalog } from "../../src/infrastructure/persona/synthetic-catalog";
 import { loadInterpretationCatalog } from "../../src/infrastructure/interpretation/catalog";
 import { createPlanMockProvider } from "../../src/infrastructure/llm/plan-mock";
-import { MemoryExperimentBudgetStore } from "../../src/infrastructure/llm/experiment-budget";
+import { MemoryExperimentConcurrencyGate } from "../../src/infrastructure/llm/experiment-concurrency";
 import { nodeSha256Adapter } from "../../src/infrastructure/hashing/index";
 
 export const evaluationManifest = z
@@ -80,7 +80,6 @@ export const evaluationSelections = evaluationProfiles.map((item) => ({
 }));
 
 export function evaluationOptions(now = Date.now()) {
-  const budget = { calls: 180, tokens: 100_000_000, microUsd: 100_000_000 };
   return {
     registry: createSyntheticPersonaCatalog().registry,
     interpretation: loadInterpretationCatalog(),
@@ -88,18 +87,13 @@ export function evaluationOptions(now = Date.now()) {
     hash: nodeSha256Adapter,
     repetitions: evaluationManifest.repetitions,
     provider: createPlanMockProvider(),
-    store: new MemoryExperimentBudgetStore(),
+    gate: new MemoryExperimentConcurrencyGate(),
     policy: {
       enabled: true,
       expiresAt: now + 600_000,
       allowedPrincipalIds: ["quality-evaluator"],
       maxConcurrent: 1,
       maxRequestBytes: 131072,
-      maxOutputTokens: 1600,
-      rates: { inputMicroUsdPerMillionTokens: 1, outputMicroUsdPerMillionTokens: 1 },
-      daily: budget,
-      perPrincipalDaily: budget,
-      perSession: budget,
     },
     environment: () => "development",
     now: () => now,

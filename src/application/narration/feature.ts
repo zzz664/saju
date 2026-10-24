@@ -15,6 +15,7 @@ import { NarrationError, type NarrationProvider } from "@/domain/narration";
 import { DEFAULT_NARRATION_MODEL, ModelIdSchema } from "@/domain/narration/model";
 import {
   buildNarrationPlan,
+  F02_PLAN_SPEC,
   F03_PLAN_SPEC,
   NarrationPlanError,
   type NarrationPlan,
@@ -38,7 +39,8 @@ export type FeatureNarrationOptions = {
   readonly spec?: unknown;
 };
 
-const SPECS = { F03: F03_PLAN_SPEC } as const;
+const SPECS = { F02: F02_PLAN_SPEC, F03: F03_PLAN_SPEC } as const;
+const TOPICS = { F02: ["temperament"], F03: ["strengths"] } as const;
 
 /**
  * FeatureResult → persona-independent plan → persona-specific request. The plan is the single
@@ -58,7 +60,7 @@ export function prepareFeatureNarration(source: unknown, options: FeatureNarrati
   const facts = result.core.document.facts;
   const interpretations = facts
     ? matchInterpretations(facts, catalog, {
-        topics: input.featureId === "F03" ? ["strengths"] : undefined,
+        topics: TOPICS[input.featureId as keyof typeof TOPICS],
       })
     : [];
   const plan = buildNarrationPlan(

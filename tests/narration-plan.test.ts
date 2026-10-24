@@ -3,6 +3,7 @@ import { buildFeatureNarrationInput, executeFeature } from "@/application/saju/f
 import { matchInterpretations } from "@/domain/interpretation";
 import {
   buildNarrationPlan,
+  F02_PLAN_SPEC,
   F03_PLAN_SPEC,
   NarrationPlanSchema,
   type NarrationPlanInput,
@@ -43,19 +44,30 @@ const scaffold = composeInterpretationCatalog(
   { ...empty, summaries: {} },
 );
 
-function planFor(request: unknown, catalog = scaffold) {
+function planFor(request: unknown, catalog = scaffold, featureId: "F02" | "F03" = "F03") {
   const result = executeFeature(request, featureDependencies);
   const input = buildFeatureNarrationInput(result);
   const facts = result.core.document.facts;
   const source: NarrationPlanInput = {
     input,
     facts,
-    interpretations: facts ? matchInterpretations(facts, catalog, { topics: ["strengths"] }) : [],
+    interpretations: facts
+      ? matchInterpretations(facts, catalog, {
+          topics: [featureId === "F02" ? "temperament" : "strengths"],
+        })
+      : [],
     analysisKey: result.core.fingerprint.hash,
     featureCacheKey: result.cacheKey,
     interpretationCatalogVersion: catalog.catalogVersion,
   };
-  return { result, plan: buildNarrationPlan(source, F03_PLAN_SPEC, nodeSha256Adapter) };
+  return {
+    result,
+    plan: buildNarrationPlan(
+      source,
+      featureId === "F02" ? F02_PLAN_SPEC : F03_PLAN_SPEC,
+      nodeSha256Adapter,
+    ),
+  };
 }
 
 describe("persona-independent narration plan", () => {
@@ -151,4 +163,64 @@ describe("persona-independent narration plan", () => {
       }).success,
     ).toBe(false);
   });
+});
+
+describe("F02 temperament narration plan", () => {
+  const emptyCatalog = { ...scaffold, sources: [], units: [] };
+  it.each([
+    ["summarized", summarized],
+    ["empty", emptyCatalog],
+  ] as const)(
+    "builds deterministic known/unknown/unavailable plans with %s catalog",
+    (_, catalog) => {
+      const request = featureRequest("F02");
+      const requests = [
+        request,
+        {
+          ...request,
+          birthInput: { ...request.birthInput, birthTime: { status: "unknown" } },
+        },
+        {
+          ...request,
+          calculationPolicy: { ...request.calculationPolicy, solarTime: "true-solar" },
+          birthInput: { ...request.birthInput, longitudeDeg: null },
+        },
+      ];
+      for (const [index, input] of requests.entries()) {
+        const { result, plan } = planFor(input, catalog, "F02");
+        expect(plan.featureId).toBe("F02");
+        expect(plan.specId).toBe("f02-temperament-plan");
+        expect(plan.status).toBe(index === 2 ? "unavailable" : "partial");
+        expect(planFor(input, catalog, "F02").plan.planKey).toBe(plan.planKey);
+        expect(plan.beats.filter((beat) => beat.role === "limitations")).toHaveLength(1);
+        const aliases = plan.beats.flatMap((beat) => beat.evidence.map((entry) => entry.alias));
+        expect(aliases).toEqual(aliases.map((_, i) => `E${i + 1}`));
+        if (index === 2) {
+          expect(plan.chart).toBeNull();
+          expect(plan.beats.map((beat) => beat.role)).toEqual(["limitations"]);
+          continue;
+        }
+        expect(plan.chart?.unknownPositions).toEqual(index === 1 ? ["시주"] : []);
+        if (index === 1)
+          expect(plan.limitations.some((line) => line.includes("시주 정보가 없어"))).toBe(true);
+        expect(plan.beats.map((beat) => beat.role)).toEqual(
+          catalog === summarized
+            ? ["chart", "observation", "interpretation", "limitations"]
+            : ["chart", "observation", "limitations"],
+        );
+        expect(
+          plan.beats.find((beat) => beat.role === "observation")?.evidence.map((e) => e.refId),
+        ).toEqual(
+          result.judgments
+            .filter((j) => j.precision === "confirmed" && j.disposition === "accepted")
+            .map((j) => j.judgmentId),
+        );
+        expect(plan.provenance.usableInterpretations).toBe(catalog === summarized ? 1 : 0);
+        if (catalog === emptyCatalog) {
+          expect(plan.provenance.matchedInterpretations).toBe(0);
+          expect(plan.limitations.some((line) => line.includes("카탈로그에 없다"))).toBe(true);
+        }
+      }
+    },
+  );
 });

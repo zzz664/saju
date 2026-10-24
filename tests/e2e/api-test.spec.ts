@@ -15,6 +15,12 @@ test("F03 selection explicitly runs shared Mock prose and preserves partial/unkn
     if (request.method() === "POST" && request.url().endsWith("/runs")) calls++;
   });
   await unlock(page);
+  await expect(
+    page.getByText("Mock은 외부 호출 없이 실행하며 횟수·토큰·비용 예산을 적용하지 않습니다."),
+  ).toBeVisible();
+  const config = await (await page.request.get("/api/dev/api-test/config")).json();
+  expect(config).not.toHaveProperty("used");
+  expect(config).not.toHaveProperty("remaining");
   await page.getByLabel("기능", { exact: true }).selectOption("F03");
   await page.getByLabel("가상 사례", { exact: true }).selectOption("synthetic-unknown");
   await expect(page.getByText(/말풍선 계획으로 전달합니다/)).toBeVisible();

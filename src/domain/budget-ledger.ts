@@ -1,4 +1,4 @@
-/** Both ledgers reserve atomically and settle once; missing usage never refunds a reservation. */
+/** Live usage is reserved atomically and settled once; missing usage retains the reservation. */
 export interface BudgetLease<Usage = void> {
   settle(usage: Usage): void;
 }

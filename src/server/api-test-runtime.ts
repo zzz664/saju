@@ -4,7 +4,7 @@ import { createPlanMockProvider } from "@/infrastructure/llm/plan-mock";
 import { FileLiveBudget } from "@/infrastructure/openai/live-budget";
 import path from "node:path";
 
-// Route bundles/HMR share one Mock ledger and unlock limiter per Node process.
+// Route bundles/HMR share Mock execution state and an unlock limiter per Node process.
 const shared = globalThis as typeof globalThis & {
   __sajuApiTestHandler?: ReturnType<typeof createApiTestHandler>;
 };

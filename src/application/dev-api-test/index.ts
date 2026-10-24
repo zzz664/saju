@@ -29,19 +29,13 @@ export function apiTestLimits(env: Record<string, string | undefined>): ApiTestL
     concurrent: integer("LIVE_API_TEST_MAX_CONCURRENT", 1),
   });
 }
-export function apiTestPolicy(limits: ApiTestLimits, now: number) {
-  const budget = { calls: limits.calls, tokens: limits.tokens, microUsd: 1_000_000 };
+export function apiTestPolicy(now: number) {
   return ExperimentPolicySchema.parse({
     enabled: true,
     expiresAt: now + 60_000,
     allowedPrincipalIds: ["local-developer"],
-    maxConcurrent: limits.concurrent,
+    maxConcurrent: 1,
     maxRequestBytes: 131072,
-    maxOutputTokens: limits.outputTokens,
-    rates: { inputMicroUsdPerMillionTokens: 1, outputMicroUsdPerMillionTokens: 1 },
-    daily: budget,
-    perPrincipalDaily: budget,
-    perSession: budget,
   });
 }
 const Quota = z.strictObject({
@@ -49,7 +43,7 @@ const Quota = z.strictObject({
   tokens: z.number().int().nonnegative(),
 });
 const Choice = z.strictObject({ id: z.string().min(1).max(64), label: z.string().min(1).max(100) });
-export const ApiTestFeatureIdSchema = z.enum(["F03"]);
+export const ApiTestFeatureIdSchema = z.enum(["F02", "F03"]);
 export const ApiTestConfigSchema = z.strictObject({
   defaultMode: z.literal("mock"),
   modelId: ModelIdSchema,
@@ -60,9 +54,7 @@ export const ApiTestConfigSchema = z.strictObject({
   csrfToken: z.string().regex(/^[a-f0-9]{64}$/),
   liveUsed: Quota.optional(),
   liveRemaining: Quota.optional(),
-  limits: ApiTestLimitsSchema,
-  used: Quota,
-  remaining: Quota,
+  limits: ApiTestLimitsSchema.nullable(),
   fixtures: z.array(Choice).max(10),
   personas: z.array(Choice).max(50),
   features: z

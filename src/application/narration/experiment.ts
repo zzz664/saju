@@ -4,15 +4,14 @@ import {
   ExperimentAccessSchema,
   ExperimentError,
   ExperimentPolicySchema,
-  quoteExperimentRequest,
-  type ExperimentBudgetStore,
+  type ExperimentConcurrencyGate,
 } from "@/domain/experiment";
 
-/** Server-owned composition only: never bind policy/identity/clock/store to request body fields. */
+/** Server-owned composition only: never bind policy/identity/clock/gate to request body fields. */
 export interface ExperimentRunnerOptions {
   readonly policy: unknown;
   readonly provider: NarrationProvider;
-  readonly store: ExperimentBudgetStore;
+  readonly gate: ExperimentConcurrencyGate;
   readonly environment?: () => string | undefined;
   readonly now?: () => number;
   readonly resolveAccess?: () => Promise<unknown>;
@@ -64,21 +63,15 @@ export function createExperimentRunner<T>(
       const guarded: NarrationProvider = {
         kind: "mock",
         async generate(request, callOptions) {
-          let lease: ReturnType<ExperimentBudgetStore["reserve"]>;
-          const limitedRequest = Object.freeze({
-            ...request,
-            maxOutputTokens: policy.maxOutputTokens,
-          });
+          let lease: ReturnType<ExperimentConcurrencyGate["acquire"]>;
           try {
-            const instant = checkEnvironment();
+            checkEnvironment();
             if (options.provider.kind !== "mock") throw new ExperimentError("ACCESS_DENIED");
-            const allocation = quoteExperimentRequest(limitedRequest, policy);
-            lease = options.store.reserve({
-              now: instant,
-              access: access.data,
-              allocation,
-              policy,
-            });
+            if (
+              new TextEncoder().encode(JSON.stringify(request)).byteLength > policy.maxRequestBytes
+            )
+              throw new ExperimentError("REQUEST_TOO_LARGE");
+            lease = options.gate.acquire(access.data.principalId, policy.maxConcurrent);
           } catch (cause) {
             denial =
               cause instanceof ExperimentError ? cause : new ExperimentError("STORE_UNAVAILABLE");
@@ -86,9 +79,9 @@ export function createExperimentRunner<T>(
           }
           // Deliberately release when the underlying supplier settles, not when its caller aborts.
           try {
-            return await options.provider.generate(limitedRequest, callOptions);
+            return await options.provider.generate(request, callOptions);
           } finally {
-            lease.settle();
+            lease.release();
           }
         },
       };
