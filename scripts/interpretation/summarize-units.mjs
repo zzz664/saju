@@ -17,6 +17,7 @@ import {
   SUMMARY_PROMPT_VERSION,
   entailmentRequestBody,
   outputTextOf,
+  partialTextOf,
   parseEntailmentReason,
   parseEntailmentVerdict,
   summaryRequestBody,
@@ -99,6 +100,7 @@ async function call(body) {
   const envelope = await response.json();
   return {
     text: outputTextOf(envelope),
+    partial: partialTextOf(envelope),
     // Why there is no text, when there is none: "incomplete/max_output_tokens", "failed/…", etc.
     why: `${envelope?.status ?? "no-status"}${envelope?.incomplete_details?.reason ? `/${envelope.incomplete_details.reason}` : ""}`,
     usage: envelope?.usage ?? null,
@@ -132,9 +134,11 @@ async function main() {
       usage.calls++;
       usage.inputTokens += verdict.usage?.input_tokens ?? 0;
       usage.outputTokens += verdict.usage?.output_tokens ?? 0;
-      const status = parseEntailmentVerdict(verdict.text);
+      // A verdict cut off mid-reason still starts with PASS/FAIL; a summary is never read partially.
+      const status = parseEntailmentVerdict(verdict.text ?? verdict.partial);
       if (!status) throw new Error(`unreadable verdict (${verdict.why})`);
-      const reason = status === "failed" ? parseEntailmentReason(verdict.text) : null;
+      const reason =
+        status === "failed" ? parseEntailmentReason(verdict.text ?? verdict.partial) : null;
       const now = new Date().toISOString();
       file.summaries[entry.unit.unitId] = {
         text: summary.text.slice(0, 800),
